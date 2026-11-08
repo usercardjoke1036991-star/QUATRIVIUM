@@ -1,0 +1,134 @@
+{
+  "expo": {
+    "name": "Quatrivium Finance",
+    "slug": "quatrivium-sovereign",
+    "scheme": "quatrivium-sovereign",
+    "version": "1.0.2",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": false,
+    "splash": {
+      "image": "./assets/splash-blank.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#07150F"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.quatrivium.sovereign",
+      "associatedDomains": [
+        "applinks:quatriviumcredit.app"
+      ]
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#07150F"
+      },
+      "edgeToEdgeEnabled": true,
+      "softwareKeyboardLayoutMode": "resize",
+      "package": "com.quatrivium.sovereign",
+      "versionCode": 4,
+      "allowBackup": false,
+      "usesCleartextTraffic": false,
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.ACCESS_WIFI_STATE",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE"
+      ],
+      "permissions": [
+        "USE_BIOMETRIC",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "READ_MEDIA_IMAGES",
+        "CAMERA"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ],
+          "data": [
+            {
+              "scheme": "https",
+              "host": "quatriviumcredit.app",
+              "pathPrefix": "/invite"
+            },
+            {
+              "scheme": "https",
+              "host": "quatriviumcredit.app",
+              "pathPrefix": "/history"
+            },
+            {
+              "scheme": "https",
+              "host": "quatriviumcredit.app",
+              "pathPrefix": "/room"
+            }
+          ]
+        }
+      ]
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Quatrivium Finance usa sus fotos para el perfil.",
+          "cameraPermission": "Quatrivium Finance usa la cámara para escanear códigos QR.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#146C2E",
+          "defaultChannel": "quatrivium-debt"
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Quatrivium Finance usa Face ID o la huella para desbloquear la aplicación."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#07150F",
+          "image": "./assets/splash-blank.png",
+          "imageWidth": 288
+        }
+      ],
+      "expo-font",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 29,
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
+          }
+        }
+      ],
+      "./plugins/withQuatriviumAndroidSecurity.js"
+    ],
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "0a9b20f0-900a-4d35-8541-14b6202d84f5"
+      },
+      "supportsRTL": true
+    },
+    "owner": "magnotechnologies"
+  }
+}

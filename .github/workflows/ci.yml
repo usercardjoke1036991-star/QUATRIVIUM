@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# No hay .nvmrc ni engines en package.json. Node 22 es la LTS que usa este chequeo.
+# El APK no entra: `eas build` pide la cuenta de Expo y el keystore, y no cabe en este job.
+jobs:
+  test:
+    name: Hardhat
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      # viaIR del compilador de Solidity pide heap. No cambia la lógica de los tests.
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci --ignore-scripts
+
+      - name: Test
+        # android/ no está en git. Si falta el manifiesto, cyber-hardening mira app.json.
+        run: npm test
+
+  typecheck:
+    name: TypeScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci --ignore-scripts
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format
+        run: npm run format:check
+
+      - name: Production repo check
+        # No abre .env ni .env.worker. No falla si faltan SMS, Twilio o Resend.
+        # Mira eas.json production: APP_ENV, chain 56, y que el crédito de
+        # mainnet no sea un contrato de testnet. La Demo viva puede figurar
+        # aparte para el modo Demo del APK.
+        run: npm run production:check:ci

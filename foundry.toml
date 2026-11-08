@@ -1,0 +1,25 @@
+[profile.default]
+src = "contracts"
+test = "forge-test"
+script = "forge-script"
+out = "forge-out"
+cache_path = "forge-cache"
+libs = ["node_modules", "lib"]
+solc_version = "0.8.24"
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 1
+via_ir = true
+bytecode_hash = "none"
+revert_strings = "strip"
+auto_detect_solc = false
+fs_permissions = [{ access = "read", path = "./" }]
+
+[lint]
+lint_on_build = false
+
+[fmt]
+line_length = 120
+tab_width = 4
+bracket_spacing = false
+int_types = "preserve"

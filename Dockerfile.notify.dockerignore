@@ -1,0 +1,9 @@
+*
+!scripts/
+!scripts/notify-worker.mjs
+!scripts/bscNetworks.cjs
+!scripts/textbeltSms.cjs
+!scripts/notify-entrypoint.sh
+!scripts/telegramBotName.cjs
+!scripts/attest2of2.mjs
+!scripts/adminTotp.mjs

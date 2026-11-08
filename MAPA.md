@@ -1,0 +1,661 @@
+# Mapa del proyecto: Magno
+
+**Ruta activa:** `C:\CURSORPLANTILLA-BASE\Magno`
+
+## Qué es
+**Quatrivium Finance** es una app móvil de microcrédito on-chain sin colateral sobre BNB Smart Chain (BSC).
+
+## Tipo
+node — QA profundo (también: android, kotlin, python)
+
+## Cómo leer este mapa
+Cerebro del proyecto activo: piezas, docs vs código y conexión.
+Los símbolos multi-lenguaje los extrae `detectar_lenguaje.py` (no este script).
+Inventario heurístico (no es un compilador). Describe cwd o `[ruta]`, no otro repo.
+Profundidad extra de conectores/lógica/módulos: python, node, mql5, android.
+Si el tipo es otro lenguaje, esos sub-checks se llaman si existen; no crashean.
+Conexión = análisis estático. No afirma ejecución 100% en runtime.
+
+## Partes
+- `actualizar_contexto.py` — módulo Python
+  - Funciones/clases: _encontrar_contexto_md, _inferir_directorio_proyecto, cmd_mostrar, cmd_actualizar_estado, cmd_agregar_cambio, cmd_init, main
+- `actualizar_readme.py` — módulo Python
+  - Funciones/clases: InfoReadme, _leer_texto, _escribir_texto, _es_placeholder, _seccion_md, _bullets, _importar_detectar_lenguaje, detectar_tipo_proyecto, _nombre_package_json, _parsear_contexto, _parsear_vision, _raices_ajenas, iterar_fuentes, _formatear_simbolo_local, extraer_simbolos_python, extraer_exports_js, extraer_handlers_mql, extraer_tipos_android, _es_archivo_test, extraer_simbolos_archivo, analizar_codigo, detectar_comandos, detectar_herramientas_qa, recolectar_info, generar_bloque, _es_readme_generico, _insertar_tras_h1, aplicar_bloque, actualizar_readme, _imprimir_ayuda, _parsear_argv, main
+- `App.js` — módulo JS/TS
+  - Funciones/clases: App
+- `aprender_error.py` — módulo Python
+  - Funciones/clases: cargar_errores, guardar_errores, generar_id, validar_tipos, validar_severidad, validar_patron_regex, _preguntar, modo_interactivo, registrar_error, mostrar_confirmacion, main
+- `babel.config.js` — módulo JS/TS
+- `detectar_lenguaje.py` — módulo Python
+  - Funciones/clases: _leer, _como_path, _tope_efectivo, hay_ext_cercana, formatear_simbolo, _unicos_etiquetados, _unicos_tope, _simbolos_por_regex_etiquetados, _simbolos_por_regex, lenguaje_de_archivo, _normalizar_tipo_proyecto, detectar_tipo_lenguaje, _simbolos_python, _exports_js, _handlers_mql, _activities_manifest, _simbolos_c_cpp, _extraer_por_lenguaje, extraer_simbolos_etiquetados, extraer_simbolos, extraer_simbolos_formateados, _listar_archivos_codigo, analizar_ruta, imprimir_reporte, _parsear_argv, main
+- `detectar_logica.py` — módulo Python
+  - Funciones/clases: ProblemaLogica, _safe_unparse, _tiene_salida_directa, _nombre_sugiere_path, _iterar_archivos_logica, detectar_division_por_cero, detectar_none_sin_verificar, detectar_bucle_infinito, detectar_modificacion_en_iteracion, detectar_return_en_bucle_acumulador, detectar_comparacion_con_asignacion, _analizar_logica_python, detectar_logica_trading_invertida, detectar_volumen_cero, detectar_operacion_sin_verificar_spread, detectar_magic_number_cero, _analizar_logica_mql5, detectar_mutacion_estado_react, detectar_async_sin_await, detectar_useeffect_sin_deps, detectar_key_en_map_faltante, _analizar_logica_node, _detectar_tipo_proyecto, analizar_directorio, formatear_reporte, analizar_directorio_con_reporte, main
+- `hardhat.config.cjs` — módulo JS/TS
+- `index.js` — módulo JS/TS
+- `io_utf8.py` — módulo Python
+  - Funciones/clases: run_utf8
+- `mapa_proyecto.py` — módulo Python
+  - Funciones/clases: _importar_detectar_lenguaje, _leer, _subproyectos_inmediatos, _nombres_excluidos, _rel, _seccion, _primera_frase, _hay_ext_cercana, _fallback_tipo_proyecto, detectar_tipo_proyecto, _fallback_simbolos_python, extraer_simbolos, _lenguaje_archivo, _rol_archivo, inventariar_partes, _que_es, _extraer_mencionados, _bloque_auto_readme, _existe_mencionado, _es_relevante_nuevo, comprobar_al_dia, _encontrar_script, _cargar_modulo, _a_dict_problema, _cli_json, _run_conectores, _run_logica, _run_modulos, comprobar_conexion, _estado_final, _linea_tipo, _render_mapa, escribir_mapa_md, mapa_proyecto, imprimir_reporte, _parsear_argv, main
+- `memoria_proyecto.py` — módulo Python
+  - Funciones/clases: MemoriaProyecto, resolver_directorio, ruta_memoria_md, ruta_memoria_json, _parece_secreto, _rechazar_si_secreto, _extraer_seccion, _parsear_lista, leer_memoria, renderizar_memoria, escribir_memoria, _cargar_o_crear, _marcar_sesion, _entrada, _prepend_unico, cmd_init, cmd_cambio, cmd_decision, cmd_enfoque, cmd_mostrar, cmd_json, _parse_args, _resolver_cli, main
+- `metro.config.js` — módulo JS/TS
+- `polyfills.js` — módulo JS/TS
+- `qa_autonomo.py` — módulo Python
+  - Funciones/clases: ResultadoQA, ReporteQA, detectar_tipo_proyecto, verificar_python, verificar_mql5, verificar_nodejs, verificar_android, verificar_rust, verificar_go, _iterar_archivos_auditables, _obtener_raices_subproyectos, _es_subproyecto, _verificar_secretos, _verificar_gitignore, verificar_ci, verificar_readme, _encontrar_errores_json, verificar_errores_aprendidos, verificar_logica, verificar_conectores_sueltos, verificar_modulos_proyecto, verificar_mapa_proyecto, ejecutar_qa, imprimir_reporte, main
+- `qa_safe_io.py` — módulo Python
+  - Funciones/clases: confine, confine_read, confine_write, write_under, under_root, resto_bullet_estado
+- `reestructurar_peticion.py` — módulo Python
+  - Funciones/clases: resolver_directorio, normalizar, _contiene_patron, detectar_intencion, detectar_tipo_proyecto, habla_espanol, _primera_linea_util, leer_contexto_una_linea, inferir_alcance, sugerir_herramientas, inferir_entregable, reformular_objetivo, construir_restricciones, construir_prompt_agente, PromptProfesional, reestructurar, formatear_texto, formatear_json, _parse_args, _resolver_texto, main
+- `run_tests.py` — módulo Python
+  - Funciones/clases: ResultadoTests, detectar_tipo_proyecto, _ejecutar_comando, _parsear_resumen_pytest, ejecutar_tests_python, ejecutar_tests_node, ejecutar_tests_android, ejecutar_tests_mql5, ejecutar_tests_proyecto, detectar_subproyectos, _icono_resultado, _linea_resultado, imprimir_reporte, main
+- `salud_proyecto.py` — módulo Python
+  - Funciones/clases: Hallazgo, ReporteSalud, _leer, _leer_env, _run, _es_quatrivium, verificar_identidad, verificar_archivos, verificar_simbolos, verificar_decisiones, verificar_comando, verificar_herramientas, _importar_hermano, _verificar_conectores, _verificar_logica, ejecutar_salud, imprimir_reporte, _parse_args, main
+- `verificar_conectores.py` — módulo Python
+  - Funciones/clases: _subproyectos_inmediatos, _conector, _iterar_py, _iterar_js, _iterar_mql, _leer, _ruta_relativa, _parse_safe, _nombres_definidos_en_modulo, _nombres_de_target, _recopilar_nombres_proyecto, _es_submodulo_local, _resolver_modulo_local, detectar_imports_rotos, _recopilar_parametros_funciones, detectar_llamadas_sin_definicion, _resolver_import_js, detectar_imports_js_rotos, _nombres_js_definidos, detectar_handlers_jsx_sin_definir, detectar_rutas_api_js, _obtener_funciones_mql, _obtener_llamadas_mql, detectar_conectores_mql, verificar_conectores, imprimir_reporte, main
+- `verificar_modulos.py` — módulo Python
+  - Funciones/clases: _limpiar_caches, _hallazgo, _subproyectos_inmediatos, _nombres_excluidos, _leer, _ruta_relativa, _inventariar, detectar_tipo_proyecto, _parse_safe, _extraer_modulos_documentados, detectar_modulos_documentados_ausentes, _existe_en_disco, detectar_imports_relativos_rotos, detectar_submodulos_paquete_ausentes, detectar_init_faltante, detectar_docstring_modulo_faltante, _indice_modulos_py, _imports_locales_py, detectar_ciclos_simples, detectar_includes_mql_ausentes, _resolver_export_js, detectar_exports_index_rotos, _es_candidato_modal, _analizar_modal, detectar_modales_ui, _checks_modulos, verificar_modulos, imprimir_reporte, _parsear_argv, main
+- `vision_proyecto.py` — módulo Python
+  - Funciones/clases: VisionProyecto, detectar_tipo_proyecto, analizar_modulos_existentes, _contar_funciones_py, _ruta_vision, leer_vision, _parsear_vision_md, escribir_vision, _generar_vision_md, cmd_init, cmd_agregar_idea, cmd_actualizar, cmd_mostrar, cmd_completar_modulo, cmd_json, _generar_arquitectura, _proximos_pasos, main
+- `web3Config.tsx` — módulo JS/TS
+  - Funciones/clases: syncAppKitNetwork, Web3Provider, toEthersWeb3Provider, getEthersSignerFromProvider, web3ConfigDebug
+- `zkService.ts` — módulo JS/TS
+- `.scannerwork/echidna-examples.py` — módulo Python
+- `.scannerwork/echidna-release.py` — módulo Python
+- `.scannerwork/fetch-config.py` — módulo Python
+- `.scannerwork/fetch-sig.py` — módulo Python
+- `.scannerwork/find-medusa-abi.py` — módulo Python
+- `.scannerwork/forge-help-filter.py` — módulo Python
+- `.scannerwork/grep-encodesig.py` — módulo Python
+- `.scannerwork/grep-filter.py` — módulo Python
+- `.scannerwork/halmos-ast.py` — módulo Python
+- `.scannerwork/halmos-links.py` — módulo Python
+- `.scannerwork/halmos-result.py` — módulo Python
+- `.scannerwork/halmos-summary.py` — módulo Python
+- `.scannerwork/halmos-tail.py` — módulo Python
+- `.scannerwork/list-filter.py` — módulo Python
+- `.scannerwork/medusa-pranks.py` — módulo Python
+- `.scannerwork/mythril-logs.py` — módulo Python
+- `.scannerwork/mythril-peek.py` — módulo Python
+- `.scannerwork/mythril-sum.py` — módulo Python
+- `.scannerwork/peek-buildinfo.py` — módulo Python
+- `.scannerwork/peek-bytecode.py` — módulo Python
+- `.scannerwork/print-encodesig.py` — módulo Python
+- `.scannerwork/search-filter.py` — módulo Python
+- `.scannerwork/semgrep-summarize.py` — módulo Python
+- `.scannerwork/slither-low.py` — módulo Python
+- `.scannerwork/slither-sum.py` — módulo Python
+- `.scannerwork/strip-cr.py` — módulo Python
+- `.scannerwork/trim-trace.py` — módulo Python
+- `android/app/src/debug/AndroidManifest.xml` — manifiesto Android
+- `android/app/src/debugOptimized/AndroidManifest.xml` — manifiesto Android
+- `android/app/src/main/AndroidManifest.xml` — manifiesto Android
+  - Funciones/clases: .MainActivity
+- `android/app/src/main/java/com/quatrivium/credit/MainActivity.kt` — Activity Android
+  - Funciones/clases: MainActivity, onCreate, onNewIntent, getMainComponentName, createReactActivityDelegate, invokeDefaultOnBackPressed
+- `android/app/src/main/java/com/quatrivium/credit/MainApplication.kt` — módulo Kotlin
+  - Funciones/clases: MainApplication, getPackages, getJSMainModuleName, getUseDeveloperSupport, onCreate, onConfigurationChanged
+- `android/app/src/release/AndroidManifest.xml` — manifiesto Android
+  - Funciones/clases: expo.modules.devlauncher.launcher.DevLauncherActivity, expo.modules.devlauncher.compose.AuthActivity, androidx.compose.ui.tooling.PreviewActivity, .MainActivity, com.canhub.cropper.CropImageActivity
+- `app/index.tsx` — módulo JS/TS
+  - Funciones/clases: HomeScreen
+- `app/_layout.tsx` — módulo JS/TS
+- `components/AccountOnboarding.tsx` — módulo JS/TS
+  - Funciones/clases: AccountOnboarding
+- `components/AccountWorldCard.tsx` — módulo JS/TS
+  - Funciones/clases: AccountWorldCard
+- `components/ActivateCreditSection.tsx` — módulo JS/TS
+  - Funciones/clases: ActivateCreditSection
+- `components/AdminAccess.tsx` — módulo JS/TS
+  - Funciones/clases: AdminAccess
+- `components/AdminPanel.tsx` — módulo JS/TS
+  - Funciones/clases: AdminPanel
+- `components/AdminTotpHost.tsx` — módulo JS/TS
+  - Funciones/clases: AdminTotpHost, useAdminTotp
+- `components/AppLockGate.tsx` — módulo JS/TS
+  - Funciones/clases: AppLockGate
+- `components/AppSection.tsx` — módulo JS/TS
+  - Funciones/clases: AppSection, AppSubsection
+- `components/AppText.tsx` — módulo JS/TS
+  - Funciones/clases: AppText, AppTextInput
+- `components/AppWindow.tsx` — módulo JS/TS
+  - Funciones/clases: AppWindow
+- `components/AuthenticatorSetup.tsx` — módulo JS/TS
+  - Funciones/clases: AuthenticatorSetup
+- `components/AuthMethodPicker.tsx` — módulo JS/TS
+  - Funciones/clases: AuthMethodPicker
+- `components/BalanceDisplay.tsx` — módulo JS/TS
+  - Funciones/clases: BalanceDisplay
+- `components/BiometricLockSection.tsx` — módulo JS/TS
+  - Funciones/clases: BiometricLockSection
+- `components/BrandLogo.tsx` — módulo JS/TS
+  - Funciones/clases: BrandLogo
+- `components/BrandSplash.tsx` — módulo JS/TS
+  - Funciones/clases: BRAND_SPLASH_BG, BrandWordmark, BrandSplash
+- `components/BusyLogo.tsx` — módulo JS/TS
+  - Funciones/clases: useBusy, BusyMark
+- `components/CreditAccessBanner.tsx` — módulo JS/TS
+  - Funciones/clases: CreditAccessBanner
+- `components/CreditAccessGate.tsx` — módulo JS/TS
+  - Funciones/clases: CreditAccessGate
+- `components/DemoModeBanner.tsx` — módulo JS/TS
+- `components/DonateFounderSection.tsx` — módulo JS/TS
+  - Funciones/clases: DonateFounderSection
+- `components/EmailOtpSection.tsx` — módulo JS/TS
+  - Funciones/clases: EmailOtpSection
+- `components/FameCanjeSection.tsx` — módulo JS/TS
+  - Funciones/clases: FameCanjeSection
+- `components/FameLeaderboard.tsx` — módulo JS/TS
+  - Funciones/clases: FameLeaderboard
+- `components/FundsConfirmHost.tsx` — módulo JS/TS
+  - Funciones/clases: FundsConfirmHost, useFundsConfirm
+- `components/GraceMoraClock.tsx` — módulo JS/TS
+  - Funciones/clases: GraceMoraClock
+- `components/HomeHub.tsx` — módulo JS/TS
+  - Funciones/clases: HomeHub
+- `components/HowTheAppWorks.tsx` — módulo JS/TS
+  - Funciones/clases: HowTheAppWorks
+- `components/icons.tsx` — módulo JS/TS
+  - Funciones/clases: AppIcon, TokenLogo, IconBadge
+- `components/KycAccessBanner.tsx` — módulo JS/TS
+  - Funciones/clases: KycAccessBanner
+- `components/KycSection.tsx` — módulo JS/TS
+  - Funciones/clases: KycSection
+- `components/LanguageSelector.tsx` — módulo JS/TS
+  - Funciones/clases: LanguageSelector
+- `components/LanguageWelcome.tsx` — módulo JS/TS
+  - Funciones/clases: LanguageWelcome
+- `components/LegalDocuments.tsx` — módulo JS/TS
+  - Funciones/clases: LegalDocuments
+- `components/LegalWelcome.tsx` — módulo JS/TS
+  - Funciones/clases: LegalWelcome
+- `components/LinkedWalletCard.tsx` — módulo JS/TS
+  - Funciones/clases: LinkedWalletCard
+- `components/LinkWalletForm.tsx` — módulo JS/TS
+  - Funciones/clases: LinkWalletForm
+- `components/LoanTierCard.tsx` — módulo JS/TS
+  - Funciones/clases: LoanTierCard
+- `components/LockedLoanCatalog.tsx` — módulo JS/TS
+  - Funciones/clases: LockedLoanCatalog
+- `components/LockSettings.tsx` — módulo JS/TS
+  - Funciones/clases: LockSettings
+- `components/MilestoneBonusCatalog.tsx` — módulo JS/TS
+  - Funciones/clases: MilestoneBonusCatalog
+- `components/ModeToggle.tsx` — módulo JS/TS
+  - Funciones/clases: ModeToggle
+- `components/MovementHistory.tsx` — módulo JS/TS
+  - Funciones/clases: MovementHistory
+- `components/NetworkStatusBanner.tsx` — módulo JS/TS
+  - Funciones/clases: NetworkStatusBanner
+- `components/NotificationChannels.tsx` — módulo JS/TS
+  - Funciones/clases: NotificationChannels
+- `components/PasswordRulesHint.tsx` — módulo JS/TS
+  - Funciones/clases: PasswordRulesHint
+- `components/PhoneOtpSection.tsx` — módulo JS/TS
+  - Funciones/clases: PhoneOtpSection
+- `components/PodiumFrame.tsx` — módulo JS/TS
+  - Funciones/clases: PodiumFrame
+- `components/PoolSupportSection.tsx` — módulo JS/TS
+  - Funciones/clases: PoolSupportSection
+- `components/ProfileAvatar.tsx` — módulo JS/TS
+  - Funciones/clases: AnonymousFace, ProfileAvatar
+- `components/ProfileSettings.tsx` — módulo JS/TS
+  - Funciones/clases: ProfileSettings
+- `components/PublicFacePicker.tsx` — módulo JS/TS
+  - Funciones/clases: PublicFacePicker
+- `components/PublicIdentityForm.tsx` — módulo JS/TS
+  - Funciones/clases: PublicIdentityForm
+- `components/RachaSection.tsx` — módulo JS/TS
+  - Funciones/clases: RachaSection
+- `components/RankFrame.tsx` — módulo JS/TS
+  - Funciones/clases: rankFramePadFor, rankFrameOuterSize, RankFrame
+- `components/RankGem.tsx` — módulo JS/TS
+  - Funciones/clases: RankGem
+- `components/RankLadder.tsx` — módulo JS/TS
+  - Funciones/clases: RankLadder
+- `components/RankMedal.tsx` — módulo JS/TS
+  - Funciones/clases: RankMedal
+- `components/ReferralBranch.tsx` — módulo JS/TS
+  - Funciones/clases: ReferralBranch
+- `components/ReferralHistory.tsx` — módulo JS/TS
+  - Funciones/clases: ReferralHistory
+- `components/ReferralSection.tsx` — módulo JS/TS
+  - Funciones/clases: ReferralSection
+- `components/ReservaSection.tsx` — módulo JS/TS
+  - Funciones/clases: ReservaSection
+- `components/ScreenGuard.tsx` — módulo JS/TS
+  - Funciones/clases: subscribeScreenshot, ScreenGuard
+- `components/SecretInput.tsx` — módulo JS/TS
+  - Funciones/clases: SecretInput
+- `components/SecuritySettings.tsx` — módulo JS/TS
+  - Funciones/clases: SecuritySettings
+- `components/SettingsButton.tsx` — módulo JS/TS
+  - Funciones/clases: SettingsButton
+- `components/SponsorPoolButton.tsx` — módulo JS/TS
+  - Funciones/clases: SponsorPoolButton
+- `components/ThemeToggle.tsx` — módulo JS/TS
+  - Funciones/clases: ThemeToggle
+- `components/TokenSelector.tsx` — módulo JS/TS
+  - Funciones/clases: TokenSelector
+- `components/TransferWalletsModal.tsx` — módulo JS/TS
+  - Funciones/clases: TransferWalletsModal
+- `components/UserMetrics.tsx` — módulo JS/TS
+  - Funciones/clases: UserMetrics
+- `components/UsernameSection.tsx` — módulo JS/TS
+  - Funciones/clases: UsernameSection
+- `components/WalletFailedEscape.tsx` — módulo JS/TS
+  - Funciones/clases: WalletFailedEscape
+- `components/WalletMark.tsx` — módulo JS/TS
+  - Funciones/clases: WalletMark
+- `components/WalletSection.tsx` — módulo JS/TS
+  - Funciones/clases: WalletSection
+- `constants/altaConfig.ts` — módulo JS/TS
+  - Funciones/clases: ALTA_ABI, CREDIT_ALTA_USDT, CREDIT_SELLO_USDT, getAltaAddress, isAltaConfigured
+- `constants/appLinks.ts` — módulo JS/TS
+  - Funciones/clases: PLAY_STORE_URL, INVITE_WEB_BASE, INVITE_APP_SCHEME, TELEGRAM_BOT, NOTIFY_API, notifyApiBases
+- `constants/brand.ts` — módulo JS/TS
+  - Funciones/clases: APP_DISPLAY_NAME
+- `constants/bsc.ts` — módulo JS/TS
+  - Funciones/clases: ZERO_ADDRESS, BSC_MAINNET, BSC_TESTNET, isZeroAddress, isTestnetOnlyToken
+- `constants/commissions.ts` — módulo JS/TS
+  - Funciones/clases: DIRECT_COMMISSION_BPS, ACTIVATION_BONUS_USD, MAX_COMMISSION_LINE, POOL_FLOOR_BP, interestFromLoan, generationCommissionBps, directCommissionFromLoan, formatCommissionUSD, commissionForGeneration, COMMISSION_BANDS, commissionLine, commissionBandsForLoan, commissionRowsForLoan, directCommissionRowsForTiers
+- `constants/compatibleWallets.ts` — módulo JS/TS
+  - Funciones/clases: COMPATIBLE_WALLETS
+- `constants/contractConfig.ts` — módulo JS/TS
+  - Funciones/clases: getUsdtAddress, ERC20_ABI, CONTRACT_ABI
+- `constants/deployedAddresses.ts` — módulo JS/TS
+  - Funciones/clases: LEGACY_DEMO_TESTNET, DEPLOYED_TESTNET, DEPLOYED_MAINNET, getRealDonationWallet, getKnownStartBlock
+- `constants/fama.ts` — módulo JS/TS
+  - Funciones/clases: FAMA_PER_USDT, FAMA_PER_REFERRAL_L1, FAMA_CANJE_POR_USDT, CANJE_USDT_BUTTONS, famaFromUsd, famaNeededForUsdt, usdtFromFama, maxCanjeUsdt
+- `constants/famaConfig.ts` — módulo JS/TS
+  - Funciones/clases: FAMA_ABI, getKnownFamaAddress, isFamaAddress
+- `constants/feeConfig.ts` — módulo JS/TS
+  - Funciones/clases: estimateNetworkGasWei, resolveFeeCollector
+- `constants/loanTiers.ts` — módulo JS/TS
+  - Funciones/clases: MAX_LOAN_LEVEL, MAX_LOAN_USD, CORE_LOAN_LEVEL, CORE_LOAN_USD, USD100_LEVEL, MILESTONE_EVERY, MILESTONE_BONUS_BY_LEVEL, MAX_LEVEL_BONUS_USD, MILESTONE_BONUS_TOTAL_USD, LADDER_STEP_USD, LADDER_RATE_DROPS, MAX_LEVEL_BONUS_EVERY, ONCHAIN_TIER_SCAN, requiredCountForLevel, requiredCountForLiveLevel, requiredCountPlanned, milestoneReached, nextClaimableMilestone, nextUpcomingMilestone, isMilestoneLevel, milestoneBonusUsd, milestoneLevels, ladderUsdAmount, ladderInterestBps, ladderTermDays, CORE_LOAN_TIER_ROWS, LOAN_TIER_ROWS, LOAN_TIERS, displayMaxLoanLevel, visibleLoanTiers, installmentsForUsd, installmentsForPrincipalWei, overlayOnChainTier
+- `constants/podium.ts` — módulo JS/TS
+  - Funciones/clases: PODIUM_STYLE
+- `constants/racha.ts` — módulo JS/TS
+  - Funciones/clases: FAMA_POR_DIA_RACHA, RACHA_GRACIA_DIAS, RACHA_HITOS, RACHA_BONO_USDT, rachaBonusUsd, nextRachaHito
+- `constants/ranks.ts` — módulo JS/TS
+  - Funciones/clases: FAMILY_BANDS, saturateHex, colorizeTextureFilters, RANK_GEM_ASSET, RANK_MEDAL_ASSET, clampLoanLevel, getRankForLevel, rankFamilyIndex, romanDivision, rankDivisionTint, formatRankLabel, RANK_LADDER, rankGalleryRow, RANK_GALLERY
+- `constants/reputation.ts` — módulo JS/TS
+  - Funciones/clases: REFERRAL_REPUTATION_POINTS, REFERRAL_NETWORK_POINTS, REFERRAL_BONUS_THRESHOLD, REFERRAL_POOL_BONUS_USD, generationBps, fameForGeneration, founderFamePoints, referralsForNextBonus, formatPoolBonus
+- `constants/reserva.ts` — módulo JS/TS
+  - Funciones/clases: RESERVA_LOCK_SECONDS, RESERVA_MAX_APY_BP, RESERVA_YEAR_SECONDS, RESERVA_TRAMO_MEDIO, RESERVA_TRAMO_ALTO, RESERVA_MIN_LEVEL, RESERVA_MIN_LOCK_USDT, RESERVA_MIN_LOCK_WEI, RESERVA_LOCK_BUTTONS, reservaTramoUsd, reservaBoostRedBp, reservaCorteFundadorBp, reservaExtraComisionWei, reservaTechoWei
+- `constants/reservaConfig.ts` — módulo JS/TS
+  - Funciones/clases: RESERVA_ABI, getReservaAddress, isReservaConfigured, reservaUsesPracticeLedger
+- `constants/rpcConfig.ts` — módulo JS/TS
+  - Funciones/clases: isStoreProduction, getRuntimeMode, isDemoMode, isDemoAccount, isCreditReady, donationVisibleInWorld, donationAllowedInWorld, isDonationVisible, isDonationEnabled, accessPaymentAllowedInWorld, isAccessPaymentEnabled, getProductMode, setProductMode, subscribeRuntimeMode, resetRpcCache, setRuntimeMode, APP_ENV, NETWORK_CONFIG, RPC_URLS, CONTRACT_ADDRESSES, getActiveContractNetwork, getProviderWithFallback, assertTrustedRpc, getContractAddress, isContractConfigured
+- `constants/support.ts` — módulo JS/TS
+  - Funciones/clases: SUPPORT_PATRON_USD, SUPPORT_CIRCLE_USD, FAME_PER_USDT_DONATE, FAME_PER_USDT_POOL, fameFromUsd, fameFromDonateUsd, fameFromPoolUsd, supportKind, supportNameKey
+- `constants/tokens.ts` — módulo JS/TS
+  - Funciones/clases: getConfigurableStables, getSupportedTokens, getTokenMeta, isOfficialWorldToken
+- `hooks/useEquippedFrame.ts` — módulo JS/TS
+  - Funciones/clases: useEquippedFrame
+- `hooks/useFameLeaderboard.ts` — módulo JS/TS
+  - Funciones/clases: useFameLeaderboard
+- `hooks/useHomeHandlers.ts` — módulo JS/TS
+  - Funciones/clases: useHomeHandlers
+- `hooks/useLiveCooldown.ts` — módulo JS/TS
+  - Funciones/clases: useLiveCooldown
+- `hooks/useLoanPaymentReminders.ts` — módulo JS/TS
+  - Funciones/clases: useLoanPaymentReminders
+- `hooks/usePendingInvite.ts` — módulo JS/TS
+  - Funciones/clases: usePendingInvite
+- `hooks/useReferralNetwork.ts` — módulo JS/TS
+  - Funciones/clases: useReferralNetwork
+- `hooks/useScreenScroll.ts` — módulo JS/TS
+  - Funciones/clases: useScreenScroll
+- `hooks/useSendCooldown.ts` — módulo JS/TS
+  - Funciones/clases: useSendCooldown
+- `hooks/useVerificationFee.ts` — módulo JS/TS
+  - Funciones/clases: useVerificationFee
+- `hooks/useWalletLevel.ts` — módulo JS/TS
+  - Funciones/clases: getWalletLevel, rememberWalletLevel, useWalletLevel
+- `hooks/useWeb3Balances.ts` — módulo JS/TS
+  - Funciones/clases: publishKycDeclared, useWeb3Balances
+- `hooks/useWeb3Transactions.ts` — módulo JS/TS
+  - Funciones/clases: useWeb3Transactions
+- `i18n/LanguageContext.tsx` — módulo JS/TS
+  - Funciones/clases: LanguageProvider, useI18n
+- `i18n/languages.ts` — módulo JS/TS
+  - Funciones/clases: LANGUAGES, RTL_LANGS, isRtl, detectDeviceLang
+- `i18n/legalCopy.ts` — módulo JS/TS
+  - Funciones/clases: legalCopy, legalDocsFor
+- `i18n/legalExtras.ts` — módulo JS/TS
+  - Funciones/clases: legalExtrasFor
+- `i18n/translations.ts` — módulo JS/TS
+  - Funciones/clases: translations
+- `plugins/withQuatriviumAndroidSecurity.js` — módulo JS/TS
+  - Funciones/clases: stripExpPlusFromManifestXml, ensureHttpsDeepLinks, solidSplashPng, hideNativeSplashMark
+- `profile/ProfileContext.tsx` — módulo JS/TS
+  - Funciones/clases: ProfileProvider, useUserProfile
+- `scripts/adminTotp.mjs` — módulo JS/TS
+  - Funciones/clases: bytesToBase32, generateAdminTotpSecret, totpAt, verifyAdminTotp, adminTotpUrl
+- `scripts/apply-i18n-leftovers.mjs` — módulo JS/TS
+- `scripts/apply-i18n-professional.mjs` — módulo JS/TS
+- `scripts/attest2of2.mjs` — módulo JS/TS
+  - Funciones/clases: sameHexKey, requireDistinctAttesterKeys, cosignPacked, verifyCosign
+- `scripts/bscNetworks.cjs` — módulo JS/TS
+- `scripts/check-i18n.mjs` — módulo JS/TS
+- `scripts/check-production.mjs` — módulo JS/TS
+- `scripts/deploy-hetzner.mjs` — módulo JS/TS
+- `scripts/deploy-mainnet-nuevo.cjs` — módulo JS/TS
+  - Funciones/clases: DEPLOYED_MAINNET
+- `scripts/deploy-notify.mjs` — módulo JS/TS
+- `scripts/deploy-reserva.cjs` — módulo JS/TS
+  - Funciones/clases: DEPLOYED_TESTNET
+- `scripts/deploy-testnet-nuevo.cjs` — módulo JS/TS
+  - Funciones/clases: DEPLOYED_TESTNET, LEGACY_DEMO_TESTNET
+- `scripts/deploy.cjs` — módulo JS/TS
+  - Funciones/clases: DEPLOYED_TESTNET
+- `scripts/fetch-wallet-logos.py` — módulo Python
+  - Funciones/clases: fetch, to_png, is_github_identicon, save_square, main
+- `scripts/free-disk-for-apk.py` — módulo Python
+  - Funciones/clases: on_rm_error, size_of, remove_path, main
+- `scripts/linkCredit.cjs` — módulo JS/TS
+- `scripts/notify-worker.mjs` — módulo JS/TS
+- `scripts/paint-wallet-icons.py` — módulo Python
+  - Funciones/clases: save, coinbase_wallet, rainbow_mark, main
+- `scripts/parse-zap-detail.py` — módulo Python
+- `scripts/parse-zap.py` — módulo Python
+- `scripts/patch-i18n-leftovers-asia.mjs` — módulo JS/TS
+  - Funciones/clases: PACK_ASIA
+- `scripts/patch-i18n-leftovers-east.mjs` — módulo JS/TS
+  - Funciones/clases: PACK_EAST
+- `scripts/patch-i18n-leftovers-rtl.mjs` — módulo JS/TS
+  - Funciones/clases: PACK_RTL
+- `scripts/patch-i18n-leftovers.mjs` — módulo JS/TS
+- `scripts/prepare-logo.py` — módulo Python
+  - Funciones/clases: luma, is_backdrop, flood_transparent, crop_mark, color_transparent, punch_fringe, fit_mark, compose, lerp, colorize, circle_mask, write_android_icons, write_rank_icons, main
+- `scripts/prepare-production-local.mjs` — módulo JS/TS
+- `scripts/run-slither.mjs` — módulo JS/TS
+- `scripts/run-snyk.mjs` — módulo JS/TS
+- `scripts/run-sonar.mjs` — módulo JS/TS
+- `scripts/scan-mobile.mjs` — módulo JS/TS
+- `scripts/security-check.mjs` — módulo JS/TS
+  - Funciones/clases: DEPLOYED_TESTNET
+- `scripts/seed-testnet.cjs` — módulo JS/TS
+- `scripts/sentinel.py` — módulo Python
+  - Funciones/clases: load_dotenv, env_addr, telegram_send, read_nav, read_reserva, check_once, parse_args, main
+- `scripts/set-sms-keys.mjs` — módulo JS/TS
+- `scripts/setup-safe-admin.cjs` — módulo JS/TS
+- `scripts/simulateTx.js` — módulo JS/TS
+- `scripts/spawnEnv.mjs` — módulo JS/TS
+  - Funciones/clases: spawnPath, spawnEnv, binDocker, binWsl, stripTrailSlash, binNpx
+- `scripts/telegramBotName.cjs` — módulo JS/TS
+- `scripts/textbeltSms.cjs` — módulo JS/TS
+- `scripts/verify-totp.mjs` — módulo JS/TS
+- `scripts/_gen_loan_tiers.py` — módulo Python
+  - Funciones/clases: nice_amount, installments, build, assert_order, write_ts, write_sol_seed
+- `scripts/_preflight_mainnet.cjs` — módulo JS/TS
+- `services/accountEmail.ts` — módulo JS/TS
+  - Funciones/clases: loadVerifiedEmail, isEmailVerified, saveVerifiedEmail, clearVerifiedEmail
+- `services/accountIdentity.ts` — módulo JS/TS
+  - Funciones/clases: fetchIdentityStatus, releaseAccountContact, restoreIdentityLocal, resumeDeviceIfNeeded, hydrateAccountIdentity
+- `services/accountPhone.ts` — módulo JS/TS
+  - Funciones/clases: maskPhone, loadVerifiedPhone, saveVerifiedPhone, clearVerifiedPhone, setPhoneActive, isPhoneActive, isPhoneVerified
+- `services/accountReset.ts` — módulo JS/TS
+  - Funciones/clases: wipeLocalAccount
+- `services/accountUsername.ts` — módulo JS/TS
+  - Funciones/clases: loadClaimedUsername, saveClaimedUsername, checkUsernameAvailable, claimUsername, clearClaimedUsername
+- `services/adminTotp.ts` — módulo JS/TS
+  - Funciones/clases: adminTotpStatus, enrollAdminTotp, confirmAdminTotp, verifyAdminTotp
+- `services/appLock.ts` — módulo JS/TS
+  - Funciones/clases: PIN_LENGTH, PIN_ROUNDS, probePasswordSet, isPasswordSet, generateMasterPassword, persistWrapForBiometric, loadWrapFromBiometric, clearBiometricWrap, persistLocalRecoveryWrap, loadLocalRecoveryWrap, probePinSet, isPinSet, getPinLockRemaining, setPin, checkPin, matchPin, verifyPin, changePin, clearPin, setPassword, abortPasswordSetup, checkPassword, matchPassword, changePassword, isBiometricEnabled, setBiometricEnabled, toggleBiometric, isLockOnOpenEnabled, setLockOnOpenEnabled, getBiometricStatus, biometricAvailable, authenticateBiometric, lockNow, shouldRelockAfterBackground
+- `services/appWallet.ts` — módulo JS/TS
+  - Funciones/clases: rewrapWalletWithNewKey, withCurrentRpc, isValidSecretPhrase, loadAppWallet, createAppWallet, ensureAppWallet, wipeAppWallet, recreateAppWallet, generateSecretPhrase, addressFromPhrase, importFromPhrase, getSecretPhrase, hasSecretPhrase, isPhraseBackedUp, markPhraseBackedUp, cobrarComisionIntermediario, enviarToken, enviarBnb
+- `services/authenticator.ts` — módulo JS/TS
+  - Funciones/clases: isAuthenticatorEnabled, loadAuthenticatorSecret, createAuthenticatorSecret, authenticatorUri, persistAuthenticatorWrap, confirmAuthenticator, verifyAuthenticator, unlockWithAuthenticator, clearAuthenticator
+- `services/authPrefs.ts` — módulo JS/TS
+  - Funciones/clases: AUTH_PURPOSES, AUTH_METHODS, ACTION_AUTH_METHODS, methodsForPurpose, getAvailableMethods, isMethodReady, loadAuthPrefs, saveAuthPrefs, getAuthMethods, getAuthMethod, isAuthEnabled, ensureUnlockEnabled, setAuthMethod, setAuthMethods, fallbackAuthIfNeeded
+- `services/contactLock.ts` — módulo JS/TS
+  - Funciones/clases: contactStillLocked, readContactLock, stampContactLock, ensureContactLock
+- `services/demoIdentity.ts` — módulo JS/TS
+  - Funciones/clases: requestDemoIdentity
+- `services/deviceBinding.ts` — módulo JS/TS
+  - Funciones/clases: getDeviceHash, getBoundWallet, bindAppWallet, clearBoundWallet, claimDeviceWallet
+- `services/deviceClaim.ts` — módulo JS/TS
+  - Funciones/clases: lookupBoundWalletOnThisDevice, lookupDeviceHashOf, assertRestoreFitsThisDevice
+- `services/emailOtp.ts` — módulo JS/TS
+  - Funciones/clases: requestEmailOtp, confirmEmailOtp, verifyEmailOtp
+- `services/equippedFrame.ts` — módulo JS/TS
+  - Funciones/clases: subscribeEquippedFrame, equippedFrameLevel, loadEquippedFrame, saveEquippedFrame
+- `services/exclusiveSession.ts` — módulo JS/TS
+  - Funciones/clases: thisDeviceOwnsSession, claimExclusiveSession
+- `services/fameLeaderboard.ts` — módulo JS/TS
+  - Funciones/clases: peekFameLeaderboard, clearFameLeaderboardCache, loadFameLeaderboard
+- `services/founderUsdtCharge.ts` — módulo JS/TS
+  - Funciones/clases: chargeFounderUsdt, chargePoolUsdt
+- `services/fundsConfirm.ts` — módulo JS/TS
+  - Funciones/clases: listSecurityConfirmMethods, hasSecurityConfirmMethod, isFundsConfirmEnabled, isLoanConfirmEnabled, setFundsConfirmEnabled, setLoanConfirmEnabled
+- `services/kycDeclaration.ts` — módulo JS/TS
+  - Funciones/clases: normalizeLegalName, normalizeCountry, normalizeCity, isValidLegalName, isValidKyc, kycIdentitySource, kycIdentityFingerprint, formatKycFingerprint, loadKycDeclaration, loadBoundLegalName, saveKycDeclaration, bindLegalIdentity, clearKycDeclaration, loadKycDocPhoto, isKycPhotoLocked, lockKycDocPhoto, persistKycDocPhoto
+- `services/kycProvider.ts` — módulo JS/TS
+  - Funciones/clases: isSumsubHttps, notifyKycProviderReady, openKycProvider
+- `services/linkedWallet.ts` — módulo JS/TS
+  - Funciones/clases: WALLET_LINK_SKIPPED, linkedWalletStorageKey, hasLinkedExternalWallet, hasCompletedWalletLink, loadLinkedExternalWallet, saveLinkedExternalWallet, proveAndSaveLinkedWallet, skipLinkedExternalWallet, loadRequiredExternalWallet
+- `services/movementHistory.ts` — módulo JS/TS
+  - Funciones/clases: recordMovement, loadMovementHistory, loadMoraHistory
+- `services/notificationProfile.ts` — módulo JS/TS
+  - Funciones/clases: normalizePhone, isValidPhone, loadNotificationProfile, saveNotificationProfile
+- `services/notifyClient.ts` — módulo JS/TS
+  - Funciones/clases: notifyApiConfigured, notifyJsonFetch, notifyJsonBody
+- `services/padrinoSettle.ts` — módulo JS/TS
+  - Funciones/clases: expiredSponsorDebtors, settleExpiredSponsor
+- `services/passwordRecovery.ts` — módulo JS/TS
+  - Funciones/clases: readRecoverQuota, recoverSendWaitSeconds, storePasswordRecovery, requestPasswordRecovery, resetPasswordWithEmail
+- `services/phoneOtp.ts` — módulo JS/TS
+  - Funciones/clases: requestPhoneOtp, verifyPhoneOtp
+- `services/quatriviumCreditService.ts` — módulo JS/TS
+  - Funciones/clases: setWalletSigner, clearWalletSigner, getWalletSigner, cachedProtocolCaps, asWeiString, QuatriviumCreditService
+- `services/referralNetwork.ts` — módulo JS/TS
+  - Funciones/clases: peekReferralNetwork, clearReferralNetworkCache, clearReferralBranchCache, loadReferralChildren, fillReferralTimestamps, loadReferralNetwork
+- `services/reservaDemoStore.ts` — módulo JS/TS
+  - Funciones/clases: loadDemoPosicion, loadDemoBote, demoAportarBote, loadDemoRetiro, demoProponerRetiro, demoAplicarRetiro, demoBloquear, demoDesbloquear, demoRenovar
+- `services/reservaService.ts` — módulo JS/TS
+  - Funciones/clases: loadReservaPreview, bloquearReserva, desbloquearReserva, renovarReserva, aportarReservaBote, leerPendienteRetiroBote, proponerRetiroReserva, aplicarRetiroReserva, reservaErrorKey
+- `services/savedSession.ts` — módulo JS/TS
+  - Funciones/clases: subscribeSessionCleared, isSessionSaved, purgePersistedWrap, markSessionSaved, restoreSavedSessionWrap, clearSavedSession, signOutSavedSession
+- `services/secureStorageService.ts` — módulo JS/TS
+  - Funciones/clases: SecureStorageService
+- `services/sponsorLock.ts` — módulo JS/TS
+  - Funciones/clases: loadLockedSponsor, lockSponsorOnce
+- `services/telegramBot.ts` — módulo JS/TS
+  - Funciones/clases: envTelegramBot, resolveTelegramBot
+- `services/userProfile.ts` — módulo JS/TS
+  - Funciones/clases: PUBLIC_PROFILE_BATCH, AVATAR_PRESETS, EMPTY_PROFILE, PUBLIC_PHOTO_MAX, clampAvatarId, hasLockedPublicIdentity, isPublicIdentityLocked, sanitizePublicPhoto, canSubmitPublicIdentity, publicPhotoFromAsset, normalizeDisplayName, isValidDisplayName, persistPickedPhoto, initialsFromName, avatarColorForWallet, labelForProfile, loadOwnProfile, saveOwnProfile, clearOwnProfile, loadProfileDirectory, rememberProfiles, rememberProfile, publishOwnProfile, fetchPublicProfiles
+- `services/verificationFeeReceipt.ts` — módulo JS/TS
+  - Funciones/clases: hasVerificationFeeReceipt, markVerificationFeeReceipt
+- `services/walletAuth.ts` — módulo JS/TS
+  - Funciones/clases: BIND_WALLET_PURPOSE, BIND_TYPES, AUTH_TYPES, authDomain, signWalletAuth, signedAuthBody, recoverWalletAuth, isFreshTimestamp, signBindExternalWallet, recoverBindExternalWallet
+- `services/walletOpenEscape.ts` — módulo JS/TS
+  - Funciones/clases: subscribeWalletOpenEscape, requestWalletOpenEscape
+- `services/walletSession.ts` — módulo JS/TS
+  - Funciones/clases: setWalletWrapKey, getWalletWrapKey, hasWalletSession, clearWalletSession
+- `services/zkService.ts` — módulo JS/TS
+  - Funciones/clases: ZKService, ZK_CIRCUIT_PATHS, ZKServiceStatus
+- `stubs/ws-stub.js` — módulo JS/TS
+  - Funciones/clases: default
+- `stubs/zk-node-stub.js` — módulo JS/TS
+- `stubs/zlib-stub.js` — módulo JS/TS
+- `test/accounting.test.js` — módulo JS/TS
+- `test/accountWorld.test.js` — módulo JS/TS
+- `test/admin-totp.test.js` — módulo JS/TS
+- `test/alta-registro.test.js` — módulo JS/TS
+- `test/attest2of2.test.js` — módulo JS/TS
+- `test/audit-fixes.test.js` — módulo JS/TS
+  - Funciones/clases: isSumsubHttps
+- `test/brand-splash.test.js` — módulo JS/TS
+- `test/circuitBreaker.test.js` — módulo JS/TS
+- `test/commission-levels.test.js` — módulo JS/TS
+- `test/contract-abi.test.js` — módulo JS/TS
+- `test/cuotas.test.js` — módulo JS/TS
+- `test/cyber-hardening.test.js` — módulo JS/TS
+  - Funciones/clases: loadWrapFromBiometric, clearBiometricWrap, confirmEmailOtp, verifyEmailOtp, loadReferralChildren, ensureAppWallet, wipeAppWallet
+- `test/demo-identity.test.js` — módulo JS/TS
+- `test/destroy.test.js` — módulo JS/TS
+- `test/equipped-frame.test.js` — módulo JS/TS
+  - Funciones/clases: rankFrameOuterSize
+- `test/fama-canje.test.js` — módulo JS/TS
+- `test/fame-rankings.test.js` — módulo JS/TS
+- `test/hardening-security.test.js` — módulo JS/TS
+- `test/hardening.test.js` — módulo JS/TS
+- `test/helpers.cjs` — módulo JS/TS
+- `test/hetzner-notify.test.js` — módulo JS/TS
+- `test/identity.test.js` — módulo JS/TS
+- `test/invite-code.test.js` — módulo JS/TS
+- `test/kyc.test.js` — módulo JS/TS
+- `test/legal-consent.test.js` — módulo JS/TS
+- `test/levelProgress.test.js` — módulo JS/TS
+- `test/liquidation.test.js` — módulo JS/TS
+- `test/loanLevels.test.js` — módulo JS/TS
+- `test/mlm.test.js` — módulo JS/TS
+- `test/money-invariants.test.js` — módulo JS/TS
+- `test/morosity.test.js` — módulo JS/TS
+- `test/origination-cupo.test.js` — módulo JS/TS
+- `test/peg.test.js` — módulo JS/TS
+- `test/racha.test.js` — módulo JS/TS
+- `test/referral-earnings.test.js` — módulo JS/TS
+  - Funciones/clases: creditDirectWei
+- `test/render-notify.test.js` — módulo JS/TS
+- `test/reserva.test.js` — módulo JS/TS
+- `test/save-changes.test.js` — módulo JS/TS
+  - Funciones/clases: hasUnsavedChanges
+- `test/secret-box.test.js` — módulo JS/TS
+- `test/security-audit-fixes.test.js` — módulo JS/TS
+- `test/security-hardening.test.js` — módulo JS/TS
+- `test/security.test.js` — módulo JS/TS
+- `test/sponsor-lock.test.js` — módulo JS/TS
+- `test/telegram-alerts-only.test.js` — módulo JS/TS
+- `test/telegram-bot-name.test.js` — módulo JS/TS
+- `test/textbelt-notify.test.js` — módulo JS/TS
+- `test/wallet-link-reject.test.js` — módulo JS/TS
+- `test/wallet-link-sign.test.js` — módulo JS/TS
+- `theme/androidText.ts` — módulo JS/TS
+  - Funciones/clases: remapAndroidTextStyle, setInterReady
+- `theme/palette.ts` — módulo JS/TS
+  - Funciones/clases: layout, palettes
+- `theme/patchAndroidText.ts` — módulo JS/TS
+- `theme/ThemeContext.tsx` — módulo JS/TS
+  - Funciones/clases: ThemeProvider, useTheme
+- `types/zk-modules.d.ts` — módulo JS/TS
+- `types/zkTypes.ts` — módulo JS/TS
+  - Funciones/clases: asFieldElement, ZKTypeValidator, ZK_SECURITY_CONSTANTS
+- `utils/accountEntry.ts` — módulo JS/TS
+  - Funciones/clases: canSubmitCreateSecrets, canSubmitDeviceCredentials, canSubmitCreateCode, canSubmitSignIn, signInEmailMatches, signInEmailAllowed, welcomeShowsCreate, welcomeShowsSignIn, accountOnPhoneFromProbes, wrapReadyForApp, nextEntryScreen, welcomeActions, restoreMatchesDevice, walletRunsOnThisDevice, restoreAllowedOnThisDevice, orderUnlockMethods, unlockPromptMethods, nextUnlockAfterBiometricFail, appOffersDestroyAccount, networkChangeCreatesAccount, liveSecondCreditAllowed, signInUsernameMatches, signInUsernameAllowed, sessionOwnedHere, canSubmitReinstall, canSubmitRestorePhrase, walletFailEscapes, afterUnlockNext
+- `utils/adminAttester.ts` — módulo JS/TS
+  - Funciones/clases: looksLikePrivateKey, attesterProposalError
+- `utils/adminProposal.ts` — módulo JS/TS
+  - Funciones/clases: describeAdminCalldata
+- `utils/appDeepLink.ts` — módulo JS/TS
+  - Funciones/clases: LOCKED_DEEP_LINK_ROOMS, isAllowedAppUrl, parseAppDeepLink
+- `utils/appKitStorage.ts` — módulo JS/TS
+  - Funciones/clases: appKitStorage
+- `utils/appNotice.ts` — módulo JS/TS
+  - Funciones/clases: showNotice
+- `utils/biometricStatus.ts` — módulo JS/TS
+  - Funciones/clases: BIOMETRIC_TYPE_FINGERPRINT, BIOMETRIC_TYPE_FACIAL, BIOMETRIC_TYPE_IRIS, ENROLLED_LEVEL_BIOMETRIC_WEAK, kindsFromTypes, resolveBiometricAvailability
+- `utils/copyText.ts` — módulo JS/TS
+  - Funciones/clases: copyText
+- `utils/creditCooldown.ts` — módulo JS/TS
+  - Funciones/clases: PRESTAMO_COOLDOWN_SECS, cooldownRestanteDesdeTimestamp
+- `utils/creditGates.ts` — módulo JS/TS
+  - Funciones/clases: liveNeedsKyc, liveNeedsPhone, livePhoneStepDone, phoneVerifiedOnThisDevice, liveNeedsEmail, liveNeedsPhrase, liveNeedsDeviceMatch, liveNeedsAccess, liveCreditReady, identityUnlocked, loanGateBannerRows, liveCreditBlockReason, creditNeedsKyc, creditNeedsPhone, creditNeedsEmail, creditNeedsPhrase, creditNeedsDeviceMatch, CREDIT_ACCESS_LEGACY_USDT, CREDIT_ACCESS_USDT, CREDIT_VERIFY_EMAIL_USDT, CREDIT_VERIFY_PHONE_USDT, accessPayUsdt, creditAccessPaidUsd, verificationFeeUsdt, verificationFeeLabel, hasCreditAccess, voluntaryDonateUsd, isHiddenVerificationDonation, classifyDonationKind, creditNeedsAccess, canPayCreditAccess, creditLineLooksActive, canHydrateCreditStatus, adminSeatOpen, identityHashBound
+- `utils/debtReminders.ts` — módulo JS/TS
+  - Funciones/clases: getInstallmentWindows, visibleDebtReminder, canSendMidReminder, shouldSendDebtReminder, upcomingReminderTriggers
+- `utils/emailPolicy.ts` — módulo JS/TS
+  - Funciones/clases: normalizeEmail, isAllowedEmailProvider, canonicalEmail, isValidEmail
+- `utils/fameRankings.ts` — módulo JS/TS
+  - Funciones/clases: FAME_PAGE_SIZE, RANKING_UNLOCK_LEVEL, FAME_BOARD_KINDS, rankingVisible, normalizeFameMetric, attachCombinedScores, fameBoardMetric, sortFameBoard, podiumPlayers, podiumPlace, rankedFameRows, fameListAfterPodium
+- `utils/formatters.ts` — módulo JS/TS
+  - Funciones/clases: formatCooldown, formatCountdownClock, formatAddress, formatUSD, formatDueDate, parsePositiveDecimal, calculateLoanWithInterest
+- `utils/founderWallet.ts` — módulo JS/TS
+  - Funciones/clases: isFounderWallet
+- `utils/graceClock.ts` — módulo JS/TS
+  - Funciones/clases: GRACE_SECONDS, paymentDueAt, graceEndsAt, graceMoraPhase, graceRemainingSeconds, moraElapsedSeconds, graceMoraSeconds
+- `utils/historyWorld.ts` — módulo JS/TS
+  - Funciones/clases: historyJournalSuffix, movementBelongsToWorld
+- `utils/inviteCode.ts` — módulo JS/TS
+  - Funciones/clases: INVITE_STORAGE_KEY, formatInviteCode, addressToInviteCode, inviteCodeToAddress, extractInviteFromText, extractInviteFromUrl, extractInviteNameFromUrl, parseInviteInput, buildInviteLink, inviteLinkPreview
+- `utils/legacyStorage.ts` — módulo JS/TS
+  - Funciones/clases: migrateLegacyStorage
+- `utils/legalConsent.ts` — módulo JS/TS
+  - Funciones/clases: LEGAL_VERSION, LEGAL_STORAGE_KEY, parseLegalRecord, isCurrentLegalAccepted, makeLegalRecord, nextBootLegalScreen, hasReadToEnd
+- `utils/moraHistory.ts` — módulo JS/TS
+  - Funciones/clases: MORA_GRACE_DAYS, FAMA_PER_MORA_DAY, GEN1_BP, moraDays, moraPenaltyDays, moraFameLost, moraBenefitsBlocked, gen1ShareWei, buildMoraSpells, addPoolToSpells, isTransferMovement, isLoanMovement, isSupportMovement
+- `utils/openWalletConnect.ts` — módulo JS/TS
+  - Funciones/clases: openWalletConnect, withWalletSignTimeout
+- `utils/passwordPolicy.ts` — módulo JS/TS
+  - Funciones/clases: PASSWORD_MIN, PASSWORD_MAX, PASSWORD_LENGTH, GENERATED_SECRET_CHARS, isPrivateKeyPassword, masterPasswordReject, isValidMasterPassword, passwordRuleFlags, masterPasswordFromRandomBytes
+- `utils/pendingDeepLink.ts` — módulo JS/TS
+  - Funciones/clases: rememberAppUrl, takePendingAppUrl
+- `utils/pickerHold.ts` — módulo JS/TS
+  - Funciones/clases: setPickerActive, isPickerHeld
+- `utils/pinPolicy.ts` — módulo JS/TS
+  - Funciones/clases: isWeakPin, lockoutMs, remainingLockMs
+- `utils/rankingDivisions.ts` — módulo JS/TS
+  - Funciones/clases: RANKING_DIVISION_SIZE, RANKING_PRIZE_BUDGET_BP, RANKING_PRIZE_FLOOR_BP, monthlyPrizeBudgetUsd, divisionCountFor, divisionWeight, seatPlaceWeight, assignDivisions, attachDivisionPrizes, seatsForDivision
+- `utils/referralEarnings.ts` — módulo JS/TS
+  - Funciones/clases: asWei, sumReferralEarnings, creditDirectWei
+- `utils/referralPages.ts` — módulo JS/TS
+  - Funciones/clases: REFERRAL_PAGE_SIZE, referralPageCount, clampReferralPage, sliceReferralPage, visibleReferralPages
+- `utils/referralSearch.ts` — módulo JS/TS
+  - Funciones/clases: normalizeReferralQuery, referralPersonMatches
+- `utils/referralTree.ts` — módulo JS/TS
+  - Funciones/clases: REFERRAL_MAX_DEPTH, normalizeBranchKey, canExpandReferralDepth, isBranchOpen, toggleBranchOpen, uniqueBranchAddresses
+- `utils/safeFetch.ts` — módulo JS/TS
+  - Funciones/clases: safeJsonFetch, readJsonLimited
+- `utils/safeOpenUrl.ts` — módulo JS/TS
+  - Funciones/clases: isAllowedOpenUrl, openSafeUrl
+- `utils/sanitize.ts` — módulo JS/TS
+  - Funciones/clases: stripUnsafeText, isHttpsUrl, isAllowedWei, isHexAddress
+- `utils/secretBox.ts` — módulo JS/TS
+  - Funciones/clases: timingSafeEqualBytes, timingSafeEqualHex, hmacSha256, deriveWrapKey, deriveWrapKeyAsync, isSealedBlob, sealedBlobVersion, sealSecret, openSecret
+- `utils/secretBoxAes.d.ts` — módulo JS/TS
+  - Funciones/clases: sealAesGcmV2, openAesGcmV2
+- `utils/secretBoxAes.js` — módulo JS/TS
+- `utils/sponsorLock.ts` — módulo JS/TS
+  - Funciones/clases: SPONSOR_LOCK_PREFIX, sponsorLockKey, resolveSponsorInput, parseLockedSponsor, buildLockedSponsor, keepFirstLock
+- `utils/storeSlot.ts` — módulo JS/TS
+  - Funciones/clases: storeSlot
+- `utils/telegramBotName.cjs` — módulo JS/TS
+- `utils/totp.ts` — módulo JS/TS
+  - Funciones/clases: bytesToBase32, base32ToBytes, totpAt, verifyTotp, otpauthUrl
+- `utils/txErrors.ts` — módulo JS/TS
+  - Funciones/clases: setTxErrorLang, humanizeTxError
+- `utils/unsavedChanges.ts` — módulo JS/TS
+  - Funciones/clases: hasUnsavedChanges
+- `utils/usernamePolicy.ts` — módulo JS/TS
+  - Funciones/clases: normalizeUsername, isValidUsername
+- `utils/waitMined.ts` — módulo JS/TS
+  - Funciones/clases: waitMined
+- `utils/walletChain.ts` — módulo JS/TS
+  - Funciones/clases: parseEvmChainId, needsWalletAddChain, ensureExternalWalletOnAppChain
+- `utils/walletVaultPolicy.ts` — módulo JS/TS
+  - Funciones/clases: allowWalletAsyncFallback
+- `wallet/AppModeContext.tsx` — módulo JS/TS
+  - Funciones/clases: AppModeProvider, useAppMode
+- `wallet/appModePersist.ts` — módulo JS/TS
+  - Funciones/clases: APP_MODE_STORAGE_KEY, resolvePersistedMode, isFirstAppMode
+- `wallet/AppWalletContext.tsx` — módulo JS/TS
+  - Funciones/clases: AppWalletProvider, useAppWallet
+
+### Docs
+- `CONTEXTO.md` — documentación (sí)
+- `VISION.md` — documentación (sí)
+- `MEMORIA.md` — documentación (sí)
+- `README.md` — documentación (sí)
+
+## Docs vs código
+Sin desfases detectados entre docs y código.
+
+## Conexión
+- verificar_conectores: 0 crítico(s), 0 aviso(s)
+- detectar_logica: 0 crítico(s), 4 aviso(s)
+- verificar_modulos: 0 crítico(s), 15 aviso(s)
+
+## Estado
+**AL DÍA**
+
+_Inventario heurístico + docs + conexión estática. No afirma ejecución 100% en runtime._

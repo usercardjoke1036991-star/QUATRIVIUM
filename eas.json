@@ -1,0 +1,55 @@
+{
+  "cli": {
+    "version": ">= 21.7.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "image": "sdk-54"
+      },
+      "env": {
+        "EXPO_PUBLIC_APP_ENV": "development",
+        "EXPO_PUBLIC_CHAIN_ID": "421614",
+        "EXPO_PUBLIC_CHAIN_NAME": "arbitrumSepolia",
+        "EXPO_PUBLIC_USDT_ADDRESS": "0x0000000000000000000000000000000000000000",
+        "EXPO_PUBLIC_WALLETCONNECT_PROJECT_ID": "546043cd7fbfac1902ccbbbe5b3d3fec"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "image": "sdk-54",
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_APP_ENV": "development",
+        "EXPO_PUBLIC_CHAIN_ID": "421614",
+        "EXPO_PUBLIC_CHAIN_NAME": "arbitrumSepolia",
+        "EXPO_PUBLIC_USDT_ADDRESS": "0x0000000000000000000000000000000000000000",
+        "EXPO_PUBLIC_WALLETCONNECT_PROJECT_ID": "546043cd7fbfac1902ccbbbe5b3d3fec"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "android": {
+        "image": "sdk-54",
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_APP_ENV": "production",
+        "EXPO_PUBLIC_CHAIN_ID": "42161",
+        "EXPO_PUBLIC_CHAIN_NAME": "arbitrumOne",
+        "EXPO_PUBLIC_USDT_ADDRESS": "0x93b346b6BC2548dA6A1E7d98E9a421B42541425b",
+        "EXPO_PUBLIC_INVITE_WEB_BASE": "https://quatriviumcredit.app",
+        "EXPO_PUBLIC_WALLETCONNECT_PROJECT_ID": "546043cd7fbfac1902ccbbbe5b3d3fec",
+        "EXPO_PUBLIC_CONTRACT_ADDRESS_MAINNET": "0x0000000000000000000000000000000000000000",
+        "EXPO_PUBLIC_FAMA_ADDRESS_MAINNET": "0x0000000000000000000000000000000000000000",
+        "EXPO_PUBLIC_RESERVA_ADDRESS_MAINNET": "0x0000000000000000000000000000000000000000",
+        "EXPO_PUBLIC_ALTA_ADDRESS_MAINNET": "0x0000000000000000000000000000000000000000"
+      }
+    }
+  }
+}

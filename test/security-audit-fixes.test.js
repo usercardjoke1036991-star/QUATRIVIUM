@@ -41,17 +41,6 @@ describe('security audit remediations', function () {
     expect(lock).to.include("biometricsSecurityLevel: 'strong'");
     expect(lock).to.include('PIN_ROUNDS = 20_000');
     expect(lock).to.include('SecureStore.getItemAsync(RECOVERY_WRAP, BIO_WRAP_OPTIONS)');
-    const email = fs.readFileSync(
-      path.join(__dirname, '..', 'services', 'accountEmail.ts'),
-      'utf8'
-    );
-    expect(email).to.include('allowWalletAsyncFallback');
-    const worker = fs.readFileSync(
-      path.join(__dirname, '..', 'scripts', 'notify-worker.mjs'),
-      'utf8'
-    );
-    expect(worker).to.include('json(res, 200, { ok: true, kycProvider: hasKycProvider })');
-    expect(worker).to.not.include('attester: attesterReady');
     const fama = fs.readFileSync(
       path.join(__dirname, '..', 'contracts', 'libraries', 'QuatriviumFamaLib.sol'),
       'utf8'

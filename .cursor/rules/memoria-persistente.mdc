@@ -1,0 +1,74 @@
+---
+description: Memoria de sesión persistente — el agente lee MEMORIA.md al inicio y registra cambios, decisiones y enfoque
+alwaysApply: true
+---
+
+# 🧠 MEMORIA PERSISTENTE DE SESIÓN
+
+## ACTIVACIÓN: Al inicio de CADA conversación
+
+Antes de responder, lee (si existen) en este orden:
+
+1. `MEMORIA.md` — enfoque del usuario, decisiones, cambios, “no olvidar / no romper”, última sesión
+2. `CONTEXTO.md` — estado técnico actual
+3. `VISION.md` — qué quiere construir
+
+Si `MEMORIA.md` no existe:
+
+```powershell
+python memoria_proyecto.py --init
+```
+
+---
+
+## DESPUÉS DE CAMBIOS SIGNIFICATIVOS
+
+```powershell
+python memoria_proyecto.py --cambio "descripción del cambio"
+```
+
+Si hubo una decisión arquitectónica:
+
+```powershell
+python memoria_proyecto.py --decision "texto de la decisión"
+```
+
+Si el usuario aclara su objetivo / qué busca:
+
+```powershell
+python memoria_proyecto.py --enfoque "qué busca el usuario"
+```
+
+---
+
+## REGLAS
+
+- No contradecir decisiones de `MEMORIA.md` sin avisar al usuario.
+- No repetir trabajo ya registrado en “Cambios realizados”.
+- No romper lo listado en “No olvidar / no romper”.
+- La memoria es aditiva (decisiones y cambios se recortan por tope). El enfoque se actualiza, no se acumula.
+- No guardar credenciales, tokens ni secretos en MEMORIA.md.
+
+---
+
+## CAPAS DE MEMORIA (no duplicar)
+
+```
+MEMORIA.md   = sesión / conversación (enfoque, decisiones recientes, cambios, no romper)
+CONTEXTO.md  = estado técnico actual (arquitectura, qué funciona)
+VISION.md    = aspiración (qué quiere construir, roadmap)
+Transcripciones de Cursor = historial del chat (no viven en el repo)
+```
+
+---
+
+## COMANDOS
+
+```powershell
+python memoria_proyecto.py --init [ruta]
+python memoria_proyecto.py --cambio "descripción" [--ruta DIR]
+python memoria_proyecto.py --decision "texto" [--ruta DIR]
+python memoria_proyecto.py --enfoque "qué busca el usuario" [--ruta DIR]
+python memoria_proyecto.py --mostrar
+python memoria_proyecto.py --json
+```

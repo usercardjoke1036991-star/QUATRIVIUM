@@ -1,0 +1,22 @@
+# SonarQube local. No publicar el puerto fuera de esta máquina.
+# Uso: docker compose -f docker-compose.sonar.yml up -d
+services:
+  sonarqube:
+    image: sonarqube:lts-community
+    container_name: quatrivium-sonarqube
+    ports:
+      - "127.0.0.1:9000:9000"
+    # Si ya hay un contenedor `sonarqube` en 9000, no levante este: use ese.
+    environment:
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+      SONAR_FORCEAUTHENTICATION: "false"
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_logs:/opt/sonarqube/logs
+      - sonarqube_ext:/opt/sonarqube/extensions
+    restart: unless-stopped
+
+volumes:
+  sonarqube_data:
+  sonarqube_logs:
+  sonarqube_ext:

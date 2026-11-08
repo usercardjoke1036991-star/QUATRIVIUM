@@ -21,7 +21,6 @@ describe('Guardar stays off until something changes', function () {
       'components/LanguageSelector.tsx',
       'components/ThemeToggle.tsx',
       'components/AuthMethodPicker.tsx',
-      'components/NotificationChannels.tsx',
       'components/ProfileSettings.tsx',
       'components/BiometricLockSection.tsx',
     ];
@@ -30,11 +29,5 @@ describe('Guardar stays off until something changes', function () {
       expect(src, rel).to.match(/disabled=\{[^}]*!dirty/);
       expect(src, rel).to.match(/if \([^)]*!dirty/);
     }
-    const avisos = fs.readFileSync(
-      path.join(root, 'components', 'NotificationChannels.tsx'),
-      'utf8'
-    );
-    expect(avisos).to.include('return false');
-    expect(avisos).to.include('if (ok) Alert.alert');
   });
 });

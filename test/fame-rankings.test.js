@@ -286,11 +286,6 @@ describe('fame rankings', () => {
       'utf8'
     );
     expect(leveling).to.include('(budget * wDiv * wSeat) / (sumDiv * sumaPesosElegibles)');
-    const banner = fs.readFileSync(
-      path.join(__dirname, '..', 'components', 'KycAccessBanner.tsx'),
-      'utf8'
-    );
-    expect(banner).to.include('accessPaid');
     const profiles = fs.readFileSync(
       path.join(__dirname, '..', 'profile', 'ProfileContext.tsx'),
       'utf8'
@@ -321,15 +316,12 @@ describe('fame rankings', () => {
     expect(result.roster[399].toLowerCase()).to.equal(viewer);
   });
 
-  it('loads ranking names and photos in full-division batches via the notify worker', () => {
+  it('loads ranking names and photos locally without notify worker', () => {
     const profiles = fs.readFileSync(
       path.join(__dirname, '..', 'services', 'userProfile.ts'),
       'utf8'
     );
-    expect(profiles).to.include('PUBLIC_PROFILE_BATCH = 100');
-    expect(profiles).to.include('notifyJsonFetch');
-    expect(profiles).to.include('notifyApiConfigured');
-    expect(profiles).to.not.include('unique.slice(0, 20)');
+    expect(profiles).to.not.include('notifyJsonFetch');
     const board = fs.readFileSync(
       path.join(__dirname, '..', 'services', 'fameLeaderboard.ts'),
       'utf8'
@@ -350,12 +342,6 @@ describe('fame rankings', () => {
     expect(ui.replace(/\s+/g, ' ')).to.include(
       'useFameLeaderboard( enabled && unlocked, walletAddress )'
     );
-    const worker = fs.readFileSync(
-      path.join(__dirname, '..', 'scripts', 'notify-worker.mjs'),
-      'utf8'
-    );
-    expect(worker).to.include("path === '/profiles'");
-    expect(worker).to.include('.slice(0, 100)');
     const loans = fs.readFileSync(
       path.join(__dirname, '..', 'components', 'LoanTierCard.tsx'),
       'utf8'

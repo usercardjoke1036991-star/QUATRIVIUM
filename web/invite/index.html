@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Invitación Quatrivium Finance</title>
+  <meta name="description" content="Lo invitan a Quatrivium Finance. Abra la aplicación e ingrese el código para activar su línea de crédito." />
+  <meta property="og:title" content="Invitación Quatrivium Finance" />
+  <meta property="og:description" content="Abra este enlace para unirse con un código de invitación." />
+  <meta property="og:type" content="website" />
+  <style>
+    body { margin: 0; font-family: Inter, Segoe UI, sans-serif; background: #f4fbf7; color: #163326; }
+    main { max-width: 520px; margin: 0 auto; padding: 40px 20px; text-align: center; }
+    h1 { margin: 0 0 8px; }
+    p { line-height: 1.5; color: #2d4a38; }
+    .code {
+      font-family: ui-monospace, Consolas, monospace;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      background: #fff;
+      border: 1px solid #1f8a4c;
+      border-radius: 10px;
+      padding: 14px 12px;
+      margin: 18px 0;
+      word-break: break-all;
+    }
+    a.btn, button.btn {
+      display: inline-block;
+      margin: 8px 6px 0;
+      padding: 14px 18px;
+      border-radius: 10px;
+      background: #146C2E;
+      color: #fff;
+      text-decoration: none;
+      border: 0;
+      font-weight: 700;
+      font-size: 15px;
+    }
+    .hint { font-size: 13px; color: #3d5c48; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Quatrivium Finance</h1>
+    <p>Lo invitan a Quatrivium Finance. Si ya tiene la aplicación, ábrala con este enlace. Si no, copie el código y péguelo al crear la cuenta.</p>
+    <div class="code" id="code">—</div>
+    <p>
+      <a class="btn" id="open">Abrir Quatrivium Finance</a>
+    </p>
+    <p class="hint">Si la aplicación no se abre, use el código. APK directo soberano. Paquete id=com.quatrivium.sovereign.</p>
+  </main>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const raw = (params.get('c') || params.get('code') || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
+    const inviter = (params.get('n') || params.get('name') || '').trim();
+    const grouped = raw ? (raw.match(/.{1,4}/g) || []).join('-') : '';
+    const codeEl = document.getElementById('code');
+    const open = document.getElementById('open');
+    const lead = document.querySelector('main p');
+    codeEl.textContent = grouped || 'Código no disponible';
+    if (inviter && lead) {
+      lead.textContent = inviter + ' lo invita a Quatrivium Finance. Si ya tiene la aplicación, ábrala con este enlace. Si no, copie el código y péguelo al crear la cuenta.';
+    }
+    const appUrl = 'quatrivium-sovereign://invite?c=' + raw + (inviter ? '&n=' + encodeURIComponent(inviter) : '');
+    open.href = appUrl;
+    if (raw) {
+      try { location.href = appUrl; } catch (e) {}
+    }
+  </script>
+</body>
+</html>

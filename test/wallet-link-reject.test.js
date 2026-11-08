@@ -46,8 +46,6 @@ describe('wallet link reject stays idle', function () {
     expect(charge).to.include('beginExternalWalletHandoff');
     expect(handoff).to.include('4 * 60 * 1000');
     expect(lock).to.include('externalWalletHandoffActive(now) || isPickerHeld()');
-    const kyc = fs.readFileSync(path.join(__dirname, '..', 'services', 'kycProvider.ts'), 'utf8');
-    expect(kyc).to.include('beginExternalWalletHandoff');
     const awayFor = 30_000;
     const now = 100_000;
     const backgroundedAt = now - awayFor;

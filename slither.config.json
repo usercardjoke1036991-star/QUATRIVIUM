@@ -1,0 +1,5 @@
+{
+  "filter_paths": "contracts/mocks,node_modules",
+  "exclude_informational": true,
+  "detectors_to_exclude": "naming-convention,solc-version,timestamp"
+}

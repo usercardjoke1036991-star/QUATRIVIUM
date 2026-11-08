@@ -1,0 +1,359 @@
+---
+description: Sistema autónomo de auditoría y QA continuo - Protocolo de detección de errores en tiempo real
+alwaysApply: true
+---
+
+# 🔍 SISTEMA AUTÓNOMO DE AUDITORÍA Y QA
+
+## PROTOCOLO DE ACTIVACIÓN AUTOMÁTICA
+
+**REGLA CRÍTICA**: Ante CUALQUIER interacción, primero ejecuta el protocolo de detección de contexto silenciosamente. No esperes que el usuario pida auditorías.
+
+---
+
+## PASO 0: LECTURA DE CONTEXTO PERSISTENTE
+
+**OBLIGATORIO antes de cualquier auditoría**: buscar y leer `CONTEXTO.md` en el directorio raíz del proyecto.
+
+```
+SI existe CONTEXTO.md:
+  → Leerlo COMPLETO antes de comenzar la auditoría
+  → Extraer: Stack, Estado actual, Lo que funciona ✅, Lo que está roto ❌
+  → Adaptar las verificaciones al propósito real del proyecto
+  → Respetar las decisiones de arquitectura descritas
+  → No reportar como "problema" algo descrito como "en progreso 🔄"
+
+SI NO existe CONTEXTO.md:
+  → Advertir: "⚠️ No se encontró CONTEXTO.md — auditando sin contexto del proyecto"
+  → Sugerir: "Ejecuta: python actualizar_contexto.py --init"
+  → Continuar la auditoría con la información disponible (NO bloquear)
+```
+
+**Nunca fallar ni abortar** si `CONTEXTO.md` no existe. Solo advertir.
+
+---
+
+## PASO 1: DETECCIÓN AUTOMÁTICA DEL TIPO DE PROYECTO
+
+Al inicio de CADA sesión o cuando el usuario mencione archivos/código, detecta el tipo de proyecto inspeccionando estos archivos en el directorio raíz y subdirectorios:
+
+| Archivo indicador | Tipo de proyecto | Stack de verificación |
+|---|---|---|
+| `build.gradle` / `build.gradle.kts` | Android (Gradle) | Gradle build + lint |
+| `AndroidManifest.xml` | Android | ADB + Gradle check |
+| `package.json` con `react-native` | React Native | metro + jest |
+| `package.json` con `next` / `react` | Web Node/React | npm build + test |
+| `package.json` (genérico) | Node.js | npm test + lint |
+| `requirements.txt` / `pyproject.toml` | Python | pytest + ruff/flake8 |
+| `*.mq4` / `*.mq5` / `*.mqh` | MQL4/5 Trading | Validación de sintaxis + lógica de trading |
+| `Cargo.toml` | Rust | cargo check + test |
+| `go.mod` | Go | go build + test |
+| `*.sln` / `*.csproj` | .NET/C# | dotnet build |
+| `Dockerfile` o `docker-compose.yml` | Docker/DevOps | docker build check |
+| `main.py` / `app.py` solo | Python Script | python -m py_compile |
+
+---
+
+## PASO 2: LECTURA DE ERRORES DE TERMINAL EN TIEMPO REAL
+
+**INSTRUCCIÓN MANDATORIA**: Cuando el usuario ejecute comandos o cuando tú ejecutes código, lee el output del terminal y:
+
+1. **Detecta patrones de error**:
+   - `Error:`, `ERROR`, `Exception`, `Traceback`, `FAILED`, `error TS`, `error[E`, `BUILD FAILED`
+   - Warnings críticos: `DeprecationWarning`, `WARNING`, `WARN`
+   - Errores de sintaxis: `SyntaxError`, `IndentationError`, `ParseError`
+
+2. **Actúa inmediatamente** sin esperar confirmación:
+   - Identifica la línea exacta del error
+   - Propone la corrección
+   - Aplica la corrección si es obvia y segura
+
+3. **Lee el archivo de terminal** en `.cursor/terminals/` para capturar output reciente
+
+---
+
+## PASO 3: PROTOCOLO DE AUDITORÍA POR TIPO DE PROYECTO
+
+### 🤖 PROYECTOS MQL4/MQL5 (Trading Bots)
+```
+Verificar obligatoriamente:
+- Gestión de riesgo: ¿Hay StopLoss y TakeProfit definidos?
+- ¿Hay control de errores en OrderSend/trade.Buy/trade.Sell?
+- ¿Se verifica MarketInfo()/SymbolInfoDouble() antes de operar?
+- ¿Hay protección contra múltiples posiciones simultáneas no deseadas?
+- ¿OnTick() tiene guard contra barras duplicadas?
+- ¿Las variables de volumen usan NormalizeDouble() o SymbolInfoDouble LOTSTEP?
+```
+
+### 🐍 PROYECTOS PYTHON
+```
+Verificar obligatoriamente:
+- ¿Hay manejo de excepciones (try/except) en operaciones I/O y API?
+- ¿Se usan variables de entorno (.env) para credenciales? (NO hardcoded)
+- ¿Los imports están organizados y sin duplicados?
+- ¿Las funciones tienen docstrings?
+- ¿Hay tests en /tests/?
+- Ejecutar: python -m py_compile <archivo> para validar sintaxis
+```
+
+### 📱 PROYECTOS ANDROID
+```
+Verificar obligatoriamente:
+- ¿El AndroidManifest.xml tiene los permisos correctos?
+- ¿Hay ProGuard/R8 configurado para builds de release?
+- ¿Las operaciones de red usan coroutines/RxJava (no UI thread)?
+- ¿Hay manejo de lifecycle en Activities/Fragments?
+- ¿El build.gradle tiene versiones compatibles de dependencies?
+```
+
+### 🌐 PROYECTOS WEB (Node/React/Next)
+```
+Verificar obligatoriamente:
+- ¿package.json tiene scripts de build y test?
+- ¿Hay .env.example con variables necesarias?
+- ¿Los componentes React tienen manejo de estado correcto?
+- ¿Las llamadas API tienen manejo de errores y loading states?
+- ¿Hay configuración de TypeScript (tsconfig.json)?
+```
+
+---
+
+## PASO 3b: VERIFICACIÓN DE CONTEXTO PERSISTENTE
+
+Como parte de la auditoría, verificar que el proyecto tiene documentación de contexto:
+
+```
+✅ CONTEXTO.md existe y tiene contenido → Proyecto documentado
+⚠️ CONTEXTO.md existe pero secciones vacías → Recomendar completarlo
+❌ CONTEXTO.md no existe → Recomendar: python actualizar_contexto.py --init
+```
+
+Si el proyecto tiene cambios recientes y `CONTEXTO.md` no refleja el estado actual,
+sugerir al usuario:
+```
+python actualizar_contexto.py --agregar-cambio "descripción del cambio reciente"
+```
+
+---
+
+## PASO 4: AUDITORÍA DE SEGURIDAD UNIVERSAL
+
+**Siempre verificar** independientemente del tipo de proyecto:
+
+- 🚫 **NUNCA credenciales hardcodeadas**: API keys, passwords, tokens en código fuente
+- 🚫 **NUNCA secrets en git**: Verificar .gitignore incluye .env, *.key, secrets.*
+- ✅ **Validar inputs**: Todo input externo debe ser validado/sanitizado
+- ✅ **Dependencias**: Alertar si hay dependencias con versiones desconocidas o sin pinear
+
+---
+
+## PASO 5: REPORTE AUTOMÁTICO DE ERRORES
+
+Cuando detectes errores, reporta en este formato SIEMPRE:
+
+```
+🚨 AUDITORÍA AUTOMÁTICA - [TIPO_PROYECTO]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ ERRORES CRÍTICOS (bloqueantes):
+  • [Archivo:Línea] Descripción del error
+  • Corrección propuesta: [código]
+
+⚠️ ADVERTENCIAS (no bloqueantes):
+  • [Descripción] → Acción recomendada
+
+✅ CORRECCIONES APLICADAS:
+  • [Qué se corrigió y por qué]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+---
+
+## REGLAS DE COMPORTAMIENTO AUTÓNOMO
+
+1. **NO PIDAS PERMISO** para auditar - hazlo automáticamente
+2. **NO IGNORES** errores de terminal aunque el usuario no los mencione
+3. **CORRIGE INMEDIATAMENTE** errores obvios de sintaxis sin preguntar
+4. **ADVIERTE ANTES** de errores de lógica o seguridad complejos
+5. **EJECUTA `qa_autonomo.py`** cuando tengas dudas sobre el estado del proyecto
+
+---
+
+## 📚 SISTEMA DE MEMORIA DE ERRORES
+
+El archivo `errores_aprendidos.json` en el workspace raíz contiene patrones de errores
+reales encontrados y corregidos en sesiones anteriores. El sistema los detecta automáticamente
+en cada ejecución de `qa_autonomo.py`.
+
+### Cuando corrijas un error que NO está en `errores_aprendidos.json`:
+1. Después de corregirlo, ejecuta: `python aprender_error.py`
+2. Registra el patrón del error para que el sistema lo detecte automáticamente en el futuro
+3. Ejecuta `python sincronizar_plantilla.py` para propagar el aprendizaje a todos los proyectos
+
+### Cuando detectes un error ya registrado:
+- Menciona su ID (ej: **ERR-001**) en tu respuesta para trazabilidad
+- Ejemplo: "Detectado ERR-003: `sys.stdout = io.TextIOWrapper()` rompe pytest — usando `reconfigure()` en su lugar"
+
+### IDs de errores conocidos (referencia rápida):
+| ID | Tipo | Descripción breve |
+|---|---|---|
+| ERR-001 | mql5 | Trading sin StopLoss |
+| ERR-002 | mql5 | Volumen sin NormalizeDouble() |
+| ERR-003 | python | sys.stdout = TextIOWrapper (rompe pytest) |
+| ERR-004 | python | Glob ** detecta subproyectos independientes |
+| ERR-005 | python | Función duplicada en el mismo módulo |
+| ERR-006 | python | SyntaxWarning por escapes inválidos en strings |
+| ERR-007 | python | Tests de subproyectos contaminan pytest raíz |
+
+> Para ver la lista completa y actualizada: `python aprender_error.py --lista`
+
+---
+
+## 🏥 HEALTH CHECK POST-RESPUESTA
+
+### ACTIVACIÓN: Al final de CADA respuesta que incluya cambios de código
+
+**REGLA**: Después de cualquier respuesta en la que hayas modificado, creado o corregido código,
+incluye obligatoriamente el siguiente bloque al final de tu respuesta.
+**NO lo incluyas** en respuestas puramente informativas o de pregunta/respuesta sin cambios de código.
+
+---
+
+### FORMATO OBLIGATORIO DEL HEALTH CHECK
+
+```
+---
+## 🏥 Salud del Proyecto
+**Estado general:** [🟢 Saludable / 🟡 Atención requerida / 🔴 Crítico]
+
+### 🧪 Estado de tests
+- Tests ejecutados: [N/N pasando] en [Xs]
+- Módulo modificado: [✅ tests pasan / ❌ fallando — corregido]
+- Suite completa: [✅ todos pasan / ⚠️ X fallando]
+- Cobertura estimada del cambio: [Alta/Media/Baja]
+[Si no hay tests → "⚠️ Sin tests — crear tests/test_main.py con: python -m pytest --co -q"]
+
+### ✅ Funcionando correctamente
+- [Lista de lo que está bien basado en el código modificado]
+
+### ⚠️ Sugerencias de mejora
+- [Mejora 1]: [por qué y cómo implementarla]
+- [Mejora 2]: [por qué y cómo implementarla]
+
+### 🚨 Problemas detectados
+- [Problema]: [impacto y solución propuesta]
+
+### 📈 Próximos pasos recomendados
+1. [Acción concreta más importante]
+2. [Segunda acción]
+```
+
+---
+
+### CRITERIOS PARA EL ESTADO GENERAL
+
+| Estado | Criterio |
+|--------|----------|
+| 🟢 Saludable | Sin errores críticos, tests pasan, manejo de excepciones correcto |
+| 🟡 Atención requerida | Hay advertencias, falta cobertura de tests, mejoras pendientes |
+| 🔴 Crítico | Errores de compilación, credenciales expuestas, riesgo financiero sin SL |
+
+---
+
+### FUENTES PARA EL ANÁLISIS (usar TODAS las disponibles)
+
+1. **Código modificado en esta sesión**: analizar lo que acabas de cambiar
+2. **`CONTEXTO.md`**: si existe, usarlo para entender el estado general del proyecto
+3. **`errores_aprendidos.json`**: verificar si algún patrón ERR-XXX aplica al código actual
+4. **Output del terminal**: si hubo errores durante la sesión, incluirlos en "Problemas detectados"
+5. **Tests**: si se ejecutaron, incluir resultado en "Funcionando correctamente" o "Problemas detectados"
+
+---
+
+### REGLAS DEL HEALTH CHECK
+
+1. **SER ESPECÍFICO**: mencionar archivos, funciones y líneas reales — nunca genérico
+2. **SER ACCIONABLE**: cada sugerencia debe incluir cómo implementarla concretamente
+3. **ADAPTAR AL TIPO**: el contenido varía según el tipo de proyecto detectado (ver regla `project-context-detector.mdc`)
+4. **OMITIR SECCIONES VACÍAS**: si no hay problemas detectados, omitir esa sección
+5. **REFERENCIAR ERRORES CONOCIDOS**: si aplica ERR-001...ERR-007, mencionarlo con su ID
+
+---
+
+### EJEMPLO REAL (Python)
+
+```
+---
+## 🏥 Salud del Proyecto
+**Estado general:** 🟡 Atención requerida
+
+### 🧪 Estado de tests
+- Tests ejecutados: 12/12 pasando en 0.58s
+- Módulo modificado: ✅ tests pasan (test_crear_proyecto.py)
+- Suite completa: ✅ todos pasan
+- Cobertura estimada del cambio: Media (función nueva sin test dedicado)
+
+### ✅ Funcionando correctamente
+- `crear_proyecto.py`: sintaxis válida, manejo de excepciones en operaciones de archivo
+- Tests en `tests/`: 12/12 pasando (pytest)
+- `.gitignore`: excluye correctamente `.env` y `*.key`
+
+### ⚠️ Sugerencias de mejora
+- **Cobertura de tests baja en `sincronizar_plantilla.py`**: solo el 40% de las funciones tiene test. Añadir `test_sincronizar_seco()` para el flag `--dry`
+- **Imports sin usar en `qa_autonomo.py`**: `import sys` en línea 3 no se usa. Eliminar para mantener el código limpio
+
+### 📈 Próximos pasos recomendados
+1. Añadir tests para `sincronizar_plantilla.py --dry` (impacto: cobertura 40% → 80%)
+2. Ejecutar `python aprender_error.py` si se detectó un nuevo patrón de error
+```
+
+---
+
+### EJEMPLO REAL (MQL5/Trading)
+
+```
+---
+## 🏥 Salud del Proyecto
+**Estado general:** 🔴 Crítico
+
+### 🚨 Problemas detectados
+- **ERR-001 detectado en `OnTick()`**: `trade.Buy()` en línea 47 sin StopLoss (sl=0). Riesgo financiero ilimitado.
+  → Solución: `double sl = Ask - 50 * _Point; trade.Buy(0.1, _Symbol, Ask, sl, tp, "Mi EA");`
+
+### ✅ Funcionando correctamente
+- Magic number configurado: `EA_MAGIC = 12345`
+- Guard de barra duplicada implementado correctamente
+
+### 💡 Oportunidades de mejora proactiva
+1. Implementar backtesting antes de activar en cuenta real
+
+### 📈 Próximos pasos recomendados
+1. URGENTE: Añadir StopLoss antes de usar en cuenta real
+2. Ejecutar backtest de 6 meses antes de activar en live
+```
+
+---
+
+## 🔗 INTEGRACIÓN CON PROACTIVE-ADVISOR
+
+Este sistema QA trabaja en conjunto con `proactive-advisor.mdc`. El advisor proactivo:
+- **Enriquece el health check** con la sección "💡 Oportunidades de mejora proactiva"
+- **Detecta el módulo activo** para focalizar las verificaciones QA
+- **Rastrea dependencias** que podrían verse afectadas por el cambio
+
+### Sección obligatoria adicional en health check (cuando aplique):
+
+```
+### 💡 Oportunidades de mejora proactiva
+1. [Oportunidad detectada durante la respuesta — con impacto y solución concreta]
+2. [Segunda oportunidad si existe]
+3. [Tercera si es relevante]
+```
+
+**Cuándo incluirla**: si durante la respuesta el agente detectó alguna de estas señales:
+- Función con más de 50 líneas → sugerir división
+- Lógica repetida en 2+ lugares → sugerir extracción
+- Test faltante para funcionalidad nueva → mencionarlo
+- Dependencia sin documentar → señalarlo
+- Operación I/O sin try/except → alertar
+
+**Cuándo omitirla**: si genuinamente no se detectaron oportunidades de mejora.

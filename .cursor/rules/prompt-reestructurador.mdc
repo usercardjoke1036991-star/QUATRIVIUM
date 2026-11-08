@@ -1,0 +1,70 @@
+---
+description: Reestructura cada petición informal en un prompt profesional (intención, herramientas, entregable) antes de actuar
+alwaysApply: true
+---
+
+# 🎯 REESTRUCTURADOR DE PETICIONES
+
+## ACTIVACIÓN: ANTES de actuar en CADA petición del usuario
+
+No ejecutes contra la frase vaga. Primero conviértela en una especificación.
+
+Este sistema **no** sustituye `CONTEXTO.md`, `VISION.md` ni `MEMORIA.md`.
+Esos archivos son estado del proyecto. Esto es **cómo interpretar el mensaje**.
+
+---
+
+## PASO 1: REFORMULAR
+
+Reformula mentalmente el mensaje informal.
+
+Si la petición es ambigua, opcionalmente:
+
+```powershell
+python reestructurar_peticion.py "texto del usuario"
+python reestructurar_peticion.py --json "texto del usuario"
+```
+
+`--ruta DIR` si el proyecto activo no es el cwd.
+
+---
+
+## PASO 2: EXTRAER (obligatorio)
+
+De la petición, deja claro:
+
+1. **Intención:** crear | modificar | corregir | auditar | preguntar | idea | otro
+2. **Tipo de trabajo** y tipo de proyecto (python | node | mql5 | android)
+3. **Herramientas** del kit si aplican: `qa_autonomo`, `vision_proyecto`, `memoria_proyecto`, `actualizar_readme`, `verificar_conectores`, `detectar_logica`, `crear_proyecto`
+4. **Entregable** esperado
+5. **Restricciones:** no romper lo que funciona; respetar CONTEXTO / VISION / MEMORIA; español si el usuario habla español
+
+---
+
+## PASO 3: EJECUTAR CONTRA LA ESPECIFICACIÓN
+
+Actúa sobre el objetivo reformulado, el alcance y el entregable — no sobre el slang original.
+
+---
+
+## PASO 4: CONFIRMAR SOLO SI ES VAGO
+
+Si la petición es **creativa o ambigua**, muestra al usuario **3-6 líneas** del prompt reformulado para confirmar el enfoque. No un muro de texto.
+
+Si la tarea es **obvia**, no pidas confirmación: typo, un test, un comando único, un fix local evidente.
+
+---
+
+## IDIOMA
+
+Responde en **español** si el usuario habla español.
+
+---
+
+## COMANDOS
+
+```powershell
+python reestructurar_peticion.py "quiero añadir login"
+python reestructurar_peticion.py --texto "..." [--ruta DIR]
+python reestructurar_peticion.py --json "..."
+```

@@ -1,0 +1,54 @@
+name: TruffleHog
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: TruffleHog
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      # La acción oficial arranca Docker y aquí salió con código 125 antes de revisar.
+      # El binario abierto hace la misma revisión sin esa imagen.
+      - name: Install TruffleHog
+        run: |
+          set -euo pipefail
+          version=3.97.9
+          curl --proto '=https' --proto-redir '=https' --tlsv1.2 -sSfL "https://github.com/trufflesecurity/trufflehog/releases/download/v${version}/trufflehog_${version}_linux_amd64.tar.gz" -o /tmp/trufflehog.tar.gz
+          echo "40377e6572495412fb9ba0bc21c9401f73b72f1d2afd11b9931bc4a5ed622866  /tmp/trufflehog.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/trufflehog.tar.gz -C /tmp trufflehog
+          sudo install -m 0755 /tmp/trufflehog /usr/local/bin/trufflehog
+
+      - name: Scan
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          since=""
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            git fetch --no-tags origin "$BASE_REF"
+            since="origin/${BASE_REF}"
+          elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            since=""
+          elif [ -z "$PUSH_BEFORE" ] || [ "$PUSH_BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            since="HEAD~1"
+          else
+            since="$PUSH_BEFORE"
+          fi
+          args=(git "file://${GITHUB_WORKSPACE}" --fail --no-update --github-actions --results=verified,unknown)
+          if [ -n "$since" ]; then
+            args+=(--since-commit "$since")
+          fi
+          trufflehog "${args[@]}"

@@ -1,0 +1,57 @@
+# Política Snyk de Quatrivium Finance. No pone secretos.
+# Expo 54 / Metro 0.83: no subir a Expo 55 / RN 0.84-0.85 ni image-size 2.x (decisión 2026-09-18).
+# La UI de Snyk agrupa el ReDoS transitivo bajo expo/react-native/snarkjs; el CLI con esta política da 0.
+version: v1.25.0
+ignore:
+  SNYK-JS-IMAGESIZE-9510753:
+    - '*':
+        reason: image-size 1.2.1 no tiene fix 1.x; 2.x rompe Metro 0.83
+        expires: 2027-09-18T00:00:00.000Z
+  SNYK-JS-IMAGESIZE-9510754:
+    - '*':
+        reason: image-size 1.2.1 no tiene fix 1.x; 2.x rompe Metro 0.83
+        expires: 2027-09-18T00:00:00.000Z
+  SNYK-JS-IMAGESIZE-17295814:
+    - '*':
+        reason: image-size 1.2.1 via Metro 0.83; Expo 55 rompe el stack
+        expires: 2027-09-28T00:00:00.000Z
+  SNYK-JS-IMAGESIZE-17295816:
+    - '*':
+        reason: image-size 1.2.1 via Metro 0.83; Expo 55 rompe el stack
+        expires: 2027-09-28T00:00:00.000Z
+  SNYK-JS-DEEPMERGE-19964053:
+    - '*':
+        reason: deepmerge via @expo/config 12 de Expo 54; el fix pide Expo 55
+        expires: 2027-09-28T00:00:00.000Z
+  SNYK-JS-BRACES-19963945:
+    - '*':
+        reason: braces via Metro 0.83 micromatch; sin parche en Expo 54
+        expires: 2027-09-28T00:00:00.000Z
+  SNYK-JS-NODEFORGE-19635204:
+    - '*':
+        reason: node-forge via expo-updates 29 / Expo 54; sin parche compatible
+        expires: 2027-09-28T00:00:00.000Z
+  SNYK-JS-INFLIGHT-6095116:
+    - '*':
+        reason: inflight via React Native 0.81 / Expo 54; el fix pide RN 0.84
+        expires: 2027-09-29T00:00:00.000Z
+  SNYK-JS-UUID-16133035:
+    - '*':
+        reason: uuid 7 via expo-constants 18 / Expo 54; el fix pide Expo 55
+        expires: 2027-09-29T00:00:00.000Z
+  javascript/HttpToHttps:
+    - 'scripts/notify-worker.mjs':
+        reason: HTTP solo en el puerto privado; TLS lo termina Render/Caddy
+        expires: 2027-10-02T00:00:00.000Z
+  javascript/PT:
+    - 'scripts/scan-mobile.mjs':
+        reason: CLI local de MobSF; solo lee .apk/.aab/.ipa dentro del repo
+        expires: 2027-10-02T00:00:00.000Z
+  javascript/UseOfHardcodedPassword:
+    - 'scripts/patch-i18n-leftovers*.mjs':
+        reason: claves i18n de UI, no credenciales
+        expires: 2027-10-01T00:00:00.000Z
+  javascript/HardcodedNonCryptoSecret:
+    - 'scripts/patch-i18n-leftovers*.mjs':
+        reason: claves i18n de UI, no secretos
+        expires: 2027-10-01T00:00:00.000Z

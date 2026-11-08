@@ -1,0 +1,60 @@
+---
+description: Mapa unificado del proyecto — piezas, docs vs código y conexión (MAPA.md)
+alwaysApply: true
+---
+
+# 🗺️ MAPA UNIFICADO DEL PROYECTO
+
+## ACTIVACIÓN: Al inicio y tras cambios de código o estructura
+
+Leer `MAPA.md` junto con `CONTEXTO.md`, `VISION.md` y `MEMORIA.md` al inicio de la sesión (si existen).
+
+Tras cualquier petición que cambie código o estructura del proyecto activo:
+
+```powershell
+python mapa_proyecto.py --actualizar
+```
+
+Si se trabaja en otra ruta:
+
+```powershell
+python mapa_proyecto.py --actualizar "C:\ruta\al\proyecto"
+```
+
+---
+
+## SI MAPA.md DICE DESFASADO O DESCONECTADO
+
+Corregir o avisar **antes de terminar** la respuesta:
+
+- **DESFASADO:** docs (CONTEXTO/VISION/README) no coinciden con el código (módulo fantasma o archivo nuevo sin mencionar).
+- **DESCONECTADO:** críticos de `verificar_conectores`, `detectar_logica` o `verificar_modulos`.
+
+No afirmar «100% funcional en runtime» si no hay tests: el mapa es estático + docs.
+
+---
+
+## QUÉ HACE (no reimplementar)
+
+`mapa_proyecto.py` es el **cerebro** (no el detector de lenguaje). Orquesta:
+
+1. Inventario de piezas del **proyecto activo** (cwd o `[ruta]`), no de otro repo
+2. Funciones/clases por archivo vía `detectar_lenguaje.py` (tope 80): python AST, JS exports, MQL, Android, y extra `.rs .go .java .kt .cs .php .rb .swift .c .cpp .h .hpp .scala .lua .r .m .mm`
+3. Desfase docs vs código (AL DÍA / DESFASADO) también si el tipo es `otro`
+4. Llamada a `verificar_conectores`, `detectar_logica` y `verificar_modulos` si existen; si no aplican, no crashean
+
+**Lenguaje adaptativo** (`detectar_lenguaje.py`) es un módulo SEPARADO: detecta tipo y extrae símbolos. El mapa y el README lo usan; no mezclar ambos conceptos.
+
+Profundidad extra de QA: python / node / mql5 / android. El resto es inventario heurístico.
+
+No duplicar extractores en el mapa. No duplicar la lógica interna de esos tres scripts. No afirmar runtime 100%.
+
+---
+
+## COMANDOS
+
+```powershell
+python mapa_proyecto.py [ruta]
+python mapa_proyecto.py --json [ruta]
+python mapa_proyecto.py --actualizar [ruta]
+```

@@ -1,0 +1,77 @@
+---
+description: Autopiloto de README — mantiene README.md alineado con lo que ES el proyecto y sus funciones reales
+alwaysApply: true
+---
+
+# 📘 AUTOPILOTO DE README DEL PROYECTO
+
+## ACTIVACIÓN: Tras cambios que alteren la naturaleza o los módulos del proyecto
+
+El README de GitHub debe mostrar **qué es el proyecto** y **qué funciones reales tiene**, no una plantilla genérica.
+
+Ejecutar en el proyecto activo (cwd del workspace / subproyecto):
+
+```powershell
+python actualizar_readme.py
+```
+
+Si se trabaja en otra ruta:
+
+```powershell
+python actualizar_readme.py "C:\ruta\al\proyecto"
+```
+
+---
+
+## CUÁNDO EJECUTARLO (obligatorio)
+
+1. **Cambio de código, módulos o naturaleza del proyecto**
+   Tras crear/renombrar/eliminar funciones, clases, scripts, exports JS o handlers MQL (`OnTick`, etc.), refrescar el README.
+
+2. **Idea nueva del usuario**
+   Frases como «quiero», «añade», «crea», «necesito», «voy a».
+   Orden: actualizar VISION.md / CONTEXTO.md si aplica → luego `python actualizar_readme.py`.
+
+3. **Proyecto nuevo**
+   `crear_proyecto.py` ya copia este script y genera el README inicial. Si faltara, ejecutarlo sobre el directorio nuevo.
+
+4. **No ejecutarlo** en preguntas puramente informativas que no cambien el repo.
+
+---
+
+## REGLAS DE ESCRITURA (no romper texto manual)
+
+- El script solo sustituye el bloque entre:
+  `<!-- AUTO-README:START -->` … `<!-- AUTO-README:END -->`
+- El texto **fuera** de esos marcadores es del usuario: no borrarlo a mano ni con otros scripts.
+- Si no existe README.md, `actualizar_readme.py` lo crea con esos marcadores.
+- Encoding UTF-8. No usar `sys.stdout = TextIOWrapper` (ERR-003).
+
+---
+
+## FUENTES DEL CONTENIDO GENERADO
+
+El README automático se construye a partir de:
+
+1. `CONTEXTO.md` — qué es, estado, qué funciona / en progreso
+2. `VISION.md` — idea central y módulos
+3. Código real — `def`/`class` en Python, exports en JS/TS, `OnTick`/`OnInit` en MQL5
+4. Scripts QA presentes (`qa_autonomo.py`, `crear_proyecto.py`, etc.)
+5. Comandos reales (`pytest`, `npm run`, `crear_proyecto`, …)
+
+---
+
+## INTEGRACIÓN CON EL RESTO DEL SISTEMA
+
+```
+VISION.md     = qué quiere construir (aspiracional)
+CONTEXTO.md   = cómo está construido ahora (técnico)
+README.md     = lo que ve GitHub (público, regenerable en el bloque AUTO-README)
+```
+
+Tras `--idea` de `vision_proyecto.py` o `--agregar-cambio` de `actualizar_contexto.py` en la misma petición, refrescar el README.
+
+```powershell
+python actualizar_readme.py --dry     # preview
+python actualizar_readme.py --json    # estado en JSON
+```

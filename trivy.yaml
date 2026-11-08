@@ -1,0 +1,14 @@
+# Trivy: no escanear caches ni dumps. El examen de lock usa package-lock.json.
+scan:
+  skip-dirs:
+    - node_modules
+    - android
+    - store-assets
+    - lib
+    - artifacts
+    - cache
+    - forge-out
+    - forge-cache
+    - coverage
+    - typechain-types
+    - .git

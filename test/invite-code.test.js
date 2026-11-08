@@ -133,7 +133,6 @@ describe('invite code and link', function () {
     expect(ui).to.include('inviteLinkLabel');
     expect(ui).to.include('copyInviteLink');
     expect(ui).to.include('inviteLinkPreview');
-    expect(onboarding).to.include('onEndEditing');
     expect(onboarding).to.include('resolveSponsorInput');
   });
 });

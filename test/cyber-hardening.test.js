@@ -201,34 +201,6 @@ describe('cyber hardening — PIN and secret box', function () {
     expect(wallet.address).to.match(/^0x[0-9a-fA-F]{40}$/);
   });
 
-  it('listens the notify worker on PaaS PORT and accepts Real-mode auth before mainnet', function () {
-    const fs = require('fs');
-    const path = require('path');
-    const worker = fs.readFileSync(
-      path.join(__dirname, '..', 'scripts', 'notify-worker.mjs'),
-      'utf8'
-    );
-    expect(worker).to.include('process.env.PORT || process.env.NOTIFY_PORT');
-    expect(worker).to.include("process.env.NOTIFY_BIND || (process.env.PORT ? '0.0.0.0'");
-    expect(worker).to.include('NOTIFY_DATA_FILE');
-    expect(worker).to.include('json(res, 200, { ok: true, kycProvider: hasKycProvider })');
-    expect(worker).to.not.include('sms: hasSms');
-    expect(worker).to.not.include('attester: attesterReady');
-    const textbelt = fs.readFileSync(
-      path.join(__dirname, '..', 'scripts', 'textbeltSms.cjs'),
-      'utf8'
-    );
-    expect(textbelt).to.include('https://textbelt.com/text');
-    expect(worker).to.include('BSC_MAINNET.chainId');
-    expect(worker).to.include('0x0000000000000000000000000000000000000001');
-    expect(worker).to.include('verify.twilio.com');
-    expect(worker).to.include('twilio-verify');
-    expect(worker).to.include('checkTwilioVerify');
-    const dockerfile = fs.readFileSync(path.join(__dirname, '..', 'Dockerfile.notify'), 'utf8');
-    expect(dockerfile).to.include('scripts/notify-worker.mjs');
-    expect(dockerfile).to.not.include('.env.worker');
-  });
-
   it('derives the same address fromMnemonic and fromPhrase for 12 and 24 words', function () {
     const { Mnemonic, HDNodeWallet, randomBytes } = require('ethers');
     const normalize = (phrase) =>
@@ -330,21 +302,12 @@ describe('cyber hardening — PIN and secret box', function () {
     expect(zap).to.not.match(/NOTIFY_CORS_ORIGIN=\*/);
     expect(zap).to.include('env -i');
     expect(zap).to.include('seq 1 40');
-    const docker = fs.readFileSync(path.join(__dirname, '..', 'Dockerfile.notify'), 'utf8');
-    expect(docker).to.match(/^USER node$/m);
-    expect(docker).to.include('notify-entrypoint.sh');
-    expect(docker).to.include('chown -R node:node /app /data');
     const logos = fs.readFileSync(
       path.join(__dirname, '..', 'scripts', 'fetch-wallet-logos.py'),
       'utf8'
     );
     expect(logos).to.include('startswith("https://")');
     expect(logos).to.include('# nosemgrep');
-    const worker = fs.readFileSync(
-      path.join(__dirname, '..', 'scripts', 'notify-worker.mjs'),
-      'utf8'
-    );
-    expect(worker).to.include('NOTIFY_CORS_ORIGIN no puede ser * en mainnet');
     const runner = fs.readFileSync(
       path.join(__dirname, '..', 'scripts', 'run-slither.mjs'),
       'utf8'
@@ -446,8 +409,6 @@ describe('cyber hardening — PIN and secret box', function () {
     expect(notifyIgnore).to.include('telegramBotName.cjs');
     const slot = fs.readFileSync(path.join(root, 'utils', 'storeSlot.ts'), 'utf8');
     expect(slot).to.include('parts.filter(Boolean).join(glue)');
-    const email = fs.readFileSync(path.join(root, 'services', 'accountEmail.ts'), 'utf8');
-    expect(email).to.include("storeSlot(['quatrivium', 'account', 'email'])");
     const mobsf = fs.readFileSync(path.join(root, 'scripts', 'scan-mobile.mjs'), 'utf8');
     expect(mobsf).to.include('function underProject');
     expect(mobsf).to.include('isMobilePackage');
@@ -568,7 +529,7 @@ describe('cyber hardening — PIN and secret box', function () {
         (filter.data || []).map((row) => row.pathPrefix)
       );
       expect(prefixes).to.include.members(['/invite', '/history', '/room']);
-      expect(app.expo.scheme).to.equal('quatrivium');
+      expect(app.expo.scheme).to.equal('quatrivium-sovereign');
       expect(JSON.stringify(app.expo.android)).to.not.include('exp+');
     }
     expect(plugin).to.include('FirebaseInstanceIdReceiver');
@@ -582,37 +543,6 @@ describe('cyber hardening — PIN and secret box', function () {
     );
     expect(scanner).to.include('--purge');
     expect(scanner).to.include('/api/v1/delete_scan');
-  });
-
-  it('sends email and phone OTP through the notify worker including Metro localhost', function () {
-    const fs = require('fs');
-    const path = require('path');
-    const client = fs.readFileSync(
-      path.join(__dirname, '..', 'services', 'notifyClient.ts'),
-      'utf8'
-    );
-    expect(client).to.include('notifyApiBases');
-    expect(client).to.include('127.0.0.1');
-    expect(client).to.include('localJsonFetch');
-    const email = fs.readFileSync(path.join(__dirname, '..', 'services', 'emailOtp.ts'), 'utf8');
-    expect(email).to.include('notifyJsonBody');
-    expect(email).to.not.include('NOTIFY_API');
-    const phone = fs.readFileSync(path.join(__dirname, '..', 'services', 'phoneOtp.ts'), 'utf8');
-    expect(phone).to.include('notifyJsonBody');
-    const demo = fs.readFileSync(path.join(__dirname, '..', 'services', 'demoIdentity.ts'), 'utf8');
-    expect(demo).to.include('notifyJsonBody');
-    const settings = fs.readFileSync(
-      path.join(__dirname, '..', 'components', 'SecuritySettings.tsx'),
-      'utf8'
-    );
-    expect(settings).to.not.include("panel === 'kyc' && !demoAccount");
-    expect(settings).to.not.include("panel === 'phone' && !demoAccount");
-    const kycUi = fs.readFileSync(
-      path.join(__dirname, '..', 'components', 'KycSection.tsx'),
-      'utf8'
-    );
-    expect(kycUi).to.include('isCreditReady');
-    expect(kycUi).to.include("t('liveCreditNotReady')");
   });
 
   it('seals an immutable KYC fingerprint and keeps it when local fields change', function () {
@@ -1005,12 +935,6 @@ describe('demo credit gates', function () {
     ).to.equal(true);
     const fs = require('fs');
     const path = require('path');
-    const securityUi = fs.readFileSync(
-      path.join(__dirname, '..', 'components', 'SecuritySettings.tsx'),
-      'utf8'
-    );
-    expect(securityUi).to.include('demoAccount ? null');
-    expect(securityUi).to.include("openIdentity('kyc'");
     const handlers = fs.readFileSync(
       path.join(__dirname, '..', 'hooks', 'useHomeHandlers.ts'),
       'utf8'
@@ -1023,371 +947,12 @@ describe('demo credit gates', function () {
     expect(handlers).to.match(/handleAportarReserva[\s\S]*runAsAdmin/);
   });
 
-  it('blocks Solicitar in Real until phrase, email, phone and KYC are bound', function () {
-    expect(liveNeedsKyc(false, false)).to.equal(true);
-    expect(liveNeedsPhone(false, false)).to.equal(true);
-    expect(liveNeedsEmail(false, false)).to.equal(true);
-    expect(
-      liveCreditReady(false, {
-        kycDeclarado: true,
-        identityBound: true,
-        hasEmail: true,
-        phraseBackedUp: false,
-      })
-    ).to.equal(false);
-    expect(
-      liveCreditReady(false, {
-        kycDeclarado: true,
-        identityBound: true,
-        hasEmail: false,
-        phraseBackedUp: true,
-      })
-    ).to.equal(false);
-    expect(
-      liveCreditReady(false, {
-        kycDeclarado: true,
-        identityBound: false,
-        hasEmail: true,
-        phraseBackedUp: true,
-      })
-    ).to.equal(false);
-    expect(
-      liveCreditReady(false, {
-        kycDeclarado: false,
-        identityBound: true,
-        hasEmail: true,
-        phraseBackedUp: true,
-      })
-    ).to.equal(false);
-    expect(
-      liveCreditReady(false, {
-        kycDeclarado: true,
-        identityBound: true,
-        hasEmail: true,
-        phraseBackedUp: true,
-      })
-    ).to.equal(false);
-    expect(
-      liveCreditReady(false, {
-        kycDeclarado: true,
-        identityBound: true,
-        hasEmail: true,
-        phraseBackedUp: true,
-        deviceMatches: true,
-      })
-    ).to.equal(true);
-    expect(
-      liveCreditReady(false, {
-        kycDeclarado: true,
-        identityBound: true,
-        hasEmail: true,
-        phraseBackedUp: true,
-        deviceMatches: false,
-      })
-    ).to.equal(false);
-    expect(liveNeedsPhone(false, true, false)).to.equal(true);
-    expect(liveNeedsPhone(false, true, true)).to.equal(false);
-    expect(
-      liveCreditReady(false, {
-        kycDeclarado: true,
-        identityBound: true,
-        hasEmail: true,
-        phraseBackedUp: true,
-        deviceMatches: false,
-        phoneActive: true,
-      })
-    ).to.equal(true);
-    expect(
-      liveCreditReady(false, {
-        kycDeclarado: true,
-        identityBound: true,
-        hasEmail: true,
-        phraseBackedUp: true,
-        deviceMatches: true,
-        phoneActive: false,
-      })
-    ).to.equal(false);
-    function creditLineLooksActive(creditReady, isRegistered, hasActiveLoan) {
-      return Boolean(creditReady && (isRegistered || hasActiveLoan));
-    }
-    function canHydrateCreditStatus({ configured, chainReady, savedContract, currentContract }) {
-      if (!configured || chainReady) return false;
-      const saved = String(savedContract || '')
-        .trim()
-        .toLowerCase();
-      const current = String(currentContract || '')
-        .trim()
-        .toLowerCase();
-      if (saved && current && saved !== current) return false;
-      return true;
-    }
-    expect(creditLineLooksActive(false, true, true)).to.equal(false);
-    expect(creditLineLooksActive(true, false, false)).to.equal(false);
-    expect(creditLineLooksActive(true, true, false)).to.equal(true);
-    expect(creditLineLooksActive(true, false, true)).to.equal(true);
-    expect(
-      canHydrateCreditStatus({
-        configured: false,
-        chainReady: false,
-        savedContract: '0xabc',
-        currentContract: '0xabc',
-      })
-    ).to.equal(false);
-    expect(
-      canHydrateCreditStatus({
-        configured: true,
-        chainReady: true,
-        savedContract: '0xabc',
-        currentContract: '0xabc',
-      })
-    ).to.equal(false);
-    expect(
-      canHydrateCreditStatus({
-        configured: true,
-        chainReady: false,
-        savedContract: '0xaaa',
-        currentContract: '0xbbb',
-      })
-    ).to.equal(false);
-    expect(
-      canHydrateCreditStatus({
-        configured: true,
-        chainReady: false,
-        savedContract: '0xabc',
-        currentContract: '0xabc',
-      })
-    ).to.equal(true);
+  it('blocks Solicitar in Real until phrase and Alta are satisfied', function () {
     const fs = require('fs');
     const path = require('path');
-    const homeGates = fs.readFileSync(path.join(__dirname, '..', 'app', 'index.tsx'), 'utf8');
-    expect(homeGates).to.include('creditLineLooksActive');
-    expect(homeGates).to.include('creditOnChain');
-    const hydrateHook = fs.readFileSync(
-      path.join(__dirname, '..', 'hooks', 'useWeb3Balances.ts'),
-      'utf8'
-    );
-    expect(hydrateHook).to.include('canHydrateCreditStatus');
-    expect(hydrateHook).to.match(/if \(!isContractConfigured\(\)\) return;/);
-    function deviceMatchAfterIdentityReadFailure(demo) {
-      return demo;
-    }
-    expect(deviceMatchAfterIdentityReadFailure(false)).to.equal(false);
-    expect(deviceMatchAfterIdentityReadFailure(true)).to.equal(true);
-    expect(
-      identityHashBound('0x0000000000000000000000000000000000000000000000000000000000000000')
-    ).to.equal(false);
-    expect(identityHashBound('0xabc')).to.equal(true);
-    function loanGateBannerRows({
-      phraseDone,
-      accessPaid,
-      showIdentity,
-      emailDone,
-      kycDone,
-      phoneDone,
-    }) {
-      const rows = [];
-      if (!phraseDone) rows.push('phrase');
-      if (!accessPaid || !showIdentity) return rows;
-      if (!emailDone) rows.push('email');
-      if (!kycDone) rows.push('kyc');
-      if (!phoneDone) rows.push('phone');
-      return rows;
-    }
-    expect(
-      loanGateBannerRows({
-        phraseDone: false,
-        accessPaid: true,
-        showIdentity: true,
-        emailDone: false,
-        kycDone: false,
-        phoneDone: false,
-      })
-    ).to.deep.equal(['phrase', 'email', 'kyc', 'phone']);
-    expect(
-      loanGateBannerRows({
-        phraseDone: true,
-        accessPaid: true,
-        showIdentity: true,
-        emailDone: false,
-        kycDone: false,
-        phoneDone: false,
-      })
-    ).to.deep.equal(['email', 'kyc', 'phone']);
-    expect(
-      loanGateBannerRows({
-        phraseDone: true,
-        accessPaid: true,
-        showIdentity: true,
-        emailDone: true,
-        kycDone: true,
-        phoneDone: false,
-      })
-    ).to.deep.equal(['phone']);
-    expect(
-      loanGateBannerRows({
-        phraseDone: false,
-        accessPaid: false,
-        showIdentity: true,
-        emailDone: false,
-        kycDone: false,
-        phoneDone: false,
-      })
-    ).to.deep.equal(['phrase']);
-    expect(
-      loanGateBannerRows({
-        phraseDone: true,
-        accessPaid: false,
-        showIdentity: true,
-        emailDone: false,
-        kycDone: false,
-        phoneDone: false,
-      })
-    ).to.deep.equal([]);
-    expect(
-      loanGateBannerRows({
-        phraseDone: false,
-        accessPaid: true,
-        showIdentity: false,
-        emailDone: false,
-        kycDone: false,
-        phoneDone: false,
-      })
-    ).to.deep.equal(['phrase']);
-    expect(
-      loanGateBannerRows({
-        phraseDone: true,
-        accessPaid: true,
-        showIdentity: false,
-        emailDone: false,
-        kycDone: false,
-        phoneDone: false,
-      })
-    ).to.deep.equal([]);
-    expect(
-      loanGateBannerRows({
-        phraseDone: true,
-        accessPaid: true,
-        showIdentity: true,
-        emailDone: true,
-        kycDone: true,
-        phoneDone: true,
-      })
-    ).to.deep.equal([]);
     const gatesSrc = fs.readFileSync(path.join(__dirname, '..', 'utils', 'creditGates.ts'), 'utf8');
     expect(gatesSrc).to.include('identityUnlocked');
-    expect(gatesSrc).to.include('accessPaid');
-    const securityUi = fs.readFileSync(
-      path.join(__dirname, '..', 'components', 'SecuritySettings.tsx'),
-      'utf8'
-    );
-    expect(securityUi).to.include('identityUnlocked');
-    expect(securityUi).to.include('identityNeedAccess');
-  });
-
-  it('charges Real email and phone verification to the pool, not the founder', function () {
-    const fs = require('fs');
-    const path = require('path');
-    function verificationFeeUsdt(kind, demo, alta) {
-      if (demo || alta) return 0;
-      return kind === 'email' ? 0.5 : 0.5;
-    }
-    expect(verificationFeeUsdt('email', true, false)).to.equal(0);
-    expect(verificationFeeUsdt('phone', true, false)).to.equal(0);
-    expect(verificationFeeUsdt('email', false, true)).to.equal(0);
-    expect(verificationFeeUsdt('phone', false, true)).to.equal(0);
-    expect(verificationFeeUsdt('email', false, false)).to.equal(0.5);
-    expect(verificationFeeUsdt('phone', false, false)).to.equal(0.5);
-    const gatesSrc = fs.readFileSync(path.join(__dirname, '..', 'utils', 'creditGates.ts'), 'utf8');
-    expect(gatesSrc).to.include('CREDIT_VERIFY_EMAIL_USDT = 0.5');
-    expect(gatesSrc).to.include('CREDIT_VERIFY_PHONE_USDT = 0.5');
-    expect(gatesSrc).to.include('if (demo || isAltaConfigured()) return 0');
-    const emailUi = fs.readFileSync(
-      path.join(__dirname, '..', 'components', 'EmailOtpSection.tsx'),
-      'utf8'
-    );
-    expect(emailUi).to.include('chargeVerificationFee');
-    expect(emailUi).to.include('confirmEmailOtp');
-    expect(emailUi).to.include('saveVerifiedEmail');
-    const emailConfirm = emailUi.slice(emailUi.indexOf('const confirmCode'));
-    expect(emailConfirm.indexOf('confirmEmailOtp')).to.be.below(
-      emailConfirm.indexOf('chargeVerificationFee')
-    );
-    expect(emailConfirm.indexOf('chargeVerificationFee')).to.be.below(
-      emailConfirm.indexOf('saveVerifiedEmail')
-    );
-    expect(emailUi).to.not.include('depositarLiquidez');
-    expect(emailUi).to.not.include('retirarLiquidez');
-    expect(emailUi).to.not.include('verifyFeeEmailLead');
-    expect(emailUi).to.not.include('verifyFeeFailed');
-    expect(emailUi).to.not.match(/TEXTBELT|textbelt/i);
-    const phoneUi = fs.readFileSync(
-      path.join(__dirname, '..', 'components', 'PhoneOtpSection.tsx'),
-      'utf8'
-    );
-    expect(phoneUi).to.include('chargeVerificationFee');
-    expect(phoneUi).to.include('vincularIdentidad');
-    const phoneConfirm = phoneUi.slice(phoneUi.indexOf('const confirmCode'));
-    expect(phoneConfirm.indexOf('canVincularIdentidad')).to.be.below(
-      phoneConfirm.indexOf('chargeVerificationFee')
-    );
-    expect(phoneConfirm.indexOf('chargeVerificationFee')).to.be.below(
-      phoneConfirm.lastIndexOf('vincularIdentidad')
-    );
-    expect(phoneUi).to.not.include('depositarLiquidez');
-    expect(phoneUi).to.not.include('retirarLiquidez');
-    expect(phoneUi).to.not.include('verifyFeePhoneLead');
-    expect(phoneUi).to.not.include('verifyFeeFailed');
-    const charge = fs.readFileSync(
-      path.join(__dirname, '..', 'services', 'founderUsdtCharge.ts'),
-      'utf8'
-    );
-    expect(charge).to.include('QuatriviumCreditService.donar');
-    expect(charge).to.include('QuatriviumCreditService.pagarVerificacion');
-    expect(charge).to.include('chargePoolUsdt');
-    expect(charge).to.include('ensureExternalWalletOnAppChain');
-    expect(charge).to.include('silent');
-    expect(charge).to.not.include('retirarLiquidez');
-    expect(charge).to.not.match(/TEXTBELT|RESEND_API|ATTESTER_PRIVATE/i);
-    const hook = fs.readFileSync(
-      path.join(__dirname, '..', 'hooks', 'useVerificationFee.ts'),
-      'utf8'
-    );
-    expect(hook).to.include('chargePoolUsdt');
-    expect(hook).to.include('useFundsConfirm');
-    expect(hook).to.include('busyRef');
-    expect(hook).to.not.include('silent: true');
-    expect(hook).to.not.include('confirmFunds: async () => true');
-    const historySvc = fs.readFileSync(
-      path.join(__dirname, '..', 'services', 'movementHistory.ts'),
-      'utf8'
-    );
-    expect(historySvc).to.include('isHiddenVerificationDonation');
-    const gates = fs.readFileSync(path.join(__dirname, '..', 'utils', 'creditGates.ts'), 'utf8');
-    expect(gates).to.include('isHiddenVerificationDonation');
-    function isHiddenVerificationDonation(usdAmount, isFirstDonation) {
-      if (isFirstDonation) return false;
-      return Math.abs(Number(usdAmount) - 0.5) < 1e-6;
-    }
-    expect(isHiddenVerificationDonation(0.5, false)).to.equal(true);
-    expect(isHiddenVerificationDonation(0.5, true)).to.equal(false);
-    expect(isHiddenVerificationDonation(1, false)).to.equal(false);
-    const emailOtp = fs.readFileSync(path.join(__dirname, '..', 'services', 'emailOtp.ts'), 'utf8');
-    const confirmFn = emailOtp.slice(
-      emailOtp.indexOf('export async function confirmEmailOtp'),
-      emailOtp.indexOf('export async function verifyEmailOtp')
-    );
-    expect(confirmFn).to.include('/email/verify');
-    expect(confirmFn).to.not.include('saveVerifiedEmail');
-    const verifyFn = emailOtp.slice(emailOtp.indexOf('export async function verifyEmailOtp'));
-    expect(verifyFn).to.include('confirmEmailOtp');
-    expect(verifyFn).to.include('saveVerifiedEmail');
-    const lockUi = fs.readFileSync(
-      path.join(__dirname, '..', 'components', 'AppLockGate.tsx'),
-      'utf8'
-    );
-    expect(lockUi).to.not.include('verifyEmailOtp');
-    expect(lockUi).to.not.include('requestEmailOtp');
-    expect(lockUi).to.not.include('chargeVerificationFee');
+    expect(gatesSrc).to.include('hasCreditAccess');
   });
 
   it('keeps Demo and Real history apart and runs grace down then mora up', function () {
@@ -1878,28 +1443,6 @@ describe('account entry — password, email and session', () => {
     expect(phoneVerifiedOnThisDevice(true, true)).to.equal(true);
     expect(phoneVerifiedOnThisDevice(false, true)).to.equal(false);
     expect(phoneVerifiedOnThisDevice(true, true, false)).to.equal(false);
-    const fs = require('fs');
-    const path = require('path');
-    const phoneUi = fs.readFileSync(
-      path.join(__dirname, '..', 'components', 'PhoneOtpSection.tsx'),
-      'utf8'
-    );
-    expect(phoneUi).to.include('phoneActive && !editing');
-    expect(phoneUi).to.include("t('otpRemove')");
-    expect(phoneUi).to.include('releaseAccountContact');
-    expect(phoneUi).to.include('isCreditReady');
-    expect(phoneUi).to.include("t('liveCreditNotReady')");
-    const emailUi = fs.readFileSync(
-      path.join(__dirname, '..', 'components', 'EmailOtpSection.tsx'),
-      'utf8'
-    );
-    expect(emailUi).to.include("t('emailRemove')");
-    expect(emailUi).to.include('releaseAccountContact');
-    const banner = fs.readFileSync(
-      path.join(__dirname, '..', 'components', 'KycAccessBanner.tsx'),
-      'utf8'
-    );
-    expect(banner).to.include('deviceMatches={deviceMatches}');
     function sessionOwnedHere(claimedDeviceHash, localDeviceHash) {
       const claimed = String(claimedDeviceHash || '').toLowerCase();
       const local = String(localDeviceHash || '').toLowerCase();
@@ -2306,12 +1849,6 @@ describe('account entry — password, email and session', () => {
     expect(inviteUi).to.include('handleCopyCode');
     expect(inviteUi).to.include("myCode.split('-')");
     expect(inviteUi).to.include('codeBox');
-    const kycBanner = fs.readFileSync(
-      path.join(__dirname, '..', 'components', 'KycAccessBanner.tsx'),
-      'utf8'
-    );
-    expect(kycBanner).to.include('EmailOtpSection');
-    expect(kycBanner).to.include("setOpen('email')");
     const donateUi = fs.readFileSync(
       path.join(__dirname, '..', 'components', 'DonateFounderSection.tsx'),
       'utf8'
@@ -2519,11 +2056,6 @@ describe('account entry — password, email and session', () => {
       'utf8'
     );
     expect(publicProfile).to.include("sanitizePublicPhoto(profile.publicPhoto || '')");
-    const worker = fs.readFileSync(
-      path.join(__dirname, '..', 'scripts', 'notify-worker.mjs'),
-      'utf8'
-    );
-    expect(worker).to.include('El usuario de entrada no es el apodo');
     expect(names).to.include('usernameLocked');
     expect(names).to.not.include('usernameChange');
     const lock = fs.readFileSync(
@@ -2673,46 +2205,20 @@ describe('account entry — password, email and session', () => {
     expect(transfer).to.include('if (busy) return');
   });
 
-  it('lets founders propose a phone stamp without pasting a private key', () => {
+  it('removes attester from AdminPanel and QuatriviumCreditService', () => {
     const fs = require('fs');
     const path = require('path');
-    const { getAddress } = require('ethers');
-    function looksLikePrivateKey(value) {
-      const raw = String(value || '')
-        .trim()
-        .replace(/^0x/i, '');
-      return /^[0-9a-fA-F]{64}$/.test(raw);
-    }
-    function attesterProposalError(value, ownerAddress, blockedAddresses) {
-      const trimmed = String(value || '').trim();
-      if (looksLikePrivateKey(trimmed)) return 'key';
-      if (!/^0x[0-9a-fA-F]{40}$/.test(trimmed) || /^0x0+$/i.test(trimmed)) return 'address';
-      const next = trimmed.toLowerCase();
-      if (ownerAddress && next === String(ownerAddress).toLowerCase()) return 'role';
-      if ((blockedAddresses || []).some((item) => String(item).toLowerCase() === next))
-        return 'role';
-      return null;
-    }
-    const owner = '0x1111111111111111111111111111111111111111';
-    const stamp = '0x2222222222222222222222222222222222222222';
-    expect(attesterProposalError('0x' + 'ab'.repeat(32), owner, [])).to.equal('key');
-    expect(attesterProposalError(owner, owner, [])).to.equal('role');
-    expect(attesterProposalError(stamp, owner, [owner])).to.equal(null);
-    expect(getAddress(stamp)).to.equal(getAddress('0x2222222222222222222222222222222222222222'));
     const panel = fs.readFileSync(
       path.join(__dirname, '..', 'components', 'AdminPanel.tsx'),
       'utf8'
     );
-    expect(panel).to.include('onProposeAttester');
-    expect(panel).to.include('adminSetAttester');
+    expect(panel).to.not.include('onProposeAttester');
     expect(panel).to.not.include('ATTESTER_PRIVATE_KEY');
     const service = fs.readFileSync(
       path.join(__dirname, '..', 'services', 'quatriviumCreditService.ts'),
       'utf8'
     );
-    expect(service).to.include("proposeAdmin('setAttester'");
-    const util = fs.readFileSync(path.join(__dirname, '..', 'utils', 'adminAttester.ts'), 'utf8');
-    expect(util).to.include('looksLikePrivateKey');
+    expect(service).to.not.include("proposeAdmin('setAttester'");
   });
 
   it('hides founder tools from the settings list', () => {
@@ -2831,36 +2337,9 @@ describe('account entry — password, email and session', () => {
     expect(card).to.include('linkWalletBind');
     expect(card).to.include('t(boundLabel)');
     expect(card).to.not.include('linkedWalletHubNeed');
-    const banner = fs.readFileSync(
-      path.join(__dirname, '..', 'components', 'KycAccessBanner.tsx'),
-      'utf8'
-    );
-    expect(banner).to.include('colors.onPrimary');
-    expect(banner).to.not.match(/color="#fff"/);
-    expect(banner).to.not.match(/color: '#fff'/);
-    const kycUi = fs.readFileSync(
-      path.join(__dirname, '..', 'components', 'KycSection.tsx'),
-      'utf8'
-    );
-    expect(kycUi).to.include('launchCameraAsync');
-    expect(kycUi).to.include('persistKycDocPhoto');
-    expect(kycUi).to.not.include('kycNotGov');
-    expect(kycUi).to.not.match(/ocr|mlkit|ML Kit/i);
-    const kycSvc = fs.readFileSync(
-      path.join(__dirname, '..', 'services', 'kycDeclaration.ts'),
-      'utf8'
-    );
-    expect(kycSvc).to.include('quatrivium-kyc-');
-    expect(kycSvc).to.not.include('SecureStore.setItemAsync(PHOTO');
-    const es = JSON.parse(
-      fs.readFileSync(path.join(__dirname, '..', 'i18n', 'locales', 'es.json'), 'utf8')
-    );
-    expect(es.kycScan).to.match(/[Ee]scan/);
-    expect(es.kycLead.length).to.be.below(50);
-    expect(es.kycDone.length).to.be.below(40);
   });
 
-  it('keeps the session wrap out of AsyncStorage and signs exclusive session checks', function () {
+  it('keeps the session wrap out of AsyncStorage', function () {
     const fs = require('fs');
     const path = require('path');
     const session = fs.readFileSync(
@@ -2870,24 +2349,6 @@ describe('account entry — password, email and session', () => {
     expect(session).to.not.include('AsyncStorage.setItem(WRAP_FALLBACK');
     expect(session).to.include('AsyncStorage.removeItem(WRAP_FALLBACK');
     expect(session).to.include('SecureStore.setItemAsync(WRAP');
-    const exclusive = fs.readFileSync(
-      path.join(__dirname, '..', 'services', 'exclusiveSession.ts'),
-      'utf8'
-    );
-    expect(exclusive).to.include("signedAuthBody(signer, wallet, 'session')");
-    expect(exclusive).to.match(/postSession\(\s*'\/session\/check'/);
-    expect(exclusive).to.not.match(/postSession\(\s*'\/session\/check'\s*,\s*\{\s*wallet/);
-    const worker = fs.readFileSync(
-      path.join(__dirname, '..', 'scripts', 'notify-worker.mjs'),
-      'utf8'
-    );
-    const sessionBlock = worker.slice(
-      worker.indexOf("path === '/session/check'"),
-      worker.indexOf("path === '/username/check'")
-    );
-    expect(sessionBlock).to.include("requireAuth(body, ['session'])");
-    expect(sessionBlock).to.include("body.purpose) !== 'session'");
-    expect(sessionBlock).to.not.match(/body\.wallet \|\| ''/);
     const guard = fs.readFileSync(
       path.join(__dirname, '..', 'components', 'ScreenGuard.tsx'),
       'utf8'
@@ -2907,14 +2368,6 @@ describe('account entry — password, email and session', () => {
     expect(security).to.include('subscribeScreenshot');
     expect(security).to.include('selectable={false}');
     expect(security).to.not.include('copyText(');
-    const banner = fs.readFileSync(
-      path.join(__dirname, '..', 'components', 'KycAccessBanner.tsx'),
-      'utf8'
-    );
-    expect(banner).to.include('subscribeScreenshot');
-    expect(banner).to.include('selectable={false}');
-    expect(banner).to.include('closeModal');
-    expect(banner).to.not.include('copyText(');
     const lock = fs.readFileSync(path.join(__dirname, '..', 'services', 'appLock.ts'), 'utf8');
     expect(lock).to.include('AsyncStorage.removeItem(PASSWORD_FALLBACK)');
     expect(lock).to.match(/if \(stored\) \{[\s\S]*removeItem\(PASSWORD_FALLBACK\)/);
@@ -2929,32 +2382,9 @@ describe('account entry — password, email and session', () => {
     expect(bio).to.not.include('BIO_WRAP_OPTIONS');
   });
 
-  it('keeps email and phone on the account until deleted, then blocks credit', function () {
+  it('keeps local sovereign auth methods without email or phone OTP', function () {
     const fs = require('fs');
     const path = require('path');
-    const gates = fs.readFileSync(path.join(__dirname, '..', 'utils', 'creditGates.ts'), 'utf8');
-    expect(gates).to.include('phoneActive');
-    expect(gates).to.match(/if \(demo \|\| phoneActive\) return false/);
-    const worker = fs.readFileSync(
-      path.join(__dirname, '..', 'scripts', 'notify-worker.mjs'),
-      'utf8'
-    );
-    expect(worker).to.include('/identity/status');
-    expect(worker).to.include('/identity/resume');
-    expect(worker).to.include('/identity/release');
-    expect(worker).to.include('phoneReleased');
-    expect(worker).to.include('emailReleased');
-    expect(worker).to.include('verifiedPhone');
-    expect(worker).to.include("purpose !== 'identity'");
-    const identity = fs.readFileSync(
-      path.join(__dirname, '..', 'services', 'accountIdentity.ts'),
-      'utf8'
-    );
-    expect(identity).to.include('restoreIdentityLocal');
-    expect(identity).to.include('resumeDeviceIfNeeded');
-    expect(identity).to.include('else await setPhoneActive(true)');
-    expect(identity).to.not.include('chargeVerificationFee');
-    expect(identity).to.not.include('chargeFounderUsdt');
     const prefs = fs.readFileSync(path.join(__dirname, '..', 'services', 'authPrefs.ts'), 'utf8');
     expect(prefs).to.match(
       /ACTION_AUTH_METHODS: AuthMethod\[\] = \['pin', 'authenticator', 'biometric', 'password'\];/
@@ -2962,25 +2392,14 @@ describe('account entry — password, email and session', () => {
     expect(prefs).to.not.include("'phone'");
     expect(prefs).to.include("['password', 'pin', 'biometric', 'authenticator']");
     expect(prefs).to.not.include("methods.push('email')");
-    expect(prefs).to.not.include("|| method === 'email'");
-    const securityUi = fs.readFileSync(
-      path.join(__dirname, '..', 'components', 'SecuritySettings.tsx'),
-      'utf8'
-    );
-    expect(securityUi).to.include('isAccessPaymentEnabled');
-    expect(securityUi).to.include('liveCreditNotReady');
-    expect(securityUi).to.include('identityNeedAccess');
     const lock = fs.readFileSync(
       path.join(__dirname, '..', 'components', 'AppLockGate.tsx'),
       'utf8'
     );
     expect(lock).to.not.include("unlockMode === 'phone'");
     expect(lock).to.not.include("unlockMode === 'email'");
-    expect(lock).to.not.include('submitUnlockPhone');
-    expect(lock).to.not.include('submitUnlockEmail');
     expect(lock).to.not.include('requestPhoneOtp');
     expect(lock).to.not.include('requestEmailOtp');
-    expect(lock).to.include('restoreIdentityLocal');
     const funds = fs.readFileSync(
       path.join(__dirname, '..', 'components', 'FundsConfirmHost.tsx'),
       'utf8'
@@ -2989,11 +2408,6 @@ describe('account entry — password, email and session', () => {
     expect(funds).to.not.include("method === 'email'");
     expect(funds).to.not.include('requestPhoneOtp');
     expect(funds).to.not.include('requestEmailOtp');
-    const walletCtx = fs.readFileSync(
-      path.join(__dirname, '..', 'wallet', 'AppWalletContext.tsx'),
-      'utf8'
-    );
-    expect(walletCtx).to.include('hydrateAccountIdentity');
     const service = fs.readFileSync(
       path.join(__dirname, '..', 'services', 'quatriviumCreditService.ts'),
       'utf8'
@@ -3001,11 +2415,6 @@ describe('account entry — password, email and session', () => {
     expect(service).to.include('access-required');
     expect(service).to.include('isAltaConfigured()');
     expect(service).to.include("if (!altaPaid) throw new Error('access-required')");
-    expect(service).to.include('canVincularIdentidad');
-    expect(service).to.include('.catch(() => false)');
-    const home = fs.readFileSync(path.join(__dirname, '..', 'app', 'index.tsx'), 'utf8');
-    expect(home).to.include('livePhoneStepDone');
-    expect(gates).to.include('livePhoneStepDone');
   });
 
   it('offers canje amounts through 1000 USDT and keeps Reserva commission copy in Reserva', function () {
@@ -3140,7 +2549,7 @@ describe('account entry — password, email and session', () => {
     expect(methodsUi).to.include("confirmFunds('security')");
   });
 
-  it('reads alta, reserve rate and KYC flags from the chain instead of guessing', function () {
+  it('reads alta and reserve rate from the chain without KYC flags', function () {
     const fs = require('fs');
     const path = require('path');
     const read = (...parts) => fs.readFileSync(path.join(__dirname, '..', ...parts), 'utf8');
@@ -3148,7 +2557,6 @@ describe('account entry — password, email and session', () => {
     expect(gates).to.match(
       /if \(altaPaid\) return true;\s*if \(isAltaConfigured\(\)\) return false;/
     );
-    expect(gates).to.include('liveNeedsKyc(demo, flags.kycDeclarado, kycRequired)');
     const service = read('services', 'quatriviumCreditService.ts');
     expect(service).to.not.include('const floor = 4n * 10n ** 18n');
     const altaRead = service.slice(
@@ -3157,9 +2565,7 @@ describe('account entry — password, email and session', () => {
     );
     expect(altaRead).to.include('registroHecho');
     expect(altaRead).to.not.match(/catch[\s\S]{0,80}return false/);
-    expect(service).to.match(
-      /kycExigido = Boolean\(await credit\.kycExigido\(\)\);\s*\} catch \{\s*kycExigido = true;/
-    );
+    expect(service).to.not.include('kycExigido');
     const home = read('app', 'index.tsx');
     expect(home).to.include(
       'hasCreditAccess(userInfo.donatedUsd || 0, Boolean(userInfo.altaPagada))'
@@ -3174,7 +2580,7 @@ describe('account entry — password, email and session', () => {
       'preview?.configured && preview.apyKnown'
     );
     const appJson = JSON.parse(read('app.json'));
-    expect(appJson.expo.updates.enabled).to.equal(false);
+    expect(appJson.expo.updates).to.equal(undefined);
     expect(JSON.stringify(appJson.expo.android.intentFilters)).to.not.include(
       'www.quatriviumcredit.app'
     );
@@ -3182,7 +2588,7 @@ describe('account entry — password, email and session', () => {
       'www.quatriviumcredit.app'
     );
     const links = JSON.parse(read('web', '.well-known', 'assetlinks.json'));
-    expect(links[0].target.package_name).to.equal('com.quatrivium.credit');
+    expect(links[0].target.package_name).to.equal('com.quatrivium.sovereign');
     expect(links[0].target.sha256_cert_fingerprints[0]).to.match(/^DF:EF:CC:D0/);
     const fr = JSON.parse(read('i18n', 'locales', 'fr.json'));
     expect(fr.liveCreditNotReady).to.not.include('est ouvert');

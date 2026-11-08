@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "hooks": {
+    "afterFileEdit": [
+      {
+        "command": "python .cursor/hooks/post-edit-qa.py",
+        "timeout": 30
+      }
+    ],
+    "afterShellExecution": [
+      {
+        "command": "python .cursor/hooks/shell-output-analyzer.py",
+        "timeout": 15
+      }
+    ]
+  }
+}

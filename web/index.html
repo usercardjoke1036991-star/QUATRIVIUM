@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quatrivium Finance</title>
+  <meta name="description" content="Quatrivium Finance: crédito sin garantía. Pague a tiempo y aumente su límite." />
+  <meta property="og:title" content="Quatrivium Finance" />
+  <meta property="og:description" content="Solicite un préstamo sin dejar garantía. Pague a tiempo y aumente su límite." />
+  <meta property="og:type" content="website" />
+  <style>
+    :root { color-scheme: light; }
+    body { margin: 0; font-family: Inter, Segoe UI, sans-serif; background: #f4fbf7; color: #163326; }
+    main { max-width: 520px; margin: 0 auto; padding: 48px 20px; text-align: center; }
+    h1 { margin: 0 0 8px; font-size: 36px; }
+    p { line-height: 1.5; color: #2d4a38; }
+    a.btn { display: inline-block; margin: 8px 6px 0; padding: 14px 20px; border-radius: 10px; background: #146C2E; color: #fff; text-decoration: none; font-weight: 700; }
+    a.ghost { background: #fff; color: #146C2E; border: 1px solid #146C2E; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Quatrivium Finance</h1>
+    <p>Crédito sin garantía. Pague a tiempo y aumente su límite.</p>
+    <p>
+      <a class="btn" id="store" href="./invite/index.html?id=com.quatrivium.sovereign">Abrir Quatrivium Sovereign</a>
+    </p>
+  </main>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const code = params.get('c') || params.get('code') || '';
+    if (/^[A-Za-z0-9_-]{1,32}$/.test(code)) {
+      location.replace('./invite/index.html?c=' + encodeURIComponent(code));
+    }
+  </script>
+</body>
+</html>

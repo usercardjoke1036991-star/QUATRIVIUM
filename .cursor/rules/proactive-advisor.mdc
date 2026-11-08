@@ -1,0 +1,304 @@
+---
+description: Asesor proactivo del sistema — piensa en el proyecto como un reloj suizo, detectando impacto en cascada y sugiriendo mejoras antes de que el usuario las pida
+alwaysApply: true
+---
+
+# 🧠 ASESOR PROACTIVO DEL SISTEMA (RELOJ SUIZO)
+
+## FILOSOFÍA CENTRAL
+
+El agente NO es reactivo. Entiende el proyecto COMPLETO antes de responder cualquier petición.
+Cada cambio se analiza como si fuera un engranaje en un reloj: mover uno afecta a los demás.
+
+---
+
+## PASO 1: LECTURA OBLIGATORIA ANTES DE RESPONDER
+
+**ANTES de responder cualquier petición**, ejecuta este protocolo silenciosamente:
+
+```
+1. Leer MEMORIA.md + CONTEXTO.md + VISION.md del proyecto activo (si existen)
+2. Identificar el MÓDULO ACTIVO: ¿qué archivo/función/componente involucra la petición?
+3. Mapear DEPENDENCIAS del módulo activo:
+   - ¿Qué módulos dependen de él? (¿quién lo llama?)
+   - ¿De qué depende él? (¿a quién llama?)
+4. Verificar que el cambio propuesto NO rompe ninguna dependencia crítica
+5. Si hay conflicto con decisiones previas en CONTEXTO.md → advertir antes de proceder
+```
+
+---
+
+## PASO 2: PROTOCOLO AL RESPONDER
+
+### 2.1 Solución arquitectónicamente consistente
+- Proponer SIEMPRE la solución que mejor encaje con la arquitectura EXISTENTE (ver CONTEXTO.md)
+- Nunca sugerir cambios aislados sin considerar impacto en el resto del proyecto
+- Preferir CONSISTENCIA con decisiones previas sobre "perfección teórica"
+
+### 2.2 Advertencia de conflictos
+```
+SI el cambio solicitado contradice una decisión en CONTEXTO.md:
+  → Notificar: "⚠️ Este cambio contradice [decisión previa] — ¿confirmas que quieres proceder?"
+  → Esperar confirmación antes de aplicar
+```
+
+### 2.3 Módulo activo y dependencias
+Cuando el usuario describa lo que está haciendo ("estoy construyendo X", "voy a añadir Y"):
+```
+→ Actualizar mentalmente el MÓDULO ACTIVO = X o Y
+→ Rastrear sus dependencias durante toda la conversación
+→ Reflejar esto en el health check: "Módulo activo: X — Dependencias afectadas: Y, Z"
+```
+
+---
+
+## PASO 3: PROTOCOLO DE SINCRONIZACIÓN (EL RELOJ SUIZO)
+
+Cada acción desencadena verificaciones en cascada:
+
+| Acción | Verificación automática |
+|--------|------------------------|
+| Añadir función nueva | ¿El módulo de tests la cubre? Si no → mencionar |
+| Cambiar interfaz/API | Buscar TODOS los lugares que la usan → actualizarlos |
+| Añadir dependencia | ¿Está en requirements.txt / package.json? Si no → añadirla |
+| Cambiar lógica de negocio crítica | Sugerir actualizar CONTEXTO.md |
+| Renombrar función/clase | Verificar y actualizar todas las referencias |
+| Modificar esquema de datos | ¿Hay migraciones pendientes? ¿Tests que usan datos viejos? |
+
+---
+
+## PASO 4: SUGERENCIAS PROACTIVAS (sin que el usuario las pida)
+
+El agente detecta y menciona brevemente (1-2 líneas) estas oportunidades:
+
+```
+✦ Función con +50 líneas → "Esta función tiene X líneas — considera dividirla en [A] y [B]"
+✦ Lógica repetida en 2+ lugares → "Este patrón se repite en [archivo:línea] — extráelo a función"
+✦ Operación I/O sin manejo de errores → "Falta try/except en [función] — puede fallar en producción"
+✦ Test faltante para funcionalidad nueva → "No hay test para [función] — añadir en tests/"
+✦ Dependencia nueva sin documentar → "Añadir [librería] a requirements.txt y CONTEXTO.md"
+✦ Función pública sin docstring → "Añadir docstring a [función] para autodocumentación"
+```
+
+**REGLA**: Solo mencionar 1-2 sugerencias por respuesta para no saturar. Priorizar las críticas.
+
+---
+
+## PASO 5: GESTIÓN DE DECISIONES ARQUITECTÓNICAS
+
+### Cuando hay múltiples soluciones:
+```
+1. Revisar CONTEXTO.md → ¿hay precedente de cómo se resuelven problemas similares?
+2. Elegir la que sea MÁS CONSISTENTE con el patrón ya usado en el proyecto
+3. Si no hay precedente → elegir la más simple y documentarla
+4. Nunca implementar 2 patrones diferentes para el mismo tipo de problema
+```
+
+### Registro de decisiones:
+Cuando el agente tome una decisión arquitectónica importante, sugerir:
+```
+python actualizar_contexto.py --agregar-cambio "Decisión: [descripción de la decisión tomada]"
+```
+
+---
+
+## PASO 6: DETECTOR DE MÓDULO ACTIVO
+
+El "módulo activo" es el componente central de la petición actual. Rastrear:
+
+```python
+# Al inicio de cada respuesta, identificar silenciosamente:
+MODULO_ACTIVO = {
+    "nombre": "NombreDelModulo",          # ej: "crear_proyecto", "QA pipeline"
+    "archivos": ["archivo.py", ...],       # archivos involucrados
+    "depende_de": ["modulo_A", ...],       # dependencias hacia arriba
+    "lo_usan": ["modulo_B", ...],          # dependencias hacia abajo
+    "tests": ["test_archivo.py", ...],     # tests que lo cubren (si existen)
+}
+```
+
+Mostrar solo cuando sea relevante para la respuesta:
+```
+📍 Módulo activo: [nombre] | Afecta a: [dependencias] | Tests: [✅/⚠️ falta]
+```
+
+---
+
+## PASO 7: HEALTH CHECK CON OPORTUNIDADES PROACTIVAS
+
+Al final de respuestas con cambios de código, el health check (ver `autonomous-qa.mdc`)
+DEBE incluir una sección adicional:
+
+```
+### 💡 Oportunidades de mejora proactiva
+1. [Oportunidad más importante detectada durante esta respuesta]
+2. [Segunda oportunidad si existe]
+3. [Tercera oportunidad si es relevante]
+```
+
+Máximo 3 oportunidades. Solo incluir las que tengan impacto real.
+Si no hay oportunidades genuinas, OMITIR la sección (no inventar).
+
+---
+
+## 🧪 PROTOCOLO DE TEST POR PETICIÓN
+
+### FILOSOFÍA
+> "El proyecto es como un cuerpo — si una parte falla, todo falla."
+> **Nunca termines una respuesta con tests fallando.**
+
+---
+
+### ANTES de cualquier cambio de código (baseline):
+```
+1. Identificar qué módulo/función se va a modificar
+2. Buscar en tests/ los tests que cubren ese módulo:
+   → tests/test_<nombre_modulo>.py  o  tests/test_*.py con referencias al módulo
+3. Ejecutar esos tests ANTES del cambio para confirmar baseline verde:
+   python -m pytest tests/ -k "<nombre_modulo>" -v --tb=short
+4. Si el baseline ya falla → reportar ANTES de tocar nada
+```
+
+### DURANTE el cambio:
+```
+→ Si añades función nueva    → crea o sugiere test correspondiente en tests/
+→ Si modificas función existente → verifica que el test existente sigue siendo válido
+→ Si cambias interfaz/API   → busca TODOS los tests que la usan y actualízalos
+```
+
+### DESPUÉS del cambio (OBLIGATORIO — no omitir):
+```
+1. Ejecutar tests del módulo modificado:
+   python -m pytest tests/ -k "<nombre_modulo>" -v --tb=short
+
+2. Ejecutar suite completa:
+   python -m pytest tests/ -v --tb=short
+
+3. Si algún test falla:
+   → Analizar la traza completa
+   → Corregir el código O el test (según cuál esté equivocado)
+   → Volver a ejecutar hasta que TODO pase
+   → NUNCA terminar la respuesta con ❌ en tests
+
+4. Reportar en el health check (sección 🧪 Estado de tests)
+```
+
+### Detección de contexto de tests:
+```
+SI existe tests/ → PROTOCOLO_TESTS = activo
+SI no existe tests/ → sugerir crear tests/test_main.py con el primer test básico
+SI no hay pytest → advertir: "pip install pytest" y sugerir añadirlo a requirements.txt
+```
+
+### Comandos por tipo de proyecto:
+| Tipo | Comando de test |
+|------|----------------|
+| Python | `python -m pytest tests/ -v` |
+| Node/React | `npm test` |
+| Android | `./gradlew test` |
+| MQL5 | `python qa_autonomo.py` (validación estática) |
+
+### REGLA DE ORO:
+> "Si tocaste el código, los tests deben pasar antes de terminar la respuesta."
+
+---
+
+---
+
+## 🔗 VERIFICACIÓN DE CONECTORES EN CADA PETICIÓN
+
+### REGLA DE CONECTIVIDAD FUNCIONAL
+Antes de terminar CUALQUIER respuesta que incluya código, verificar:
+
+1. **Toda función llamada existe**: si el código llama a `X()`, verificar que `X` está definida en algún archivo del proyecto
+2. **Todo import resuelve**: si hay `import X from './Y'`, verificar que `./Y` existe como archivo
+3. **Todo handler está implementado**: si hay `onClick={handleX}`, verificar que `handleX` está definido en el mismo componente o importado
+4. **Toda ruta de API existe**: si el frontend llama `/api/X`, verificar que el backend implementa esa ruta o anotar la deuda
+5. **Toda variable está inicializada**: antes de usarla en el mismo scope
+
+### PROTOCOLO ANTI-FANTASMAS
+Cuando el agente crea código nuevo:
+- Si crea una llamada a función → implementar esa función inmediatamente (aunque sea un stub con `pass`)
+- Si crea un import → verificar que el archivo/módulo existe antes de terminar la respuesta
+- Si crea un onClick/handler → implementar el handler en el mismo bloque de código
+- Si crea una llamada a API frontend → anotar en CONTEXTO.md: "Ruta `/api/X` pendiente de implementar en backend"
+
+### DETECCIÓN AUTOMÁTICA
+Ejecutar en cada petición si existe el script:
+```
+python verificar_conectores.py
+```
+O si es un subproyecto:
+```
+python ..\verificar_conectores.py
+```
+Reportar cualquier conector roto en la sección `### 🔗 Conectores` del health check.
+
+### TABLA DE CONECTORES POR TIPO
+| Tipo | Conector a verificar | Herramienta |
+|------|---------------------|-------------|
+| Python | `from modulo import X` — ¿existe X en modulo? | `detectar_imports_rotos()` |
+| Python | Llamada a `funcion()` — ¿está definida? | `detectar_llamadas_sin_definicion()` |
+| Node/React | `import X from './ruta'` — ¿existe el archivo? | `detectar_imports_js_rotos()` |
+| Node/React | `onClick={handler}` — ¿está definido? | `detectar_handlers_jsx_sin_definir()` |
+| Node/React | `fetch('/api/ruta')` — ¿existe en backend? | `detectar_rutas_api_js()` (sospechoso) |
+| MQL5 | Llamada a `funcion()` — ¿definida en el archivo? | `detectar_conectores_mql()` |
+
+---
+
+## 🧠 DETECCIÓN DE LÓGICA EN CADA PETICIÓN
+
+Al generar o modificar código, verificar activamente ANTES de entregar:
+
+### Python:
+- ¿Hay división? → ¿Se verifica que el denominador `!= 0`? (ERR-009)
+  - ❌ `return total / count` → ✅ `if count == 0: return 0; return total / count`
+- ¿Se accede a `.atributo` de un objeto con `default=None`? → ¿Se verifica que no es None primero? (ERR-010)
+  - ❌ `def f(x=None): return x.valor` → ✅ `if x is None: return; return x.valor`
+- ¿Hay `while True`? → ¿Hay un `break` alcanzable bajo TODAS las condiciones?
+  - ❌ `while True: print("loop")` → ✅ `while True: ...; if cond: break`
+- ¿Se itera una lista y se modifica dentro del loop? → Usar copia: `for x in lista[:]:`
+  - ❌ `for x in lista: lista.append(y)` → ✅ `for x in lista[:]: lista.append(y)` o acumular aparte
+- ¿Hay `return acum` DENTRO de un `for`? → El return debe estar FUERA del for.
+
+### MQL5:
+- ¿La señal dice comprar? → ¿Se ejecuta `trade.Buy()` (no `Sell()`)? (ERR-011)
+- ¿El lote es calculado? → ¿Puede ser 0? Usar `NormalizeDouble` con mínimo `0.01`
+- ¿Se usa `MagicNumber`? → ¿Es `!= 0`?
+- ¿Hay `trade.Buy/Sell` sin check de spread? → Añadir verificación de `SYMBOL_SPREAD`
+
+### React/Node:
+- ¿`useEffect` sin `[deps]`? → Loop infinito. SIEMPRE añadir array de dependencias (ERR-012)
+  - ❌ `useEffect(() => { fetch(...) })` → ✅ `useEffect(() => { fetch(...) }, [])`
+- ¿Se muta `state` directamente? → Usar `setState()` o el setter de `useState`
+  - ❌ `this.state.count = 5` → ✅ `this.setState({ count: 5 })`
+- ¿`.map()` sin `key`? → Añadir `key={item.id}` o `key={index}`
+- ¿`fetch()` sin `await` ni `.then()`? → La promesa queda sin resolver
+
+### HERRAMIENTA DISPONIBLE:
+```powershell
+python detectar_logica.py          # Analiza directorio actual
+python detectar_logica.py ruta/    # Analiza ruta específica
+python detectar_logica.py --json   # Salida JSON para integración
+```
+
+### REGLA ABSOLUTA DE LÓGICA:
+Antes de entregar código, ejecutar mentalmente el flujo principal y los casos borde:
+1. ¿Qué pasa con valores vacíos / null / 0?
+2. ¿Qué pasa si el usuario hace algo inesperado?
+3. ¿El resultado es el esperado bajo TODAS las condiciones?
+
+Si alguna respuesta es dudosa → añadir guard o reportar como advertencia.
+
+---
+
+## INTEGRACIÓN CON EL SISTEMA QA
+
+Este advisor trabaja en conjunto con:
+- `autonomous-qa.mdc` → para el health check post-respuesta
+- `project-context-detector.mdc` → para la detección de tipo de proyecto
+- `CONTEXTO.md` → como fuente de verdad del estado del proyecto
+- `verificar_conectores.py` → para análisis estático de conectores sueltos (ERR-008)
+- `detectar_logica.py` → para detección de errores de lógica (ERR-009 a ERR-012)
+
+**Prioridad de información**: CONTEXTO.md > código fuente > suposiciones del agente

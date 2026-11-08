@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.quatrivium.sovereign",
+      "sha256_cert_fingerprints": [
+        "DF:EF:CC:D0:00:39:72:5E:B7:3A:A6:7D:B0:E7:7E:91:0A:E7:46:4D:EE:8D:F2:74:86:54:E2:1D:A7:3E:D2:4A"
+      ]
+    }
+  }
+]

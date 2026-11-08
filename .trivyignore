@@ -1,0 +1,10 @@
+# Expo 54 / Metro 0.83. No hay parche 1.x. image-size 2.x rompe Metro (decision 2026-09-18).
+CVE-2025-71329
+CVE-2025-71330
+
+# uuid 7 via xcode / expo-constants de Expo 54. El fix pide 11+ y Expo 55.
+CVE-2026-41907
+
+# solc 0.8.26 de Hardhat 2 fija tmp 0.0.33. tmp 0.2 rompe el compilador.
+CVE-2026-44705
+CVE-2025-54798

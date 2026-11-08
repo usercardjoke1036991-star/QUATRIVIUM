@@ -1,0 +1,378 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  Contract,
+  HDNodeWallet,
+  JsonRpcProvider,
+  Mnemonic,
+  Wallet,
+  randomBytes,
+  type Signer,
+} from 'ethers';
+import * as SecureStore from 'expo-secure-store';
+import { ERC20_ABI } from '../constants/contractConfig';
+import { estimateNetworkGasWei, resolveFeeCollector } from '../constants/feeConfig';
+import { getProductMode, NETWORK_CONFIG, RPC_URLS } from '../constants/rpcConfig';
+import { isAllowedWei, isHexAddress } from '../utils/sanitize';
+import { isSealedBlob, openSecret, sealSecret, sealedBlobVersion } from '../utils/secretBox';
+import { allowWalletAsyncFallback } from '../utils/walletVaultPolicy';
+import { assertRestoreFitsThisDevice, lookupBoundWalletOnThisDevice } from './deviceClaim';
+import { bindAppWallet, claimDeviceWallet, clearBoundWallet } from './deviceBinding';
+import { getWalletWrapKey } from './walletSession';
+import { storeSlot } from '../utils/storeSlot';
+
+const WALLET_KEY = storeSlot(['quatrivium', 'appWallet', 'v1']);
+const WALLET_FALLBACK = storeSlot(['quatrivium', 'appWallet', 'v1', 'fallback']);
+const PHRASE_ACK_KEY = storeSlot(['quatrivium', 'appWallet', 'phraseAck']);
+const OPTIONS = { keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY };
+
+async function withLimit<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(fallback), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      () => {
+        clearTimeout(timer);
+        resolve(fallback);
+      }
+    );
+  });
+}
+
+interface StoredWallet {
+  address: string;
+  privateKey: string;
+  mnemonic?: string;
+}
+
+function parseStored(raw: string): StoredWallet | null {
+  try {
+    const parsed = JSON.parse(raw) as StoredWallet;
+    if (!isHexAddress(parsed.address) || !parsed.privateKey?.startsWith('0x')) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+async function readRawWallet(): Promise<string | null> {
+  const secure = await withLimit(
+    SecureStore.getItemAsync(WALLET_KEY).catch(() => null),
+    12000,
+    null
+  );
+  if (secure) {
+    void AsyncStorage.removeItem(WALLET_FALLBACK).catch(() => {});
+    return secure;
+  }
+  const fallback = await AsyncStorage.getItem(WALLET_FALLBACK).catch(() => null);
+  if (!fallback) return null;
+  const migrated = await withLimit(
+    SecureStore.setItemAsync(WALLET_KEY, fallback, OPTIONS).then(() => true as const),
+    2500,
+    false as const
+  );
+  if (migrated) {
+    await AsyncStorage.removeItem(WALLET_FALLBACK).catch(() => {});
+    return fallback;
+  }
+  if (!allowWalletAsyncFallback(getProductMode())) {
+    throw new Error('wallet-persist');
+  }
+  return fallback;
+}
+
+async function readStored(): Promise<StoredWallet | null> {
+  const raw = await readRawWallet();
+  if (!raw) return null;
+  if (isSealedBlob(raw)) {
+    const wrap = getWalletWrapKey();
+    if (!wrap) return null;
+    const opened = parseStored(openSecret(raw, wrap));
+    if (opened && sealedBlobVersion(raw) === 1) {
+      try {
+        await persistRecord(opened);
+      } catch {
+        // El sobre v1 sigue sirviendo si el cofre no acepta reescribir AES-GCM.
+      }
+    }
+    return opened;
+  }
+  const parsed = parseStored(raw);
+  if (!parsed) return null;
+  const wrap = getWalletWrapKey();
+  if (!wrap) return null;
+  await persistRecord(parsed);
+  return parsed;
+}
+
+async function persistRecord(record: StoredWallet): Promise<void> {
+  const wrap = getWalletWrapKey();
+  if (!wrap) {
+    throw new Error('locked');
+  }
+  const sealed = sealSecret(JSON.stringify(record), wrap);
+  const secureOk = await withLimit(
+    SecureStore.setItemAsync(WALLET_KEY, sealed, OPTIONS).then(() => true as const),
+    2500,
+    false as const
+  );
+  if (secureOk) {
+    await AsyncStorage.removeItem(WALLET_FALLBACK).catch(() => {});
+    return;
+  }
+  if (!allowWalletAsyncFallback(getProductMode())) {
+    throw new Error('wallet-persist');
+  }
+  try {
+    await AsyncStorage.setItem(WALLET_FALLBACK, sealed);
+  } catch {
+    throw new Error('wallet-persist');
+  }
+}
+
+async function writeStored(record: StoredWallet): Promise<void> {
+  const claim = await claimDeviceWallet(record.address);
+  if (!claim.ok) {
+    throw new Error('device-bound');
+  }
+  await persistRecord(record);
+  await bindAppWallet(record.address);
+}
+
+export async function rewrapWalletWithNewKey(rotatePin: () => Promise<string>): Promise<void> {
+  const current = await readStored();
+  await rotatePin();
+  if (current) {
+    await persistRecord(current);
+  }
+}
+
+function writeProvider() {
+  return new JsonRpcProvider(
+    RPC_URLS.primary,
+    { chainId: NETWORK_CONFIG.chainId, name: NETWORK_CONFIG.chainName },
+    { staticNetwork: true }
+  );
+}
+
+function toConnectedWallet(privateKey: string): HDNodeWallet | Wallet {
+  return new Wallet(privateKey).connect(writeProvider());
+}
+
+/** Reconecta un signer ya cargado al RPC del mundo activo (Demo testnet / Real mainnet). */
+export function withCurrentRpc(wallet: HDNodeWallet | Wallet): HDNodeWallet | Wallet {
+  return wallet.connect(writeProvider()) as HDNodeWallet | Wallet;
+}
+
+function normalizePhrase(phrase: string): string {
+  return phrase.trim().toLowerCase().split(/\s+/).filter(Boolean).join(' ');
+}
+
+export function isValidSecretPhrase(phrase: string): boolean {
+  const normalized = normalizePhrase(phrase);
+  const words = normalized.split(' ');
+  if (words.length !== 12 && words.length !== 24) return false;
+  try {
+    return Mnemonic.isValidMnemonic(normalized);
+  } catch {
+    return false;
+  }
+}
+
+export async function loadAppWallet(): Promise<HDNodeWallet | Wallet | null> {
+  const stored = await readStored();
+  if (!stored) return null;
+  return toConnectedWallet(stored.privateKey);
+}
+
+export async function createAppWallet(): Promise<HDNodeWallet> {
+  const claimed = await lookupBoundWalletOnThisDevice();
+  if (claimed) {
+    throw new Error('device-bound');
+  }
+  const created = createTwentyFourWordWallet();
+  await writeStored({
+    address: created.address.toLowerCase(),
+    privateKey: created.privateKey,
+    mnemonic: created.mnemonic?.phrase,
+  });
+  await SecureStore.deleteItemAsync(PHRASE_ACK_KEY).catch(() => {});
+  return created.connect(writeProvider()) as HDNodeWallet;
+}
+
+export async function ensureAppWallet(): Promise<HDNodeWallet | Wallet> {
+  const existing = await loadAppWallet();
+  if (existing) {
+    await bindAppWallet(existing.address);
+    return existing;
+  }
+  if (!getWalletWrapKey()) {
+    throw new Error('locked');
+  }
+  if (await readRawWallet()) {
+    throw new Error('locked');
+  }
+  throw new Error('missing');
+}
+
+export async function wipeAppWallet(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(WALLET_FALLBACK);
+  } catch {
+    // ignore
+  }
+  try {
+    await SecureStore.deleteItemAsync(WALLET_KEY);
+  } catch {
+    // ignore
+  }
+  try {
+    await SecureStore.deleteItemAsync(PHRASE_ACK_KEY);
+  } catch {
+    // ignore
+  }
+  await clearBoundWallet();
+}
+
+export async function recreateAppWallet(): Promise<HDNodeWallet> {
+  await wipeAppWallet();
+  return createAppWallet();
+}
+
+function createTwentyFourWordWallet(): HDNodeWallet {
+  const mnemonic = Mnemonic.fromEntropy(randomBytes(32));
+  return HDNodeWallet.fromMnemonic(mnemonic);
+}
+
+/** Genera 24 palabras sin guardarlas. Se persisten al poner usuario y contraseña. */
+export function generateSecretPhrase(): { phrase: string; address: string } {
+  const created = createTwentyFourWordWallet();
+  const phrase = created.mnemonic?.phrase;
+  if (!phrase) {
+    throw new Error('phrase');
+  }
+  return { phrase: normalizePhrase(phrase), address: created.address.toLowerCase() };
+}
+
+export function addressFromPhrase(phrase: string): string {
+  const normalized = normalizePhrase(phrase);
+  if (!isValidSecretPhrase(normalized)) {
+    throw new Error('phrase');
+  }
+  return HDNodeWallet.fromPhrase(normalized).address.toLowerCase();
+}
+
+export async function importFromPhrase(
+  phrase: string,
+  options: { markBackedUp?: boolean } = {}
+): Promise<HDNodeWallet> {
+  const normalized = normalizePhrase(phrase);
+  if (!isValidSecretPhrase(normalized)) {
+    throw new Error('phrase');
+  }
+  const imported = HDNodeWallet.fromPhrase(normalized);
+  const next = imported.address.toLowerCase();
+  await assertRestoreFitsThisDevice(next);
+  await wipeAppWallet();
+  await writeStored({
+    address: next,
+    privateKey: imported.privateKey,
+    mnemonic: imported.mnemonic?.phrase || normalized,
+  });
+  if (options.markBackedUp !== false) {
+    await markPhraseBackedUp();
+  }
+  return imported.connect(writeProvider()) as HDNodeWallet;
+}
+
+export async function getSecretPhrase(): Promise<string | null> {
+  const stored = await readStored();
+  return stored?.mnemonic ? normalizePhrase(stored.mnemonic) : null;
+}
+
+export async function hasSecretPhrase(): Promise<boolean> {
+  return Boolean(await getSecretPhrase());
+}
+
+export async function isPhraseBackedUp(): Promise<boolean> {
+  try {
+    return (await SecureStore.getItemAsync(PHRASE_ACK_KEY)) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export async function markPhraseBackedUp(): Promise<void> {
+  await SecureStore.setItemAsync(PHRASE_ACK_KEY, '1', OPTIONS);
+}
+
+async function cobrarGasPlataforma(
+  signer: Signer,
+  tokenTransfer: boolean,
+  extraWei = 0n,
+  followUp = false
+): Promise<bigint> {
+  const collector = await resolveFeeCollector(signer);
+  const from = (await signer.getAddress()).toLowerCase();
+  if (!collector || collector === from) return 0n;
+  const feeWei =
+    (await estimateNetworkGasWei(signer, tokenTransfer)) +
+    (await estimateNetworkGasWei(signer, false));
+  if (feeWei <= 0n) return 0n;
+  const provider = signer.provider;
+  if (!provider) throw new Error('provider');
+  const balance = await provider.getBalance(from);
+  const feeTxGas = await estimateNetworkGasWei(signer, false);
+  const followGas = followUp ? await estimateNetworkGasWei(signer, tokenTransfer) : 0n;
+  if (balance < feeWei + feeTxGas + followGas + extraWei) {
+    throw new Error('platform-fee-bnb');
+  }
+  const tx = await signer.sendTransaction({ to: collector, value: feeWei });
+  await tx.wait();
+  return feeWei;
+}
+
+export async function cobrarComisionIntermediario(signer: Signer, tokenTransfer = true) {
+  return cobrarGasPlataforma(signer, tokenTransfer, 0n, true);
+}
+
+export async function enviarToken(
+  signer: Signer,
+  tokenAddress: string,
+  to: string,
+  amountWei: string,
+  skipPlatformFee = false
+) {
+  if (!isHexAddress(to)) throw new Error('address');
+  assertAmount(amountWei);
+  if (!skipPlatformFee) {
+    await cobrarGasPlataforma(signer, true, 0n, true);
+  }
+  const token = new Contract(tokenAddress, ERC20_ABI, signer);
+  const tx = await token.transfer(to, amountWei);
+  return tx.wait();
+}
+
+export async function enviarBnb(
+  signer: Signer,
+  to: string,
+  amountWei: string,
+  skipPlatformFee = false
+) {
+  if (!isHexAddress(to)) throw new Error('address');
+  assertAmount(amountWei);
+  if (!skipPlatformFee) {
+    await cobrarGasPlataforma(signer, false, BigInt(amountWei), true);
+  }
+  const tx = await signer.sendTransaction({ to, value: amountWei });
+  return tx.wait();
+}
+
+function assertAmount(amountWei: string) {
+  if (!isAllowedWei(amountWei)) {
+    throw new Error('invalid-amount');
+  }
+}
