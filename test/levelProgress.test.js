@@ -36,12 +36,10 @@ async function deployHarness() {
   const { deployFamaAndCredit } = require('./helpers.cjs');
   const Harness = await getLinkedCreditFactory(ethers, 'QuatriviumCreditHarness');
   const token = await Token.deploy();
-  const feed = await Aggregator.deploy(8, 100000000);
   const tokenAddr = await token.getAddress();
   const { contract, fama } = await deployFamaAndCredit(
     Harness,
     tokenAddr,
-    await feed.getAddress(),
     owner,
     500,
     [owner.address],
@@ -66,7 +64,7 @@ describe('QuatriviumLeveling - hermano de solicitudes', function () {
     expect(await leveling.bonoDeHito(100)).to.equal(bonusOf(100));
     expect(await leveling.bonoDeHito(200)).to.equal(bonusOf(200));
     expect(await leveling.bonoDeHito(1000)).to.equal(ethers.parseUnits('20000', 18));
-    expect(await leveling.BONO_HITOS_TOTAL()).to.equal(ethers.parseUnits('108400', 18));
+    expect(await leveling.BONO_HITOS_TOTAL()).to.equal(ethers.parseUnits('107900', 18));
     for (let id = 1; id <= 1000; id += 17) {
       expect(await leveling.requiredCount(id)).to.equal(BigInt(requiredCountPlanned(id)));
     }

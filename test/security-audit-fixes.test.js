@@ -14,7 +14,7 @@ describe('security audit remediations', function () {
       .reverted;
     const fresh = await deployProtocol();
     await seedPool(fresh.token, fresh.contract, fresh.owner, '50');
-    await fresh.contract.connect(fresh.user).registrarHumanoConPadre(ethers.ZeroAddress);
+    await registerAndFund(fresh.token, fresh.contract, fresh.user);
     await expect(fresh.contract.connect(fresh.user).solicitarPrestamo(fresh.tokenAddr, 0)).to.not.be
       .reverted;
   });
@@ -45,7 +45,8 @@ describe('security audit remediations', function () {
       path.join(__dirname, '..', 'contracts', 'libraries', 'QuatriviumFamaLib.sol'),
       'utf8'
     );
-    expect(fama).to.include('PEG_MAX_EDAD = 25 hours');
+    expect(fama).to.not.include('PEG_MAX_EDAD');
+    expect(fama).to.include('function altaRegistrada');
     expect(fama).to.include('_avisarReserva');
     expect(fama).to.not.include('recoverAttest');
     const reserva = fs.readFileSync(
@@ -57,7 +58,7 @@ describe('security audit remediations', function () {
     expect(reserva).to.include('BOOST_GAP');
     expect(reserva).to.include('BOOST_DIA_TOPE');
     expect(reserva).to.include('function addGuardian');
-    expect(reserva).to.include('function pausarBoost');
+    expect(reserva).to.not.include('function pausarBoost');
   });
 
   it('keeps leftover translation scripts free of password-named keys', function () {

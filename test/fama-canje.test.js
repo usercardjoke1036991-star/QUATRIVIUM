@@ -4,6 +4,7 @@ const {
   deployProtocol,
   seedPool,
   registerAndFund,
+  qualifyCollector,
   proposeAndExecute,
   assertNavInvariant,
   expectAmt,
@@ -60,6 +61,8 @@ describe('QuatriviumFamaCaja - fama de caja y canje', function () {
     await seedPool(token, contract, owner, '500');
     await contract.connect(abuelo).registrarHumanoConPadre(ethers.ZeroAddress);
     await contract.connect(padre).registrarHumanoConPadre(abuelo.address);
+    await qualifyCollector(token, contract, abuelo);
+    await qualifyCollector(token, contract, padre);
     await registerAndFund(token, contract, hijo, '20', padre.address);
 
     expect(await fama.famaCaja(padre.address)).to.equal(0n);
@@ -73,7 +76,7 @@ describe('QuatriviumFamaCaja - fama de caja y canje', function () {
     expect(await fama.famaCanjeada(padre.address)).to.equal(0n);
     expectAmt(await fama.famaRed(abuelo.address), 53n);
     expectAmt((await fama.famaRed(owner.address)) - founderFame0, 140n);
-    expect(await contract.reputacion(padre.address)).to.equal(200n);
+    expect(await contract.reputacion(padre.address)).to.equal(300n);
     await assertNavInvariant(token, contract, tokenAddr, contractAddr);
   });
 
@@ -81,6 +84,10 @@ describe('QuatriviumFamaCaja - fama de caja y canje', function () {
     const { token, contract, fama, owner, user, tokenAddr, contractAddr } = await deployProtocol();
     await seedPool(token, contract, owner, '500');
     await registerAndFund(token, contract, user, '20');
+    await contract.connect(user).solicitarPrestamo(tokenAddr, 0);
+    await contract
+      .connect(user)
+      .pagarPrestamo(tokenAddr, (await contract.obtenerDeuda(user.address)).total);
 
     const gift = ethers.parseUnits('5', 18);
     await contract.connect(user).donar(tokenAddr, gift);
@@ -151,7 +158,9 @@ describe('QuatriviumFamaCaja - fama de caja y canje', function () {
   });
 
   it('still allows fame redeem if an installment date passed but the loan is not due', async () => {
-    const { token, contract, fama, owner, user, tokenAddr, contractAddr } = await deployProtocol();
+    const { token, contract, fama, owner, user, tokenAddr, contractAddr } = await deployProtocol({
+      harness: true,
+    });
     await seedPool(token, contract, owner, '500');
     await registerAndFund(token, contract, user, '200');
     await contract.connect(user).donar(tokenAddr, ethers.parseUnits('5', 18));
@@ -162,12 +171,8 @@ describe('QuatriviumFamaCaja - fama de caja y canje', function () {
     await borrowAndPay(contract, user, tokenAddr);
     await borrowAndPay(contract, user, tokenAddr);
 
-    await proposeAndExecute(contract, owner, 'setNivel', [
-      2,
-      ethers.parseUnits('50', 18),
-      35 * 24 * 60 * 60,
-      1400,
-    ]);
+    await contract.forceNivel(user.address, 7);
+    await advanceCooldown();
 
     await contract.connect(user).solicitarPrestamo(tokenAddr, 0);
     const plan = await contract.planPago(user.address);
@@ -217,8 +222,8 @@ describe('QuatriviumFamaCaja - fama de caja y canje', function () {
     await token.mint(user.address, fee);
     await token.connect(user).approve(contractAddr, fee);
     const liqBefore = await contract.totalLiquidity(tokenAddr);
-    await contract.connect(user).pagarVerificacion(tokenAddr, fee);
-    expect(await contract.totalLiquidity(tokenAddr)).to.equal(liqBefore + fee);
+    await expect(contract.connect(user).pagarVerificacion(tokenAddr, fee)).to.be.reverted;
+    expect(await contract.totalLiquidity(tokenAddr)).to.equal(liqBefore);
     expect(await fama.famaCaja(user.address)).to.equal(0n);
     expect(await contract.donado(user.address)).to.equal(0n);
   });

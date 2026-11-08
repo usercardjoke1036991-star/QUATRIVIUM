@@ -38,11 +38,12 @@ describe('QuatriviumFamaCaja - racha diaria', function () {
       extra: padre,
       tokenAddr,
       signers,
-    } = await deployProtocol();
+    } = await deployProtocol({ harness: true });
     const hijo = signers[3];
     await seedPool(token, contract, owner, '500');
     await contract.connect(padre).registrarHumanoConPadre(ethers.ZeroAddress);
     await registerAndFund(token, contract, hijo, '20', padre.address);
+    await contract.forceNivel(hijo.address, 2);
     await borrowAndPay(contract, hijo, tokenAddr);
     await fama.connect(hijo).notificarRacha(hijo.address);
 
@@ -63,13 +64,15 @@ describe('QuatriviumFamaCaja - racha diaria', function () {
       extra: padre,
       tokenAddr,
       signers,
-    } = await deployProtocol();
+    } = await deployProtocol({ harness: true });
     const hijoA = signers[3];
     const hijoB = signers[4];
     await seedPool(token, contract, owner, '500');
     await contract.connect(padre).registrarHumanoConPadre(ethers.ZeroAddress);
     await registerAndFund(token, contract, hijoA, '20', padre.address);
     await registerAndFund(token, contract, hijoB, '20', padre.address);
+    await contract.forceNivel(hijoA.address, 2);
+    await contract.forceNivel(hijoB.address, 2);
     await borrowAndPay(contract, hijoA, tokenAddr);
     await fama.connect(hijoA).notificarRacha(hijoA.address);
     await contract.connect(hijoB).solicitarPrestamo(tokenAddr, 0);
@@ -89,11 +92,12 @@ describe('QuatriviumFamaCaja - racha diaria', function () {
       extra: padre,
       tokenAddr,
       signers,
-    } = await deployProtocol();
+    } = await deployProtocol({ harness: true });
     const hijo = signers[3];
     await seedPool(token, contract, owner, '500');
     await contract.connect(padre).registrarHumanoConPadre(ethers.ZeroAddress);
     await registerAndFund(token, contract, hijo, '40', padre.address);
+    await contract.forceNivel(hijo.address, 2);
     await borrowAndPay(contract, hijo, tokenAddr);
     await fama.connect(hijo).notificarRacha(hijo.address);
     await borrowAndPay(contract, hijo, tokenAddr);
@@ -118,11 +122,12 @@ describe('QuatriviumFamaCaja - racha diaria', function () {
       extra: padre,
       tokenAddr,
       signers,
-    } = await deployProtocol();
+    } = await deployProtocol({ harness: true });
     const hijo = signers[3];
     await seedPool(token, contract, owner, '500');
     await contract.connect(padre).registrarHumanoConPadre(ethers.ZeroAddress);
     await registerAndFund(token, contract, hijo, '80', padre.address);
+    await contract.forceNivel(hijo.address, 2);
     for (let i = 0; i < 7; i += 1) {
       await borrowAndPay(contract, hijo, tokenAddr);
       await fama.connect(hijo).notificarRacha(hijo.address);
@@ -132,6 +137,15 @@ describe('QuatriviumFamaCaja - racha diaria', function () {
     expect(row.diasMax).to.equal(7);
     expect(row.bonoPendiente).to.equal(ethers.parseUnits('5', 18));
 
+    const alta = await ethers.getContractAt('QuatriviumAlta', await fama.alta());
+    await token.mint(padre.address, ethers.parseUnits('10', 18));
+    await token.connect(padre).approve(await alta.getAddress(), ethers.MaxUint256);
+    await token.connect(padre).approve(await contract.getAddress(), ethers.MaxUint256);
+    await alta.connect(padre).pagarRegistro();
+    await contract.connect(padre).solicitarPrestamo(tokenAddr, 0);
+    await contract
+      .connect(padre)
+      .pagarPrestamo(tokenAddr, (await contract.obtenerDeuda(padre.address)).total);
     const before = await token.balanceOf(padre.address);
     await fama.connect(padre).cobrarBonoRacha();
     expect(await token.balanceOf(padre.address)).to.equal(before + ethers.parseUnits('5', 18));

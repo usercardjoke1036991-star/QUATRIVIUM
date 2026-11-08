@@ -30,7 +30,9 @@ async function borrowAndPay(contract, user, tokenAddr) {
 
 describe('QuatriviumCredit - cuotas desde $50', function () {
   it('keeps Level 1 as a single payment and splits $50 into two installments', async () => {
-    const { token, contract, owner, user, tokenAddr, contractAddr } = await deployProtocol();
+    const { token, contract, owner, user, tokenAddr, contractAddr } = await deployProtocol({
+      harness: true,
+    });
     await seedPool(token, contract, owner, '500');
     await registerAndFund(token, contract, user, '200');
 
@@ -46,12 +48,7 @@ describe('QuatriviumCredit - cuotas desde $50', function () {
     await borrowAndPay(contract, user, tokenAddr);
     await borrowAndPay(contract, user, tokenAddr);
 
-    await proposeAndExecute(contract, owner, 'setNivel', [
-      2,
-      ethers.parseUnits('50', 18),
-      35 * 24 * 60 * 60,
-      1400,
-    ]);
+    await contract.forceNivel(user.address, 7);
 
     await advanceCooldown();
     await contract.connect(user).solicitarPrestamo(tokenAddr, 0);
@@ -83,9 +80,21 @@ describe('QuatriviumCredit - cuotas desde $50', function () {
   });
 
   it('pays referral commissions on each installment, adding up to the full share', async () => {
-    const { token, contract, owner, user, extra: padre, tokenAddr } = await deployProtocol();
+    const {
+      token,
+      contract,
+      owner,
+      user,
+      extra: padre,
+      tokenAddr,
+    } = await deployProtocol({ harness: true });
     await seedPool(token, contract, owner, '500');
-    await contract.connect(padre).registrarHumanoConPadre(ethers.ZeroAddress);
+    await registerAndFund(token, contract, padre, '20');
+    await contract.connect(padre).solicitarPrestamo(tokenAddr, 0);
+    await contract
+      .connect(padre)
+      .pagarPrestamo(tokenAddr, (await contract.obtenerDeuda(padre.address)).total);
+    await advanceCooldown();
     await registerAndFund(token, contract, user, '200', padre.address);
 
     await contract.connect(user).solicitarPrestamo(tokenAddr, 0);
@@ -94,12 +103,7 @@ describe('QuatriviumCredit - cuotas desde $50', function () {
     await borrowAndPay(contract, user, tokenAddr);
     await borrowAndPay(contract, user, tokenAddr);
 
-    await proposeAndExecute(contract, owner, 'setNivel', [
-      2,
-      ethers.parseUnits('50', 18),
-      35 * 24 * 60 * 60,
-      1400,
-    ]);
+    await contract.forceNivel(user.address, 7);
 
     await advanceCooldown();
     const padreBefore = await token.balanceOf(padre.address);
@@ -125,7 +129,7 @@ describe('QuatriviumCredit - cuotas desde $50', function () {
   });
 
   it('lets an unlocked user keep requesting any lower level and rejects locked levels', async () => {
-    const { token, contract, owner, user, tokenAddr } = await deployProtocol();
+    const { token, contract, owner, user, tokenAddr } = await deployProtocol({ harness: true });
     await seedPool(token, contract, owner, '500');
     await registerAndFund(token, contract, user, '200');
 
@@ -147,7 +151,7 @@ describe('QuatriviumCredit - cuotas desde $50', function () {
   });
 
   it('keeps on-time ranking if installments are skipped and the loan is paid before the final due date', async () => {
-    const { token, contract, owner, user, tokenAddr } = await deployProtocol();
+    const { token, contract, owner, user, tokenAddr } = await deployProtocol({ harness: true });
     await seedPool(token, contract, owner, '500');
     await registerAndFund(token, contract, user, '200');
 
@@ -157,12 +161,7 @@ describe('QuatriviumCredit - cuotas desde $50', function () {
     await borrowAndPay(contract, user, tokenAddr);
     await borrowAndPay(contract, user, tokenAddr);
 
-    await proposeAndExecute(contract, owner, 'setNivel', [
-      2,
-      ethers.parseUnits('50', 18),
-      35 * 24 * 60 * 60,
-      1400,
-    ]);
+    await contract.forceNivel(user.address, 7);
 
     await advanceCooldown();
     const before = await contract.obtenerProgresoUsuario(user.address);

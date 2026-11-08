@@ -151,12 +151,13 @@ contract QuatriviumInvariantTest is Test {
         admins[0] = owner;
         uint64 nonce = vm.getNonce(owner);
         address predictedCredit = vm.computeCreateAddress(owner, nonce + 1);
+        address predictedReserva = vm.computeCreateAddress(owner, nonce + 2);
+        address predictedAlta = vm.computeCreateAddress(owner, nonce + 3);
 
         vm.startPrank(owner, owner);
-        QuatriviumFamaCaja fama = new QuatriviumFamaCaja(address(token), predictedCredit);
+        QuatriviumFamaCaja fama = new QuatriviumFamaCaja(address(token), predictedCredit, predictedAlta, predictedReserva);
         credit = new QuatriviumCreditHarness(
             address(token),
-            address(feed),
             payable(owner),
             500,
             admins,
@@ -164,11 +165,8 @@ contract QuatriviumInvariantTest is Test {
             address(fama)
         );
         require(address(credit) == predictedCredit, "credit pred");
-        reserva = new QuatriviumReserva(address(token), owner, address(credit), address(fama));
+        reserva = new QuatriviumReserva(address(token), owner, address(credit), address(fama), predictedAlta);
         QuatriviumAlta alta = new QuatriviumAlta(address(token), address(credit), address(reserva));
-        reserva.setAltaFuente(address(alta));
-        fama.setReserva(address(reserva));
-        fama.setAlta(address(alta));
         token.mint(owner, 20_000 ether);
         token.approve(address(credit), type(uint256).max);
         token.approve(address(reserva), type(uint256).max);

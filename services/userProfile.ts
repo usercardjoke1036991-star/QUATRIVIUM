@@ -306,6 +306,8 @@ export async function publishOwnProfile(
 ): Promise<void> {}
 
 /** Sin directorio remoto: nunca hay perfiles públicos de otras wallets. */
-export async function fetchPublicProfiles(_wallets: string[]): Promise<Record<string, UserProfile>> {
+export async function fetchPublicProfiles(
+  _wallets: string[]
+): Promise<Record<string, UserProfile>> {
   return {};
 }

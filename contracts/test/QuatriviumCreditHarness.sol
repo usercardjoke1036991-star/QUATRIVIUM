@@ -8,13 +8,12 @@ import {QuatriviumFamaLib} from "../libraries/QuatriviumFamaLib.sol";
 contract QuatriviumCreditHarness is QuatriviumCredit {
     constructor(
         address usdt,
-        address feed,
         address payable feeCollector_,
         uint256 feeBp,
         address[] memory admins_,
         uint256 confirms,
         address famaHermano_
-    ) QuatriviumCredit(usdt, feed, feeCollector_, feeBp, admins_, confirms, famaHermano_) {}
+    ) QuatriviumCredit(usdt, feeCollector_, feeBp, admins_, confirms, famaHermano_) {}
 
     function forceNivel(address usuario, uint256 nivel) external {
         progresoUsuarios[usuario].nivelActual = nivel;

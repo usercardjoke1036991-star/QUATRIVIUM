@@ -5,11 +5,9 @@ const { Interface } = require('ethers');
 
 const ADMIN_SELECTORS = [
   'setFeeBP',
-  'setNivel',
   'setTokenConfig',
   'setInterestModelParams',
   'setReputationParams',
-  'setMorosidad',
   'setFeeCollector',
   'addAdmin',
   'removeAdmin',
@@ -36,7 +34,11 @@ describe('CONTRACT_ABI', function () {
     expect(() => iface.getFunction('cancelAdminAction')).to.not.throw();
     expect(() => iface.getFunction('proposeAdminAction')).to.not.throw();
     expect(
-      iface.parseTransaction({ data: iface.encodeFunctionData('setFundador', ['0x0000000000000000000000000000000000000001']) }).name
+      iface.parseTransaction({
+        data: iface.encodeFunctionData('setFundador', [
+          '0x0000000000000000000000000000000000000001',
+        ]),
+      }).name
     ).to.equal('setFundador');
   });
 

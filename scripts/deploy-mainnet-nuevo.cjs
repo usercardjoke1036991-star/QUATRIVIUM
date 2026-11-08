@@ -135,13 +135,17 @@ async function main() {
     if (!testnetUsdt.has(envUsdt)) {
       throw new Error(`LUSD/USDT_ADDRESS no es el LUSD de Arbitrum One. Recibido ${envUsdt}`);
     }
-    console.warn('Token de la red de prueba ignorado. Mainnet usa el LUSD oficial en Arbitrum One.');
+    console.warn(
+      'Token de la red de prueba ignorado. Mainnet usa el LUSD oficial en Arbitrum One.'
+    );
   }
   const usdt = ARBITRUM_MAINNET.lusd;
   const usdtFeed = ARBITRUM_MAINNET.lusdUsdFeed;
   const envFeed = (process.env.USDT_FEED || process.env.LUSD_FEED || '').toLowerCase();
   if (envFeed && envFeed !== usdtFeed.toLowerCase()) {
-    console.warn('Feed del entorno ignorado. Mainnet usa el feed LUSD/USD de Chainlink en Arbitrum One.');
+    console.warn(
+      'Feed del entorno ignorado. Mainnet usa el feed LUSD/USD de Chainlink en Arbitrum One.'
+    );
   }
   const feeCollector = process.env.FEE_COLLECTOR || '';
   const feeBp = Number(process.env.FEE_BP || '500');

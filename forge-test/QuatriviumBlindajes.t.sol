@@ -34,23 +34,21 @@ contract QuatriviumBlindajesTest is Test {
         address[] memory admins = new address[](1);
         admins[0] = owner;
         uint64 nonce = vm.getNonce(owner);
-        address predicted = vm.computeCreateAddress(owner, nonce + 1);
+        address predictedCredit = vm.computeCreateAddress(owner, nonce + 1);
+        address predictedReserva = vm.computeCreateAddress(owner, nonce + 2);
+        address predictedAlta = vm.computeCreateAddress(owner, nonce + 3);
         vm.startPrank(owner, owner);
-        fama = new QuatriviumFamaCaja(address(token), predicted);
+        fama = new QuatriviumFamaCaja(address(token), predictedCredit, predictedAlta, predictedReserva);
         credit = new QuatriviumCreditHarness(
             address(token),
-            address(feed),
             payable(owner),
             500,
             admins,
             1,
             address(fama)
         );
-        reserva = new QuatriviumReserva(address(token), owner, address(credit), address(fama));
+        reserva = new QuatriviumReserva(address(token), owner, address(credit), address(fama), predictedAlta);
         alta = new QuatriviumAlta(address(token), address(credit), address(reserva));
-        reserva.setAltaFuente(address(alta));
-        fama.setReserva(address(reserva));
-        fama.setAlta(address(alta));
         token.mint(owner, 50_000 ether);
         token.approve(address(credit), type(uint256).max);
         credit.depositarLiquidez(address(token), 20_000 ether);

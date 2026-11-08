@@ -56,7 +56,7 @@ contract QuatriviumReserva is ReentrancyGuard {
     uint256 public pendienteFundadorDesde;
     address public pendienteFundadorProposer;
     uint256 public bote;
-    address public altaFuente;
+    address public immutable altaFuente;
     uint256 public totalBloqueado;
     address public pendienteRetiroA;
     uint256 public pendienteRetiroMonto;
@@ -68,8 +68,6 @@ contract QuatriviumReserva is ReentrancyGuard {
     address public pendienteGuardian;
     uint256 public pendienteGuardianDesde;
     address public pendienteGuardianProposer;
-    address public reanudaBoostProposer;
-    bool public boostPausado;
     uint256 public boostDiaAcumulado;
     uint256 public boostDiaInicio;
 
@@ -127,13 +125,16 @@ contract QuatriviumReserva is ReentrancyGuard {
         _;
     }
 
-    constructor(address token_, address fundador_, address credit_, address famaCaja_) {
-        if (token_ == address(0) || fundador_ == address(0) || credit_ == address(0)) revert DestinoCero();
+    constructor(address token_, address fundador_, address credit_, address famaCaja_, address alta_) {
+        if (token_ == address(0) || fundador_ == address(0) || credit_ == address(0) || alta_ == address(0)) {
+            revert DestinoCero();
+        }
         token = IERC20(token_);
         owner = msg.sender;
         fundador = fundador_;
         credit = credit_;
         famaCaja = famaCaja_;
+        altaFuente = alta_;
         isGuardian[msg.sender] = true;
         guardianList.push(msg.sender);
     }
@@ -219,12 +220,6 @@ contract QuatriviumReserva is ReentrancyGuard {
         emit BoteAportado(msg.sender, monto);
     }
 
-    function setAltaFuente(address next) external {
-        if (msg.sender != owner) revert SoloOwner();
-        if (altaFuente != address(0) || next == address(0)) revert DestinoCero();
-        altaFuente = next;
-    }
-
     function onAlta(uint256 monto) external {
         if (msg.sender != altaFuente) revert SoloAdmin();
         if (monto == 0) revert MontoCero();
@@ -282,7 +277,6 @@ contract QuatriviumReserva is ReentrancyGuard {
         external
         nonReentrant
     {
-        if (boostPausado) revert BoostCerrado();
         if (msg.sender != credit) revert NoAutorizado();
         if (beneficiario == address(0) || montoBase == 0 || salt == bytes32(0)) revert MontoCero();
         bytes32 id = boostIdOf(beneficiario, montoBase, salt);
@@ -405,26 +399,6 @@ contract QuatriviumReserva is ReentrancyGuard {
         pendienteOwnerDesde = 0;
         pendienteOwnerProposer = address(0);
         ownerCambioConfirmado = false;
-    }
-
-    function pausarBoost() external {
-        if (!isGuardian[msg.sender] && !_esAdminCredit()) revert SoloAdmin();
-        boostPausado = true;
-        reanudaBoostProposer = address(0);
-        emit BoostPausa(true);
-    }
-
-    function reanudarBoost() external onlyGuardian {
-        if (guardianList.length >= 2) {
-            if (reanudaBoostProposer == address(0)) {
-                reanudaBoostProposer = msg.sender;
-                return;
-            }
-            if (msg.sender == reanudaBoostProposer) revert MismaLlave();
-            reanudaBoostProposer = address(0);
-        }
-        boostPausado = false;
-        emit BoostPausa(false);
     }
 
     function _esOwnerCredit() internal view returns (bool) {

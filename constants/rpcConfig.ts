@@ -135,9 +135,10 @@ const DEMO_RPCS = [
   ...ARBITRUM_SEPOLIA.rpc,
 ].filter(usableRpc);
 
-const LIVE_RPCS = [process.env.EXPO_PUBLIC_ARBITRUM_MAINNET_RPC_PRIMARY, ...ARBITRUM_MAINNET.rpc].filter(
-  usableRpc
-);
+const LIVE_RPCS = [
+  process.env.EXPO_PUBLIC_ARBITRUM_MAINNET_RPC_PRIMARY,
+  ...ARBITRUM_MAINNET.rpc,
+].filter(usableRpc);
 
 export const RPC_URLS = {
   get primary() {

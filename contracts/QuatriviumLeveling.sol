@@ -11,7 +11,7 @@ pragma solidity ^0.8.24;
 contract QuatriviumLeveling {
     uint256 public constant HITO_PASO = 100;
     uint256 public constant BONO_NIVEL_MAXIMO = 20000e18;
-    uint256 public constant BONO_HITOS_TOTAL = 108400e18;
+    uint256 public constant BONO_HITOS_TOTAL = 107900e18;
     uint256 public constant MAX_NIVEL = 1000;
     uint256 public constant DIVISION_SIZE = 100;
     uint256 public constant L1000_BONO_CADA = 100;

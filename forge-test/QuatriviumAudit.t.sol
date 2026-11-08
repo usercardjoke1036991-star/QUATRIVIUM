@@ -6,6 +6,7 @@ import {QuatriviumCredit} from "../contracts/QuatriviumCredit.sol";
 import {QuatriviumFamaCaja} from "../contracts/QuatriviumFamaCaja.sol";
 import {QuatriviumFamaLib} from "../contracts/libraries/QuatriviumFamaLib.sol";
 import {QuatriviumReserva} from "../contracts/QuatriviumReserva.sol";
+import {QuatriviumAlta} from "../contracts/QuatriviumAlta.sol";
 import {ERC20Mock} from "../contracts/mocks/ERC20Mock.sol";
 import {MockV3Aggregator} from "../contracts/mocks/MockV3Aggregator.sol";
 import {CreditViewMock} from "../contracts/mocks/CreditViewMock.sol";
@@ -16,6 +17,7 @@ contract QuatriviumAuditForgeTest is Test {
     MockV3Aggregator internal feed;
     QuatriviumCredit internal credit;
     QuatriviumFamaCaja internal fama;
+    QuatriviumAlta internal alta;
     address internal owner;
     uint256 internal ownerPk;
     address internal user;
@@ -35,17 +37,20 @@ contract QuatriviumAuditForgeTest is Test {
         admins[0] = owner;
         uint64 nonce = vm.getNonce(owner);
         address predictedCredit = vm.computeCreateAddress(owner, nonce + 1);
+        address predictedReserva = vm.computeCreateAddress(owner, nonce + 2);
+        address predictedAlta = vm.computeCreateAddress(owner, nonce + 3);
         vm.startPrank(owner);
-        fama = new QuatriviumFamaCaja(address(token), predictedCredit);
+        fama = new QuatriviumFamaCaja(address(token), predictedCredit, predictedAlta, predictedReserva);
         credit = new QuatriviumCredit(
             address(token),
-            address(feed),
             payable(owner),
             500,
             admins,
             1,
             address(fama)
         );
+        new QuatriviumReserva(address(token), owner, predictedCredit, address(fama), predictedAlta);
+        alta = new QuatriviumAlta(address(token), predictedCredit, predictedReserva);
         vm.stopPrank();
         require(address(credit) == predictedCredit, "credit pred");
 
@@ -102,7 +107,7 @@ contract QuatriviumAuditForgeTest is Test {
         vm.prank(user, user);
         credit.solicitarPrestamo(address(token), 0);
         (, , uint256 vencimiento,,,) = credit.usuarios(user);
-        vm.warp(vencimiento + 10);
+        vm.warp(vencimiento + 48 hours + 10);
         token.mint(user, 20 ether);
         vm.prank(user, user);
         vm.expectRevert();
@@ -116,7 +121,7 @@ contract QuatriviumAuditForgeTest is Test {
         vm.prank(user, user);
         credit.solicitarPrestamo(address(token), 0);
         (, , uint256 vencimiento,,,) = credit.usuarios(user);
-        vm.warp(vencimiento + 10);
+        vm.warp(vencimiento + 48 hours + 10);
         token.mint(liquidator, 50 ether);
         vm.prank(liquidator);
         token.approve(address(credit), type(uint256).max);
@@ -143,25 +148,18 @@ contract QuatriviumAuditForgeTest is Test {
         _assertNav();
     }
 
-    function test_stale_peg_blocks_borrow_and_donate_past_25h() public {
+    function test_stale_feed_does_not_block_borrow_or_donate() public {
         _onboard(user);
-        feed.setRound(2, 100000000, block.timestamp - 24 hours, block.timestamp - 24 hours, 2);
-        vm.prank(user, user);
-        credit.donar(address(token), 1 ether);
-
         feed.setRound(3, 100000000, block.timestamp - 26 hours, block.timestamp - 25 hours - 1 minutes, 3);
         vm.prank(user, user);
-        vm.expectRevert();
         credit.solicitarPrestamo(address(token), 0);
         vm.prank(user, user);
-        vm.expectRevert();
-        credit.donar(address(token), 2 ether);
+        credit.donar(address(token), 1 ether);
     }
 
-    function test_depeg_blocks_deposit() public {
+    function test_depeg_does_not_block_deposit() public {
         feed.updateAnswer(97000000);
         vm.prank(owner, owner);
-        vm.expectRevert();
         credit.depositarLiquidez(address(token), 1 ether);
     }
 
@@ -197,7 +195,7 @@ contract QuatriviumAuditForgeTest is Test {
         vm.prank(user, user);
         credit.solicitarPrestamo(address(token), 0);
         (, , uint256 vencimiento,,,) = credit.usuarios(user);
-        vm.warp(vencimiento + 10);
+        vm.warp(vencimiento + 48 hours + 10);
         token.mint(liquidator, 50 ether);
         vm.prank(liquidator);
         token.approve(address(credit), type(uint256).max);
@@ -215,6 +213,11 @@ contract QuatriviumAuditForgeTest is Test {
 
     function test_canje_respects_cash_floor() public {
         _onboard(user);
+        vm.prank(user, user);
+        credit.solicitarPrestamo(address(token), 0);
+        (,, uint256 total,) = credit.obtenerDeuda(user);
+        vm.prank(user, user);
+        credit.pagarPrestamo(address(token), total);
         _donate(user, 5 ether);
         assertEq(fama.famaCaja(user), 500);
         // Pool is 500; 20% floor = 100. Redeem 250 fame = 1 USDT, allowed.
@@ -263,7 +266,7 @@ contract QuatriviumAuditForgeTest is Test {
         CreditViewMock vista = new CreditViewMock();
         address founder = makeAddr("boost-founder");
         address locker = makeAddr("boost-locker");
-        QuatriviumReserva reserva = new QuatriviumReserva(address(token), founder, address(vista), address(vista));
+        QuatriviumReserva reserva = new QuatriviumReserva(address(token), founder, address(vista), address(vista), address(1));
         vista.setAdmin(founder, true);
         vista.setNivel(locker, 10);
         vista.setPayToken(address(token));
@@ -287,20 +290,19 @@ contract QuatriviumAuditForgeTest is Test {
         reserva.addGuardian(g2);
         vm.warp(block.timestamp + 72 hours + 1);
         reserva.applyGuardian();
-        reserva.pausarBoost();
-        reserva.reanudarBoost();
-        assertTrue(reserva.boostPausado());
-        vm.prank(g2);
-        reserva.reanudarBoost();
-        assertFalse(reserva.boostPausado());
+        assertEq(reserva.guardianes(), 2);
     }
 
     function _onboard(address who) internal {
         vm.prank(who, who);
         credit.registrarHumanoConPadre(address(0));
-        token.mint(who, 80 ether);
+        token.mint(who, 84 ether);
         vm.prank(who);
         token.approve(address(credit), type(uint256).max);
+        vm.prank(who);
+        token.approve(address(alta), type(uint256).max);
+        vm.prank(who, who);
+        alta.pagarRegistro();
     }
 
     function _donate(address who, uint256 amount) internal {

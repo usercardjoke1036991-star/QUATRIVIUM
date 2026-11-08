@@ -1,14 +1,12 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const { deployProtocol, seedPool } = require('./helpers.cjs');
+const { deployProtocol, seedPool, registerAndFund } = require('./helpers.cjs');
 
 describe('QuatriviumCredit - Sovereign KYC-free borrowing', function () {
   it('lets a registered user borrow directly without KYC declaration', async () => {
     const { token, contract, user, tokenAddr } = await deployProtocol();
     await seedPool(token, contract, (await ethers.getSigners())[0], '500');
-    await contract.connect(user).registrarHumanoConPadre(ethers.ZeroAddress);
-    await token.mint(user.address, ethers.parseUnits('50', 18));
-    await token.connect(user).approve(await contract.getAddress(), ethers.MaxUint256);
+    await registerAndFund(token, contract, user, '50');
 
     expect(contract.interface.hasFunction('declararKyc')).to.equal(false);
     expect(contract.interface.hasFunction('kycDeclarado')).to.equal(false);

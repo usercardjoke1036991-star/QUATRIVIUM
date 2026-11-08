@@ -100,7 +100,9 @@ describe('Demo y Real no se mezclan', function () {
     expect(rpc.NETWORK_CONFIG.chainId).to.equal(42161);
     expect(rpc.NETWORK_CONFIG.chainId).to.equal(addresses.DEPLOYED_MAINNET.chainId);
     expect(String(rpc.RPC_URLS.primary || '')).to.not.match(/sepolia/i);
-    expect(contracts.getUsdtAddress().toLowerCase()).to.equal(bsc.ARBITRUM_MAINNET.lusd.toLowerCase());
+    expect(contracts.getUsdtAddress().toLowerCase()).to.equal(
+      bsc.ARBITRUM_MAINNET.lusd.toLowerCase()
+    );
   });
 
   it('en Demo usa Arbitrum Sepolia (chain 421614) y el crédito de prueba, nunca el de mainnet', function () {

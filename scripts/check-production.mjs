@@ -110,7 +110,9 @@ function runRepoCi() {
     process.exit(1);
   }
   console.log('OK  eas.json production: APP_ENV=production, chain 42161 (Arbitrum One)');
-  console.log('OK  LUSD (0x93b346b6BC2548dA6A1E7d98E9a421B42541425b) y contratos alineados con el repo');
+  console.log(
+    'OK  LUSD (0x93b346b6BC2548dA6A1E7d98E9a421B42541425b) y contratos alineados con el repo'
+  );
   console.log('OK  Modo 100% soberano (sin servidores Web2, SMS ni attester)');
   process.exit(0);
 }

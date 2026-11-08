@@ -144,7 +144,8 @@ function writeDeploymentSummaryJson(summary) {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
-  const networkTag = summary.chainId === ARBITRUM_ONE_CHAIN_ID ? 'arbitrum-one' : 'arbitrum-sepolia';
+  const networkTag =
+    summary.chainId === ARBITRUM_ONE_CHAIN_ID ? 'arbitrum-one' : 'arbitrum-sepolia';
   const fileByNetwork = path.join(dir, `arbitrum-sovereign-${networkTag}.json`);
   const fileByChainId = path.join(dir, `arbitrum-sovereign-${summary.chainId}.json`);
   const payload = JSON.stringify(summary, null, 2) + '\n';
@@ -221,7 +222,9 @@ async function resolveTokensAndFeeds(chainId, isMainnet) {
     throw new Error(`Token LUSD de prueba sin bytecode en Arbitrum Sepolia (${chainId}): ${lusd}`);
   }
   if (!feedCode || feedCode === '0x') {
-    throw new Error(`Feed LUSD/USD de prueba sin bytecode en Arbitrum Sepolia (${chainId}): ${lusdFeed}`);
+    throw new Error(
+      `Feed LUSD/USD de prueba sin bytecode en Arbitrum Sepolia (${chainId}): ${lusdFeed}`
+    );
   }
   return { lusd, lusdFeed };
 }
@@ -239,7 +242,9 @@ async function main() {
 
   const isMainnet = chainId === ARBITRUM_ONE_CHAIN_ID;
   if (isMainnet && process.env.CONFIRM_MAINNET !== 'yes') {
-    throw new Error('Mainnet bloqueada. Defina CONFIRM_MAINNET=yes solo en el momento del despliegue.');
+    throw new Error(
+      'Mainnet bloqueada. Defina CONFIRM_MAINNET=yes solo en el momento del despliegue.'
+    );
   }
   if (!isMainnet && process.env.CONFIRM_MAINNET === 'yes') {
     throw new Error('Arbitrum Sepolia es testnet. No ejecute con CONFIRM_MAINNET=yes.');
@@ -278,11 +283,17 @@ async function main() {
   const artifact = await hre.artifacts.readArtifact('QuatriviumCredit');
   const runtimeBytes = (artifact.deployedBytecode.length - 2) / 2;
   if (runtimeBytes > 24576) {
-    throw new Error(`QuatriviumCredit mide ${runtimeBytes} bytes y excede el límite EIP-170 (24576).`);
+    throw new Error(
+      `QuatriviumCredit mide ${runtimeBytes} bytes y excede el límite EIP-170 (24576).`
+    );
   }
 
   console.log('=== QUATRIVIUM SOVEREIGN — DESPLIEGUE EN ARBITRUM ===');
-  console.log('chainId:', chainId, isMainnet ? '(Arbitrum One Mainnet)' : '(Arbitrum Sepolia Testnet)');
+  console.log(
+    'chainId:',
+    chainId,
+    isMainnet ? '(Arbitrum One Mainnet)' : '(Arbitrum Sepolia Testnet)'
+  );
   console.log('deployer:', deployer.address);
   console.log('LUSD:', lusd);
   console.log('Chainlink LUSD/USD:', lusdFeed);

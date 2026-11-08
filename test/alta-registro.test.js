@@ -3,31 +3,18 @@ const { ethers } = require('hardhat');
 const { deployProtocol, seedPool, registerAndFund, expectAmt } = require('./helpers.cjs');
 
 async function deployAltaStack() {
-  const { token, contract, fama, owner, user, extra, tokenAddr, contractAddr } =
-    await deployProtocol();
-  const Mock = await ethers.getContractFactory('CreditViewMock');
-  const Reserva = await ethers.getContractFactory('QuatriviumReserva');
-  const Alta = await ethers.getContractFactory('QuatriviumAlta');
-  const vista = await Mock.deploy();
-  const reserva = await Reserva.deploy(
-    tokenAddr,
-    owner.address,
-    contractAddr,
-    await fama.getAddress()
-  );
-  const alta = await Alta.deploy(tokenAddr, contractAddr, await reserva.getAddress());
-  await reserva.setAltaFuente(await alta.getAddress());
-  await fama.connect(owner).setAlta(await alta.getAddress());
+  const ctx = await deployProtocol();
+  const { token, user, contractAddr, alta } = ctx;
   await token.mint(user.address, ethers.parseUnits('20', 18));
   await token.connect(user).approve(await alta.getAddress(), ethers.MaxUint256);
   await token.connect(user).approve(contractAddr, ethers.MaxUint256);
-  return { token, contract, fama, reserva, alta, owner, user, extra, tokenAddr, contractAddr };
+  return ctx;
 }
 
 describe('Alta 4 USDT', function () {
   it('parte 1 fundador, 1 Reserva, 1 sello y aparta 1 al padrino', async () => {
     const { token, contract, reserva, alta, owner, user, tokenAddr } = await deployAltaStack();
-    await registerAndFund(token, contract, user, '20');
+    await contract.connect(user).registrarHumanoConPadre(ethers.ZeroAddress);
     const founderBefore = await token.balanceOf(owner.address);
     const boteBefore = await reserva.bote();
     await alta.connect(user).pagarRegistro();
@@ -42,8 +29,13 @@ describe('Alta 4 USDT', function () {
     const { token, contract, alta, owner, user, extra, tokenAddr } = await deployAltaStack();
     await seedPool(token, contract, owner, '500');
     await registerAndFund(token, contract, extra, '20');
+    await contract.connect(extra).solicitarPrestamo(tokenAddr, 0);
+    await contract
+      .connect(extra)
+      .pagarPrestamo(tokenAddr, (await contract.obtenerDeuda(extra.address)).total);
+    await ethers.provider.send('evm_increaseTime', [48 * 60 * 60]);
+    await ethers.provider.send('evm_mine');
     await registerAndFund(token, contract, user, '20', extra.address);
-    await alta.connect(user).pagarRegistro();
     const liqBefore = await contract.totalLiquidity(tokenAddr);
     const padreBefore = await token.balanceOf(extra.address);
     await contract.connect(user).solicitarPrestamo(tokenAddr, 0);
@@ -72,7 +64,7 @@ describe('Alta 4 USDT', function () {
     const { token, contract, owner, user, extra, tokenAddr } = await deployAltaStack();
     await seedPool(token, contract, owner, '500');
     await registerAndFund(token, contract, extra, '20');
-    await registerAndFund(token, contract, user, '20', extra.address);
+    await contract.connect(user).registrarHumanoConPadre(extra.address);
     await expect(contract.connect(user).solicitarPrestamo(tokenAddr, 0)).to.be.reverted;
   });
 
@@ -81,9 +73,6 @@ describe('Alta 4 USDT', function () {
     await seedPool(token, contract, owner, '500');
     await registerAndFund(token, contract, extra, '20');
     await registerAndFund(token, contract, user, '20', extra.address);
-    await token.connect(extra).approve(await alta.getAddress(), ethers.MaxUint256);
-    await alta.connect(extra).pagarRegistro();
-    await alta.connect(user).pagarRegistro();
     const extraAntes = await contract.verificadoAlPool(extra.address);
     const userAntes = await contract.verificadoAlPool(user.address);
     await ethers.provider.send('evm_increaseTime', [7 * 24 * 60 * 60 + 1]);
@@ -102,7 +91,6 @@ describe('Alta 4 USDT', function () {
     await seedPool(token, contract, owner, '500');
     await registerAndFund(token, contract, extra, '20');
     await registerAndFund(token, contract, user, '20', extra.address);
-    await alta.connect(user).pagarRegistro();
     const liqBefore = await contract.totalLiquidity(tokenAddr);
     const padreBefore = await token.balanceOf(extra.address);
     await expect(alta.connect(user).vencerPadrinoAlPool(user.address)).to.be.reverted;
@@ -124,7 +112,6 @@ describe('Alta 4 USDT', function () {
     await seedPool(token, contract, owner, '500');
     await registerAndFund(token, contract, extra, '20');
     await registerAndFund(token, contract, user, '20', extra.address);
-    await alta.connect(user).pagarRegistro();
     await contract.connect(user).solicitarPrestamo(tokenAddr, 0);
     const deuda = await contract.obtenerDeuda(user.address);
     await contract.connect(user).pagarPrestamo(tokenAddr, deuda[2]);

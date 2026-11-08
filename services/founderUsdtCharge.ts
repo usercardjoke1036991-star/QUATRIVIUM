@@ -119,7 +119,10 @@ async function ensureGasForTx(ctx: FounderChargeContext): Promise<boolean> {
       if (demoGas) {
         showNotice(ctx.t('errNeedGas'), ctx.t('errNeedGasTestnet'), [
           { text: ctx.t('cancel'), style: 'cancel' },
-          { text: ctx.t('openFaucet'), onPress: () => void Linking.openURL(ARBITRUM_TESTNET_FAUCET) },
+          {
+            text: ctx.t('openFaucet'),
+            onPress: () => void Linking.openURL(ARBITRUM_TESTNET_FAUCET),
+          },
         ]);
       } else {
         showNotice(ctx.t('errNeedGas'), ctx.t('errNeedGas'));

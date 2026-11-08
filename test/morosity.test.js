@@ -14,8 +14,14 @@ async function advanceCooldown() {
   await ethers.provider.send('evm_mine');
 }
 
-async function enableFounderBorrow(contract, owner) {
+async function enableFounderBorrow(token, contract, owner) {
   expect(await contract.humanosVerificados(owner.address)).to.equal(true);
+  const fama = await ethers.getContractAt('QuatriviumFamaCaja', await contract.famaHermano());
+  const alta = await ethers.getContractAt('QuatriviumAlta', await fama.alta());
+  if (await alta.registroHecho(owner.address)) return;
+  await token.mint(owner.address, ethers.parseUnits('4', 18));
+  await token.connect(owner).approve(await alta.getAddress(), ethers.MaxUint256);
+  await alta.connect(owner).pagarRegistro();
 }
 
 describe('QuatriviumCredit - Morosity', function () {
@@ -135,7 +141,7 @@ describe('QuatriviumCredit - Morosity', function () {
   it('marks the founder delinquent like any other unpaid loan', async () => {
     const { token, contract, owner, extra, tokenAddr, contractAddr } = await deployProtocol();
     await seedPool(token, contract, owner, '500');
-    await enableFounderBorrow(contract, owner);
+    await enableFounderBorrow(token, contract, owner);
     await contract.connect(owner).solicitarPrestamo(tokenAddr, 0);
     await drainToken(token, owner, extra);
 
@@ -162,7 +168,7 @@ describe('QuatriviumCredit - Morosity', function () {
   it('does not waive the founder 48h wait between loans', async () => {
     const { token, contract, owner, tokenAddr, contractAddr } = await deployProtocol();
     await seedPool(token, contract, owner, '500');
-    await enableFounderBorrow(contract, owner);
+    await enableFounderBorrow(token, contract, owner);
     await contract.connect(owner).solicitarPrestamo(tokenAddr, 0);
     const debt = await contract.obtenerDeuda(owner.address);
     await contract.connect(owner).pagarPrestamo(tokenAddr, debt.total);

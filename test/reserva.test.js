@@ -14,7 +14,8 @@ async function deployReserva() {
     await token.getAddress(),
     founder.address,
     await credit.getAddress(),
-    await credit.getAddress()
+    await credit.getAddress(),
+    extra.address
   );
   await token.mint(user.address, ethers.parseUnits('1000', 18));
   await token.mint(founder.address, ethers.parseUnits('1000', 18));
@@ -273,21 +274,16 @@ describe('QuatriviumReserva', function () {
     expect(await credit.getAddress()).to.not.equal(await nextCredit.getAddress());
   });
 
-  it('lets a guardian pause commission extras without freezing unlock', async () => {
-    const { token, reserva, credit, user, owner, founder } = await deployReserva();
+  it('pays commission extras with no pause switch', async () => {
+    const { token, reserva, credit, user, founder } = await deployReserva();
     const reservaAddr = await reserva.getAddress();
+    expect(reserva.interface.hasFunction('pausarBoost')).to.equal(false);
     await reserva.connect(founder).aportarBote(ethers.parseUnits('20', 18));
     await reserva.connect(user).bloquear(ethers.parseUnits('100', 18));
-    await reserva.connect(owner).pausarBoost();
     const id = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(['uint256'], [11n]));
-    await expect(
-      credit.triggerBoost(reservaAddr, user.address, ethers.parseUnits('5', 18), id)
-    ).to.be.revertedWithCustomError(reserva, 'BoostCerrado');
-    await reserva.connect(owner).reanudarBoost();
     await credit.triggerBoost(reservaAddr, user.address, ethers.parseUnits('5', 18), id);
     await ethers.provider.send('evm_increaseTime', [LOCK]);
     await ethers.provider.send('evm_mine');
-    await reserva.connect(owner).pausarBoost();
     await reserva.connect(user).desbloquear();
     expect(await token.balanceOf(user.address)).to.be.gt(ethers.parseUnits('900', 18));
   });
@@ -306,21 +302,23 @@ describe('QuatriviumReserva', function () {
   });
 
   it('settles pagarBoostComision 100% on-chain directly from QuatriviumCredit interest dispersion', async () => {
-    const { deployFamaAndCredit, seedPool, registerAndFund, assertNavInvariant } = require('./helpers.cjs');
+    const {
+      deployFamaAndCredit,
+      seedPool,
+      registerAndFund,
+      qualifyCollector,
+      assertNavInvariant,
+    } = require('./helpers.cjs');
     const { getLinkedCreditFactory } = require('../scripts/linkCredit.cjs');
     const signers = await ethers.getSigners();
     const [owner, user, abuelo, padre] = signers;
     const Token = await ethers.getContractFactory('ERC20Mock');
-    const Aggregator = await ethers.getContractFactory('MockV3Aggregator');
     const token = await Token.deploy();
-    const feed = await Aggregator.deploy(8, 100_000_000);
     const tokenAddr = await token.getAddress();
-    const feedAddr = await feed.getAddress();
     const HarnessFactory = await getLinkedCreditFactory(ethers, 'QuatriviumCreditHarness');
-    const { contract, fama } = await deployFamaAndCredit(
+    const { contract, reserva } = await deployFamaAndCredit(
       HarnessFactory,
       tokenAddr,
-      feedAddr,
       owner,
       500,
       [owner.address],
@@ -328,21 +326,12 @@ describe('QuatriviumReserva', function () {
     );
     const contractAddr = await contract.getAddress();
     await seedPool(token, contract, owner, '2000');
-
-    const Reserva = await ethers.getContractFactory('QuatriviumReserva');
-    const reserva = await Reserva.deploy(
-      tokenAddr,
-      owner.address,
-      contractAddr,
-      await fama.getAddress()
-    );
-    await reserva.waitForDeployment();
     const reservaAddr = await reserva.getAddress();
-    await fama.connect(owner).setReserva(reservaAddr);
 
     // Registra a abuelo y ponlo en nivel 10 para poder bloquear en Reserva
     await registerAndFund(token, contract, abuelo, '500', ethers.ZeroAddress);
     await contract.forceNivel(abuelo.address, 10);
+    await qualifyCollector(token, contract, abuelo);
     expect((await contract.obtenerProgresoUsuario(abuelo.address)).nivelActual).to.equal(10n);
 
     // Abuelo bloquea 100 LUSD en Reserva (tramo 2 -> +10% extra sobre comisiones de red)
@@ -359,7 +348,10 @@ describe('QuatriviumReserva', function () {
 
     const abueloBefore = await token.balanceOf(abuelo.address);
     const gen2Base = (debt.interes * 800n) / 10000n;
-    const [expectedExtra, expectedFounderCut] = await reserva.extraComisionDe(abuelo.address, gen2Base);
+    const [expectedExtra, expectedFounderCut] = await reserva.extraComisionDe(
+      abuelo.address,
+      gen2Base
+    );
     expect(expectedExtra).to.be.gt(0n);
 
     await expect(contract.connect(user).pagarPrestamo(tokenAddr, debt.total))

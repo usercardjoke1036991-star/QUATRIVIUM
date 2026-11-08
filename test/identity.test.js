@@ -6,9 +6,7 @@ describe('QuatriviumCredit - Sovereign wallet-only onboarding (no attester / pho
   it('lets a registered user borrow directly with their wallet without phone or device attestation', async () => {
     const { token, contract, owner, user, tokenAddr } = await deployProtocol();
     await seedPool(token, contract, owner, '500');
-    await contract.connect(user).registrarHumanoConPadre(ethers.ZeroAddress);
-    await token.mint(user.address, ethers.parseUnits('50', 18));
-    await token.connect(user).approve(await contract.getAddress(), ethers.MaxUint256);
+    await registerAndFund(token, contract, user, '50');
 
     await expect(contract.connect(user).solicitarPrestamo(tokenAddr, 0)).to.not.be.reverted;
     expect((await contract.usuarios(user.address)).montoActivo).to.equal(
@@ -35,21 +33,8 @@ describe('QuatriviumCredit - Sovereign wallet-only onboarding (no attester / pho
   });
 
   it('requires Alta (4 LUSD) when QuatriviumAlta is linked before borrowing', async () => {
-    const { token, contract, fama, owner, user, tokenAddr, contractAddr } = await deployProtocol();
+    const { token, contract, owner, user, tokenAddr, alta } = await deployProtocol();
     await seedPool(token, contract, owner, '500');
-
-    const Reserva = await ethers.getContractFactory('QuatriviumReserva');
-    const reserva = await Reserva.deploy(
-      tokenAddr,
-      owner.address,
-      contractAddr,
-      await fama.getAddress()
-    );
-    const Alta = await ethers.getContractFactory('QuatriviumAlta');
-    const alta = await Alta.deploy(tokenAddr, contractAddr, await reserva.getAddress());
-    await fama.connect(owner).setAlta(await alta.getAddress());
-    await fama.connect(owner).setReserva(await reserva.getAddress());
-    await reserva.connect(owner).setAltaFuente(await alta.getAddress());
 
     await contract.connect(user).registrarHumanoConPadre(ethers.ZeroAddress);
     await expect(contract.connect(user).solicitarPrestamo(tokenAddr, 0)).to.be.reverted;
@@ -62,8 +47,11 @@ describe('QuatriviumCredit - Sovereign wallet-only onboarding (no attester / pho
   });
 
   it('lets the founder borrow directly without phone or device attestation', async () => {
-    const { token, contract, owner, extra, tokenAddr } = await deployProtocol();
+    const { token, contract, owner, extra, tokenAddr, alta } = await deployProtocol();
     await seedPool(token, contract, owner, '500');
+    await token.mint(owner.address, ethers.parseUnits('4', 18));
+    await token.connect(owner).approve(await alta.getAddress(), ethers.MaxUint256);
+    await alta.connect(owner).pagarRegistro();
     await expect(contract.connect(owner).solicitarPrestamo(tokenAddr, 0)).to.not.be.reverted;
 
     await registerAndFund(token, contract, extra);

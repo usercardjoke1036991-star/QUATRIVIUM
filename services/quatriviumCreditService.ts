@@ -751,10 +751,9 @@ export const QuatriviumCreditService = {
     return proposeAdmin('setRequiredConfirmations', [required]);
   },
 
-  proposeSetTokenConfig: async (token: string, feed: string, enabled: boolean) => {
+  proposeSetTokenConfig: async (token: string, _feed: string, enabled: boolean) => {
     if (!isAddress(token)) throw new Error('invalid address');
-    if (enabled && !isAddress(feed)) throw new Error('invalid feed');
-    return proposeAdmin('setTokenConfig', [token, enabled ? feed : ZeroAddress, enabled]);
+    return proposeAdmin('setTokenConfig', [token, enabled]);
   },
 
   confirmAdminAction: async (id: number) => {

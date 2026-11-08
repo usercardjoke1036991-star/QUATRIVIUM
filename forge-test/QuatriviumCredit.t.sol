@@ -4,6 +4,8 @@ pragma solidity ^0.8.24;
 import {Test} from "forge-std/Test.sol";
 import {QuatriviumCredit} from "../contracts/QuatriviumCredit.sol";
 import {QuatriviumFamaCaja} from "../contracts/QuatriviumFamaCaja.sol";
+import {QuatriviumReserva} from "../contracts/QuatriviumReserva.sol";
+import {QuatriviumAlta} from "../contracts/QuatriviumAlta.sol";
 import {QuatriviumLeveling} from "../contracts/QuatriviumLeveling.sol";
 import {ERC20Mock} from "../contracts/mocks/ERC20Mock.sol";
 import {MockV3Aggregator} from "../contracts/mocks/MockV3Aggregator.sol";
@@ -13,6 +15,7 @@ contract QuatriviumCreditForgeTest is Test {
     ERC20Mock internal token;
     MockV3Aggregator internal feed;
     QuatriviumCredit internal credit;
+    QuatriviumAlta internal alta;
     address internal owner;
     uint256 internal ownerPk;
     address internal user;
@@ -30,17 +33,20 @@ contract QuatriviumCreditForgeTest is Test {
         admins[0] = owner;
         uint64 nonce = vm.getNonce(owner);
         address predictedCredit = vm.computeCreateAddress(owner, nonce + 1);
+        address predictedReserva = vm.computeCreateAddress(owner, nonce + 2);
+        address predictedAlta = vm.computeCreateAddress(owner, nonce + 3);
         vm.startPrank(owner);
-        QuatriviumFamaCaja fama = new QuatriviumFamaCaja(address(token), predictedCredit);
+        QuatriviumFamaCaja fama = new QuatriviumFamaCaja(address(token), predictedCredit, predictedAlta, predictedReserva);
         credit = new QuatriviumCredit(
             address(token),
-            address(feed),
             payable(owner),
             500,
             admins,
             1,
             address(fama)
         );
+        new QuatriviumReserva(address(token), owner, predictedCredit, address(fama), predictedAlta);
+        alta = new QuatriviumAlta(address(token), predictedCredit, predictedReserva);
         vm.stopPrank();
         require(address(credit) == predictedCredit, "credit pred");
         require(credit.famaHermano() == address(fama), "fama hermano");
@@ -114,9 +120,13 @@ contract QuatriviumCreditForgeTest is Test {
     function _onboard(address who) internal {
         vm.prank(who, who);
         credit.registrarHumanoConPadre(address(0));
-        token.mint(who, 50 ether);
+        token.mint(who, 54 ether);
         vm.prank(who);
         token.approve(address(credit), type(uint256).max);
+        vm.prank(who);
+        token.approve(address(alta), type(uint256).max);
+        vm.prank(who, who);
+        alta.pagarRegistro();
     }
 
     function _assertNav() internal view {

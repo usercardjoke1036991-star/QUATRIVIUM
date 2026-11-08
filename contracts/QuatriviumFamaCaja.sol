@@ -30,6 +30,9 @@ interface ICreditCaja {
         returns (uint128 pagado, uint64 venceCuota, uint8 totales, uint8 pagadas, bool enPlazo);
     function prestamosCerrados(address) external view returns (uint256);
     function fundador() external view returns (address);
+    function cobradorListo(address) external view returns (bool);
+    function cierreNivel(address) external view returns (uint256);
+    function cierreATiempo(address) external view returns (bool);
 }
 
 /**
@@ -59,14 +62,14 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
 
     address public immutable credit;
     address public immutable token;
+    address public immutable alta;
+    address public immutable reserva;
 
     mapping(address => uint256) public famaCaja;
     mapping(address => uint256) public famaRed;
     mapping(address => uint256) public famaRacha;
     mapping(address => uint256) public famaCanjeada;
     mapping(address => uint256) public famaRedCanjeada;
-    address public reserva;
-    address public alta;
 
     struct Racha {
         uint32 dias;
@@ -88,8 +91,6 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
     error SinBonoRacha();
     error SinCierre();
     error SoloReserva();
-    error ReservaYaSet();
-    error AltaYaSet();
 
     event FamaAcreditada(address indexed usuario, uint256 pts);
     event FamaCanjeada(address indexed usuario, uint256 fama, uint256 monto, address indexed token);
@@ -97,10 +98,14 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
     event RachaDiaSumado(address indexed padrino, uint32 dias, uint32 famaDias, uint32 dia);
     event BonoRachaPagado(address indexed usuario, uint32 hito, uint256 monto, address indexed token);
 
-    constructor(address token_, address credit_) {
-        if (token_ == address(0) || credit_ == address(0)) revert DestinoCero();
+    constructor(address token_, address credit_, address alta_, address reserva_) {
+        if (token_ == address(0) || credit_ == address(0) || alta_ == address(0) || reserva_ == address(0)) {
+            revert DestinoCero();
+        }
         token = token_;
         credit = credit_;
+        alta = alta_;
+        reserva = reserva_;
     }
 
     modifier onlyCredit() {
@@ -122,20 +127,6 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
 
     function famaPerfil(address usuario) public view returns (uint256) {
         return famaCaja[usuario] + famaRed[usuario] + famaRacha[usuario];
-    }
-
-    function setReserva(address next) external {
-        if (next == address(0)) revert DestinoCero();
-        if (reserva != address(0)) revert ReservaYaSet();
-        if (msg.sender != ICreditCaja(credit).fundador()) revert SoloCredit();
-        reserva = next;
-    }
-
-    function setAlta(address next) external {
-        if (next == address(0)) revert DestinoCero();
-        if (alta != address(0)) revert AltaYaSet();
-        if (msg.sender != ICreditCaja(credit).fundador()) revert SoloCredit();
-        alta = next;
     }
 
     function pagarDesdePool(address to, uint256 amount) external {
@@ -266,7 +257,7 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
         (, uint256 montoActivo, uint256 vencimiento, bool enMora,,) = nucleo.usuarios(msg.sender);
         bool vencido = montoActivo > 0 && vencimiento > 0 && block.timestamp > vencimiento;
         if (
-            !nucleo.humanosVerificados(msg.sender)
+            !nucleo.cobradorListo(msg.sender)
                 || nucleo.dispersionCongelada(msg.sender)
                 || nucleo.esMoroso(msg.sender)
                 || enMora
@@ -288,7 +279,7 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
         (, uint256 montoActivo, uint256 vencimiento, bool enMora,,) = nucleo.usuarios(msg.sender);
         bool vencido = montoActivo > 0 && vencimiento > 0 && block.timestamp > vencimiento;
         if (
-            !nucleo.humanosVerificados(msg.sender)
+            !nucleo.cobradorListo(msg.sender)
                 || nucleo.dispersionCongelada(msg.sender)
                 || nucleo.esMoroso(msg.sender)
                 || enMora
@@ -308,7 +299,7 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
         (, uint256 montoActivo, uint256 vencimiento, bool enMora,,) = nucleo.usuarios(msg.sender);
         bool vencido = montoActivo > 0 && vencimiento > 0 && block.timestamp > vencimiento;
         if (
-            !nucleo.humanosVerificados(msg.sender)
+            !nucleo.cobradorListo(msg.sender)
                 || nucleo.dispersionCongelada(msg.sender)
                 || nucleo.esMoroso(msg.sender)
                 || enMora
@@ -327,6 +318,8 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
         uint256 cerrados = nucleo.prestamosCerrados(hijo);
         if (montoActivo != 0 || cerrados == 0 || cerrados <= cierreContado[hijo]) return false;
         cierreContado[hijo] = cerrados;
+        // Antes un L1 pagado sumaba día. Ahora solo nivel >= 2 y a tiempo.
+        if (nucleo.cierreNivel(hijo) < 2 || !nucleo.cierreATiempo(hijo)) return false;
         _sumarDia(padre);
         return true;
     }

@@ -23,7 +23,9 @@ describe('QuatriviumCredit - Liquidation', function () {
     await contract.connect(user).solicitarPrestamo(tokenAddr, 0);
 
     const userInfo = await contract.usuarios(user.address);
-    await ethers.provider.send('evm_setNextBlockTimestamp', [Number(userInfo.vencimiento) + 10]);
+    await ethers.provider.send('evm_setNextBlockTimestamp', [
+      Number(userInfo.vencimiento) + 48 * 60 * 60 + 10,
+    ]);
     await ethers.provider.send('evm_mine');
 
     await token.mint(liquidator.address, ethers.parseUnits('10', 18));
@@ -54,7 +56,9 @@ describe('QuatriviumCredit - Liquidation', function () {
 
     const userInfo = await contract.usuarios(user.address);
     const debt = await contract.obtenerDeuda(user.address);
-    await ethers.provider.send('evm_setNextBlockTimestamp', [Number(userInfo.vencimiento) + 10]);
+    await ethers.provider.send('evm_setNextBlockTimestamp', [
+      Number(userInfo.vencimiento) + 48 * 60 * 60 + 10,
+    ]);
     await ethers.provider.send('evm_mine');
 
     await token.mint(liquidator.address, ethers.parseUnits('10', 18));
@@ -82,7 +86,9 @@ describe('QuatriviumCredit - Liquidation', function () {
     await registerAndFund(token, contract, user);
     await contract.connect(user).solicitarPrestamo(tokenAddr, 0);
     const userInfo = await contract.usuarios(user.address);
-    await ethers.provider.send('evm_setNextBlockTimestamp', [Number(userInfo.vencimiento) + 10]);
+    await ethers.provider.send('evm_setNextBlockTimestamp', [
+      Number(userInfo.vencimiento) + 48 * 60 * 60 + 10,
+    ]);
     await ethers.provider.send('evm_mine');
     await token.mint(liquidator.address, ethers.parseUnits('10', 18));
     await token.connect(liquidator).approve(contractAddr, ethers.MaxUint256);
@@ -99,8 +105,8 @@ describe('QuatriviumCredit - Liquidation', function () {
     await registerAndFund(token, contract, user);
     await contract.connect(user).solicitarPrestamo(tokenAddr, 0);
 
-    await expect(proposeAndExecute(contract, owner, 'setTokenConfig', [tokenAddr, feedAddr, false]))
-      .to.be.reverted;
+    await expect(proposeAndExecute(contract, owner, 'setTokenConfig', [tokenAddr, false])).to.be
+      .reverted;
   });
 
   it('liquidates overdue loans permissionlessly without any pause gate', async () => {
@@ -117,7 +123,9 @@ describe('QuatriviumCredit - Liquidation', function () {
     await registerAndFund(token, contract, user);
     await contract.connect(user).solicitarPrestamo(tokenAddr, 0);
     const userInfo = await contract.usuarios(user.address);
-    await ethers.provider.send('evm_setNextBlockTimestamp', [Number(userInfo.vencimiento) + 10]);
+    await ethers.provider.send('evm_setNextBlockTimestamp', [
+      Number(userInfo.vencimiento) + 48 * 60 * 60 + 10,
+    ]);
     await ethers.provider.send('evm_mine');
     await token.mint(liquidator.address, ethers.parseUnits('10', 18));
     await token.connect(liquidator).approve(contractAddr, ethers.MaxUint256);
@@ -131,7 +139,9 @@ describe('QuatriviumCredit - Liquidation', function () {
     await registerAndFund(token, contract, user, '20');
     await contract.connect(user).solicitarPrestamo(tokenAddr, 0);
     const userInfo = await contract.usuarios(user.address);
-    await ethers.provider.send('evm_setNextBlockTimestamp', [Number(userInfo.vencimiento) + 10]);
+    await ethers.provider.send('evm_setNextBlockTimestamp', [
+      Number(userInfo.vencimiento) + 48 * 60 * 60 + 10,
+    ]);
     await ethers.provider.send('evm_mine');
     await token.mint(user.address, ethers.parseUnits('10', 18));
     await token.connect(user).approve(contractAddr, ethers.MaxUint256);

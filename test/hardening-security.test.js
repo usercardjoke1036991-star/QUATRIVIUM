@@ -20,9 +20,7 @@ describe('QuatriviumCredit - security hardening', function () {
   it('allows direct sovereign borrowing after registration without KYC or identity flags', async () => {
     const { token, contract, owner, user, tokenAddr } = await deployProtocol();
     await seedPool(token, contract, owner, '500');
-    await contract.connect(user).registrarHumanoConPadre(ethers.ZeroAddress);
-    await token.mint(user.address, ethers.parseUnits('50', 18));
-    await token.connect(user).approve(await contract.getAddress(), ethers.MaxUint256);
+    await registerAndFund(token, contract, user, '50');
 
     await expect(contract.connect(user).solicitarPrestamo(tokenAddr, 0)).to.not.be.reverted;
   });
@@ -36,15 +34,10 @@ describe('QuatriviumCredit - security hardening', function () {
       extra: liquidator,
       tokenAddr,
       contractAddr,
-    } = await deployProtocol();
+    } = await deployProtocol({ harness: true });
     await seedPool(token, contract, owner, '5000');
-    await proposeAndExecute(contract, owner, 'setNivel', [
-      1,
-      ethers.parseUnits('50', 18),
-      35 * 24 * 60 * 60,
-      4000,
-    ]);
     await registerAndFund(token, contract, user, '80');
+    await contract.forceNivel(user.address, 7);
     await contract.connect(user).solicitarPrestamo(tokenAddr, 0);
 
     const plan = await contract.planPago(user.address);
@@ -59,20 +52,22 @@ describe('QuatriviumCredit - security hardening', function () {
     await token.connect(liquidator).approve(contractAddr, ethers.MaxUint256);
     await expect(contract.connect(liquidator).liquidate(user.address, tokenAddr)).to.be.reverted;
 
-    await ethers.provider.send('evm_setNextBlockTimestamp', [Number(userInfo.vencimiento) + 10]);
+    await ethers.provider.send('evm_setNextBlockTimestamp', [
+      Number(userInfo.vencimiento) + 48 * 60 * 60 + 10,
+    ]);
     await ethers.provider.send('evm_mine');
     await expect(contract.connect(liquidator).liquidate(user.address, tokenAddr)).to.not.be
       .reverted;
     expect((await contract.usuarios(user.address)).montoActivo).to.equal(0);
   });
 
-  it('blocks new deposits when the peg is lost', async () => {
+  it('accepts deposits when an external feed would have reported a broken peg', async () => {
     const { token, contract, owner, tokenAddr, feed, contractAddr } = await deployProtocol();
     await seedPool(token, contract, owner, '500');
     await feed.updateAnswer(97_000_000);
     await token.mint(owner.address, ethers.parseUnits('10', 18));
     await token.connect(owner).approve(contractAddr, ethers.MaxUint256);
     await expect(contract.connect(owner).depositarLiquidez(tokenAddr, ethers.parseUnits('10', 18)))
-      .to.be.reverted;
+      .to.not.be.reverted;
   });
 });
