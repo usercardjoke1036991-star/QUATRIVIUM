@@ -203,9 +203,12 @@ contract QuatriviumAuditForgeTest is Test {
         token.mint(liquidator, 50 ether);
         vm.prank(liquidator);
         token.approve(address(credit), type(uint256).max);
+        uint256 antes = credit.totalLiquidity(address(token)) + credit.fondoSeguro(address(token));
         vm.prank(liquidator, liquidator);
         credit.liquidate(user, address(token));
-        assertGt(credit.collectedFees(address(token)), 0);
+        uint256 trasFee = credit.totalLiquidity(address(token)) + credit.fondoSeguro(address(token));
+        assertGt(trasFee, antes);
+        assertEq(credit.collectedFees(address(token)), 0);
 
         vm.prank(credit.ownerList(1));
         credit.confirmAdminAction(id);
@@ -214,7 +217,8 @@ contract QuatriviumAuditForgeTest is Test {
         (,,,, bool done,) = credit.proposals(id);
         assertTrue(done);
         assertFalse(credit.admins(third));
-        assertGt(credit.collectedFees(address(token)), 0);
+        assertEq(credit.collectedFees(address(token)), 0);
+        assertEq(credit.totalLiquidity(address(token)) + credit.fondoSeguro(address(token)), trasFee);
         _assertNav();
     }
 
@@ -325,7 +329,8 @@ contract QuatriviumAuditForgeTest is Test {
         uint256 outstanding = credit.outstandingLoans(address(token));
         uint256 liquidity = credit.totalLiquidity(address(token));
         uint256 fees = credit.collectedFees(address(token));
-        assertEq(cash + outstanding, liquidity + fees, "NAV broken");
+        uint256 fondo = credit.fondoSeguro(address(token));
+        assertEq(cash + outstanding, liquidity + fees + fondo, "NAV broken");
     }
 }
 

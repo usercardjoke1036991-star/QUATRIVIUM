@@ -47,7 +47,7 @@ describe('QuatriviumCredit - el pool manda', function () {
 
   it('lets a stamped first L1 through when general utilization is at 80%', async () => {
     const { token, contract, owner, user, extra, third, tokenAddr } = await deployHarness();
-    await seedPool(token, contract, owner, '125');
+    await seedPool(token, contract, owner, '131.8');
     await registerAndFund(token, contract, user, '80');
     await registerAndFund(token, contract, extra, '80');
     await registerAndFund(token, contract, third, '80');
@@ -71,7 +71,7 @@ describe('QuatriviumCredit - el pool manda', function () {
 
   it('releases the stamp after 7 days so unused USDT returns to the general pool', async () => {
     const { token, contract, owner, user, extra, third, tokenAddr } = await deployHarness();
-    await seedPool(token, contract, owner, '125');
+    await seedPool(token, contract, owner, '131.8');
     await registerAndFund(token, contract, user, '80');
     await registerAndFund(token, contract, extra, '80');
     await registerAndFund(token, contract, third, '80');
@@ -89,7 +89,7 @@ describe('QuatriviumCredit - el pool manda', function () {
 
   it('after the first stamped loan, 48h and the 80% cap apply', async () => {
     const { token, contract, owner, user, extra, third, tokenAddr } = await deployHarness();
-    await seedPool(token, contract, owner, '125');
+    await seedPool(token, contract, owner, '131.8');
     await registerAndFund(token, contract, user, '80');
     await registerAndFund(token, contract, extra, '80');
     await registerAndFund(token, contract, third, '80');

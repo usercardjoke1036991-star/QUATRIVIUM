@@ -75,7 +75,7 @@ contract QuatriviumCredit is ReentrancyGuard {
     address public fundadorPendiente;
     uint256 public fundadorEta;
     uint256 public pausaPrestamosHasta;
-    /// @notice Feed de uptime del sequencer de Arbitrum. Cero = sin feed (la gracia de 48 h sola).
+    /// @notice Feed de uptime del sequencer. En Arbitrum One (42161) no puede ser cero.
     AggregatorV3Interface public immutable sequencerFeed;
     /// @notice Tiempo que el sequencer estuvo caído y que se suma a la gracia de liquidación.
     uint256 public graciaSequencer;
@@ -100,6 +100,9 @@ contract QuatriviumCredit is ReentrancyGuard {
     mapping(uint256 => mapping(address => bool)) public confirmed;
 
     mapping(address => uint256) public totalLiquidity;
+    /// @notice 5 % de lo que entra al pool. Solo cubre el premio de un impago. Nadie lo retira.
+    mapping(address => uint256) public fondoSeguro;
+    uint256 public totalImpagoCubierto;
     mapping(address => uint256) public outstandingLoans;
     mapping(address => mapping(address => uint256)) public lpShares;
     mapping(address => uint256) public totalShares;
@@ -217,6 +220,8 @@ contract QuatriviumCredit is ReentrancyGuard {
     event FundadorUpdated(address indexed previous, address indexed next);
     event FundadorPropuesto(address indexed next, uint256 eta);
     event FundadorCancelado();
+
+    error SequencerFeedRequerido();
     event PrestamosPausados(uint256 hasta);
     event SecurityParamsUpdated(uint256 maxOriginations, uint256 maxUtilizationBps);
     event FeeCollectorUpdated(address indexed newCollector);
@@ -245,6 +250,7 @@ contract QuatriviumCredit is ReentrancyGuard {
         address _famaHermano,
         address _sequencerFeed
     ) {
+        if (block.chainid == 42161 && _sequencerFeed == address(0)) revert SequencerFeedRequerido();
         require(_usdtAddress != address(0), "zero token");
         require(_feeCollector != address(0), "zero fee collector");
         require(_feeBP <= 1000, "fee too high");
@@ -446,17 +452,19 @@ contract QuatriviumCredit is ReentrancyGuard {
         require(tx.origin == msg.sender, "no contracts");
         require(_monto >= 1e18, "monto>0");
 
+        (uint256 alPool, uint256 seguro) = QuatriviumFamaLib.partirSeguro(_monto);
         uint256 shares;
         if (totalShares[token] == 0 || totalLiquidity[token] == 0) {
-            shares = _monto;
+            shares = alPool;
         } else {
-            shares = (_monto * totalShares[token]) / totalLiquidity[token];
+            shares = (alPool * totalShares[token]) / totalLiquidity[token];
         }
         if (shares > 0) {
             lpShares[msg.sender][token] += shares;
             totalShares[token] += shares;
         }
-        totalLiquidity[token] += _monto;
+        totalLiquidity[token] += alPool;
+        fondoSeguro[token] += seguro;
         uint256 pts = (_monto * 100) / 1e18;
         reputacion[msg.sender] += pts;
         stableTokens[token].safeTransferFrom(msg.sender, address(this), _monto);
@@ -670,6 +678,7 @@ contract QuatriviumCredit is ReentrancyGuard {
             prestamosCerrados[deudor],
             famaHermano
         );
+        QuatriviumFamaLib.apartarSeguro(totalLiquidity, fondoSeguro, token, retenidoPool);
         emit InteresDistribuido(deudor, token, interesParte, comisionesRed, retenidoPool, usoBonoA);
     }
 
@@ -908,14 +917,24 @@ contract QuatriviumCredit is ReentrancyGuard {
 
         uint256 fee = (interest * restante * feeBasisPoints) / (totalDue * 10000);
         if (fee > interestRestante) fee = interestRestante;
-        if (fee > 0) collectedFees[tokenAddress] += fee;
 
         // 5 % del principal, nunca más que el interés que queda tras el fee: el pool no pierde.
+        // El fee se queda en el pool en esta misma transacción. No hay saldo sin dueño.
         uint256 reward = (principalRestante * 5) / 100;
         uint256 topePremio = interestRestante - fee;
         if (reward > topePremio) reward = topePremio;
 
-        _ajustarLiquidezPorInteres(tokenAddress, interestRestante, fee + reward);
+        _ajustarLiquidezPorInteres(tokenAddress, interestRestante, reward);
+        uint256 entro = interestRestante > reward ? interestRestante - reward : 0;
+        QuatriviumFamaLib.apartarSeguro(totalLiquidity, fondoSeguro, tokenAddress, entro);
+        if (reward > 0) {
+            totalImpagoCubierto += QuatriviumFamaLib.cubrirImpago(
+                totalLiquidity,
+                fondoSeguro,
+                tokenAddress,
+                reward
+            );
+        }
 
         if (outstandingLoans[tokenAddress] <= principalRestante) {
             outstandingLoans[tokenAddress] = 0;
@@ -1035,6 +1054,7 @@ contract QuatriviumCredit is ReentrancyGuard {
     function pagarVerificacion(address token, uint256 amount) external nonReentrant onlySupportedToken(token) {
         address user = QuatriviumFamaLib.usuarioVerificacion(famaHermano, msg.sender, tx.origin);
         QuatriviumFamaLib.alimentarPool(totalLiquidity, stableTokens[token], token, amount);
+        QuatriviumFamaLib.apartarSeguro(totalLiquidity, fondoSeguro, token, amount);
         uint256 prev = verificadoAlPool[user];
         verificadoAlPool[user] = prev + amount;
         if (prev < 1e18 && prev + amount >= 1e18) {
@@ -1073,6 +1093,7 @@ contract QuatriviumCredit is ReentrancyGuard {
         address alta = _altaHermano();
         require(msg.sender == alta && alta != address(0), "solo alta");
         QuatriviumFamaLib.alimentarPool(totalLiquidity, stableTokens[token], token, amount);
+        QuatriviumFamaLib.apartarSeguro(totalLiquidity, fondoSeguro, token, amount);
     }
 
     function _altaHermano() internal view returns (address alta) {

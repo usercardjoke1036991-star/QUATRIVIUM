@@ -52,6 +52,29 @@ describe('QuatriviumReserva', function () {
     expect(await token.balanceOf(user.address)).to.equal(ethers.parseUnits('1000', 18));
     const pos = await reserva.posiciones(user.address);
     expect(pos.activa).to.equal(false);
+    expect(await reserva.bote()).to.equal(0n);
+  });
+
+  it('pays yield only up to a partial pot and still returns the full principal', async () => {
+    const { token, reserva, user, founder } = await deployReserva();
+    const amount = ethers.parseUnits('100', 18);
+    const pot = ethers.parseUnits('0.4', 18);
+    await reserva.connect(founder).aportarBote(pot);
+    await reserva.connect(user).bloquear(amount);
+    await ethers.provider.send('evm_increaseTime', [LOCK]);
+    await ethers.provider.send('evm_mine');
+    const techo = await reserva.techoRendimiento(amount, LOCK);
+    expect(techo).to.be.gt(pot);
+    const corte = await reserva.corteFundadorBp(await reserva.tramo(amount));
+    const founderCut = (pot * corte) / 10000n;
+    const userBefore = await token.balanceOf(user.address);
+    const founderBefore = await token.balanceOf(founder.address);
+    await reserva.connect(user).desbloquear();
+    expect((await token.balanceOf(user.address)) - userBefore).to.equal(amount + pot - founderCut);
+    expect((await token.balanceOf(founder.address)) - founderBefore).to.equal(founderCut);
+    expect(await reserva.bote()).to.equal(0n);
+    const pos = await reserva.posiciones(user.address);
+    expect(pos.activa).to.equal(false);
   });
 
   it('caps yield at 12% APY for the lock and pays the founder from that yield', async () => {

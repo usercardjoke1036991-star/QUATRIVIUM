@@ -85,7 +85,9 @@ contract QuatriviumCreditForgeTest is Test {
         vm.prank(owner, owner);
         vm.expectRevert();
         credit.retirarLiquidez(address(token), value);
-        assertEq(credit.valorLp(owner, address(token)), 500 ether);
+        assertEq(credit.valorLp(owner, address(token)), 475 ether);
+        assertEq(credit.fondoSeguro(address(token)), 25 ether);
+        assertEq(credit.totalLiquidity(address(token)) + credit.fondoSeguro(address(token)), 500 ether);
     }
 
     function test_contract_cannot_register() public {
@@ -137,7 +139,8 @@ contract QuatriviumCreditForgeTest is Test {
         uint256 outstanding = credit.outstandingLoans(address(token));
         uint256 liquidity = credit.totalLiquidity(address(token));
         uint256 fees = credit.collectedFees(address(token));
-        assertEq(cash + outstanding, liquidity + fees, "NAV broken");
+        uint256 fondo = credit.fondoSeguro(address(token));
+        assertEq(cash + outstanding, liquidity + fees + fondo, "NAV broken");
     }
 }
 

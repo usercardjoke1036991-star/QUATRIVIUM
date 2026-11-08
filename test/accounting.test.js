@@ -10,7 +10,7 @@ describe('QuatriviumCredit - Accounting', function () {
     await seedPool(token, contract, owner, '500');
   });
 
-  it('keeps cash + outstanding == liquidity + fees across deposit, borrow and repay', async () => {
+  it('keeps cash + outstanding == liquidity + fees + insurance across deposit, borrow and repay', async () => {
     await assertNavInvariant(token, contract, tokenAddr, contractAddr);
 
     await registerAndFund(token, contract, user);
@@ -30,13 +30,13 @@ describe('QuatriviumCredit - Accounting', function () {
 
   it('records LP shares but does not let anyone redeem the pool', async () => {
     const value = await contract.valorLp(owner.address, tokenAddr);
-    expect(value).to.equal(ethers.parseUnits('500', 18));
+    const pool = ethers.parseUnits('475', 18);
+    expect(value).to.equal(pool);
 
     await expect(contract.connect(owner).retirarLiquidez(tokenAddr, value)).to.be.reverted;
-    expect(await contract.valorLp(owner.address, tokenAddr)).to.equal(ethers.parseUnits('500', 18));
-    expect(await contract.lpShares(owner.address, tokenAddr)).to.equal(
-      ethers.parseUnits('500', 18)
-    );
+    expect(await contract.valorLp(owner.address, tokenAddr)).to.equal(pool);
+    expect(await contract.lpShares(owner.address, tokenAddr)).to.equal(pool);
+    expect(await contract.fondoSeguro(tokenAddr)).to.equal(ethers.parseUnits('25', 18));
     await assertNavInvariant(token, contract, tokenAddr, contractAddr);
   });
 

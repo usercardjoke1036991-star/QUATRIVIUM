@@ -26,7 +26,7 @@ describe('QuatriviumCredit - hardening', function () {
     await seedPool(token, contract, owner, '500');
     const value = await contract.valorLp(owner.address, tokenAddr);
     await expect(contract.connect(owner).retirarLiquidez(tokenAddr, value)).to.be.reverted;
-    expect(await contract.valorLp(owner.address, tokenAddr)).to.equal(ethers.parseUnits('500', 18));
+    expect(await contract.valorLp(owner.address, tokenAddr)).to.equal(ethers.parseUnits('475', 18));
   });
 
   it('always allows deposits and repayments without any pause gate', async () => {
@@ -177,8 +177,8 @@ describe('QuatriviumCredit - hardening', function () {
     await token.mint(extra.address, ethers.parseUnits('500', 18));
     await token.connect(extra).approve(contractAddr, ethers.MaxUint256);
     await contract.connect(extra).depositarLiquidez(tokenAddr, ethers.parseUnits('500', 18));
-    expect(await contract.valorLp(owner.address, tokenAddr)).to.equal(ethers.parseUnits('500', 18));
-    expect(await contract.valorLp(extra.address, tokenAddr)).to.equal(ethers.parseUnits('500', 18));
+    expect(await contract.valorLp(owner.address, tokenAddr)).to.equal(ethers.parseUnits('475', 18));
+    expect(await contract.valorLp(extra.address, tokenAddr)).to.equal(ethers.parseUnits('475', 18));
     await assertNavInvariant(token, contract, tokenAddr, contractAddr);
   });
 

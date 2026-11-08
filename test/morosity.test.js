@@ -65,7 +65,8 @@ describe('QuatriviumCredit - Morosity', function () {
     const outstanding = await contract.outstandingLoans(tokenAddr);
     const liquidity = await contract.totalLiquidity(tokenAddr);
     const fees = await contract.collectedFees(tokenAddr);
-    expect(cash + outstanding).to.equal(liquidity + fees);
+    const fondo = await contract.fondoSeguro(tokenAddr);
+    expect(cash + outstanding).to.equal(liquidity + fees + fondo);
   });
 
   it('keeps earnings during the grace month then freezes them and burns 10 reputation per level per day', async () => {
@@ -162,7 +163,8 @@ describe('QuatriviumCredit - Morosity', function () {
     const outstanding = await contract.outstandingLoans(tokenAddr);
     const liquidity = await contract.totalLiquidity(tokenAddr);
     const fees = await contract.collectedFees(tokenAddr);
-    expect(cash + outstanding).to.equal(liquidity + fees);
+    const fondo = await contract.fondoSeguro(tokenAddr);
+    expect(cash + outstanding).to.equal(liquidity + fees + fondo);
   });
 
   it('does not waive the founder 48h wait between loans', async () => {

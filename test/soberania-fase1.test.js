@@ -126,7 +126,7 @@ describe('Fase 1 — soberanía de cobros, racha, alta, liquidación y oráculo'
     } = await deployProtocol({ harness: true });
     await token.mint(owner.address, ethers.parseUnits('2000000', 18));
     await token.connect(owner).approve(contractAddr, ethers.MaxUint256);
-    await contract.connect(owner).depositarLiquidez(tokenAddr, ethers.parseUnits('1500000', 18));
+    await contract.connect(owner).depositarLiquidez(tokenAddr, ethers.parseUnits('1510000', 18));
     await registerAndFund(token, contract, user, '20');
     await contract.forceNivel(user.address, 1000);
     await contract.connect(user).solicitarPrestamo(tokenAddr, 1000);

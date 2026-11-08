@@ -168,9 +168,10 @@ contract QuatriviumReserva is ReentrancyGuard {
         return (bote, totalBloqueado, apyHoyBps());
     }
 
-    function techoRendimiento(uint256 principal, uint256 elapsed) public view returns (uint256) {
+    /// @notice Techo del periodo: 12 % anual. Si el bote no alcanza, el pago se recorta sin revertir.
+    function techoRendimiento(uint256 principal, uint256 elapsed) public pure returns (uint256) {
         if (elapsed > LOCK) elapsed = LOCK;
-        return (principal * apyHoyBps() * elapsed) / (10000 * YEAR);
+        return (principal * MAX_APY_BP * elapsed) / (10000 * YEAR);
     }
 
     function desbloqueoDe(address usuario) public view returns (uint256) {

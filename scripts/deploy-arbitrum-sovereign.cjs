@@ -29,6 +29,8 @@ const { getLinkedCreditFactory } = require('./linkCredit.cjs');
 const FOUNDER = '0x5023bf46dB7458B9bb9152a7ffE64f195CD1a047';
 const ARBITRUM_ONE_CHAIN_ID = 42161;
 const ARBITRUM_SEPOLIA_CHAIN_ID = 421614;
+// Chainlink Sequencer Uptime Feed en Arbitrum One. No es un address inventado.
+const SEQUENCER_FEED_ARBITRUM_ONE = '0xFdB631F5EE196F0ed6FAa767959853A9F217697D';
 const LUSD_ARBITRUM_ONE = '0x93b346b6BC2548dA6A1E7d98E9a421B42541425b';
 const CHAINLINK_LUSD_USD_ARBITRUM_ONE = '0x0411D28c94d85A36bC72Cb0f875dfA8371D8fFfF';
 const GAS_FLOOR_MAINNET = ethers.parseEther('0.002');
@@ -241,6 +243,12 @@ async function main() {
   }
 
   const isMainnet = chainId === ARBITRUM_ONE_CHAIN_ID;
+  if (isMainnet) {
+    const sequencerFeed = process.env.SEQUENCER_FEED || SEQUENCER_FEED_ARBITRUM_ONE;
+    if (!isHexAddress(sequencerFeed) || isZero(sequencerFeed)) {
+      throw new Error('Arbitrum One (42161) exige un feed de sequencer distinto de cero.');
+    }
+  }
   if (isMainnet && process.env.CONFIRM_MAINNET !== 'yes') {
     throw new Error(
       'Mainnet bloqueada. Defina CONFIRM_MAINNET=yes solo en el momento del despliegue.'

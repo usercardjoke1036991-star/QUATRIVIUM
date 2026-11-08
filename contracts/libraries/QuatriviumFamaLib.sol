@@ -24,6 +24,7 @@ library QuatriviumFamaLib {
     uint256 internal constant POOL_FLOOR_BP = 4000;
     uint256 internal constant FUNDADOR_BP = 1500;
     uint256 internal constant PISO_CAJA_BP = 2000;
+    uint256 internal constant SEGURO_BP = 500;
     uint8 internal constant MAX_LINEA = 40;
     uint256 internal constant CARRIL_REF_BP = 1000;
     uint256 internal constant CARRIL_CHICO_PISO = 50e18;
@@ -501,6 +502,42 @@ library QuatriviumFamaLib {
             abi.encodeWithSignature("registroHecho(address)", user)
         );
         return ok && data.length >= 32 && abi.decode(data, (bool));
+    }
+
+    /// @notice 5 % de cada entrada al pool. El resto queda prestable.
+    function partirSeguro(uint256 amount) public pure returns (uint256 alPool, uint256 alSeguro) {
+        alSeguro = (amount * SEGURO_BP) / 10000;
+        alPool = amount - alSeguro;
+    }
+
+    /// @dev `entered` ya se sumó a la liquidez. Mueve el 5 % al fondo de seguro.
+    function apartarSeguro(
+        mapping(address => uint256) storage totalLiquidity,
+        mapping(address => uint256) storage fondoSeguro,
+        address token,
+        uint256 entered
+    ) external {
+        if (entered == 0) return;
+        (, uint256 seguro) = partirSeguro(entered);
+        if (seguro == 0) return;
+        require(totalLiquidity[token] >= seguro, "seguro");
+        totalLiquidity[token] -= seguro;
+        fondoSeguro[token] += seguro;
+    }
+
+    /// @dev Cubre una pérdida por impago moviendo contabilidad del fondo al pool. No saca tokens.
+    function cubrirImpago(
+        mapping(address => uint256) storage totalLiquidity,
+        mapping(address => uint256) storage fondoSeguro,
+        address token,
+        uint256 perdida
+    ) external returns (uint256 cubierto) {
+        if (perdida == 0) return 0;
+        uint256 fondo = fondoSeguro[token];
+        cubierto = perdida <= fondo ? perdida : fondo;
+        if (cubierto == 0) return 0;
+        fondoSeguro[token] = fondo - cubierto;
+        totalLiquidity[token] += cubierto;
     }
 
     function _leerAlta(address hermano) private view returns (address alta) {

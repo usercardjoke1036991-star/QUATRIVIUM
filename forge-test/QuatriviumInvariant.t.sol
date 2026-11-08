@@ -198,7 +198,8 @@ contract QuatriviumInvariantTest is Test {
         uint256 outstanding = credit.outstandingLoans(address(token));
         uint256 liquidity = credit.totalLiquidity(address(token));
         uint256 fees = credit.collectedFees(address(token));
-        assertEq(cash + outstanding, liquidity + fees, "NAV Credit");
+        uint256 fondo = credit.fondoSeguro(address(token));
+        assertEq(cash + outstanding, liquidity + fees + fondo, "NAV Credit");
     }
 
     /// @notice Reserva es otra caja: saldo == bote + lo bloqueado. No es el pool de préstamos.

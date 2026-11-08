@@ -40,7 +40,7 @@ describe('QuatriviumCredit - Liquidation', function () {
     expect(await contract.prestamosCerrados(user.address)).to.equal(1n);
   });
 
-  it('takes the liquidation fee from interest without dividing first', async () => {
+  it('keeps the liquidation fee inside the pool in the same transaction', async () => {
     const {
       token,
       contract,
@@ -63,13 +63,23 @@ describe('QuatriviumCredit - Liquidation', function () {
 
     await token.mint(liquidator.address, ethers.parseUnits('10', 18));
     await token.connect(liquidator).approve(contractAddr, ethers.MaxUint256);
-    await contract.connect(liquidator).liquidate(user.address, tokenAddr);
-
     const interest = debt.interes;
+    const principal = debt.principal;
     const totalDue = debt.total;
     const feeBp = await contract.feeBasisPoints();
-    const expectedFee = (interest * totalDue * feeBp) / (totalDue * 10000n);
-    expect(await contract.collectedFees(tokenAddr)).to.equal(expectedFee);
+    const fee = (interest * totalDue * feeBp) / (totalDue * 10000n);
+    let reward = (principal * 5n) / 100n;
+    const tope = interest - fee;
+    if (reward > tope) reward = tope;
+    const liqBefore = await contract.totalLiquidity(tokenAddr);
+    const fondoBefore = await contract.fondoSeguro(tokenAddr);
+    await contract.connect(liquidator).liquidate(user.address, tokenAddr);
+
+    expect(await contract.collectedFees(tokenAddr)).to.equal(0n);
+    const liqDelta = (await contract.totalLiquidity(tokenAddr)) - liqBefore;
+    const fondoDelta = (await contract.fondoSeguro(tokenAddr)) - fondoBefore;
+    expect(liqDelta + fondoDelta).to.equal(interest - reward);
+    expect(interest - reward).to.be.gt(interest - fee - reward);
   });
 
   it('lets a liquidated user borrow again after cooldown', async () => {

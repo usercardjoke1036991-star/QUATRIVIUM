@@ -92,6 +92,7 @@ describe('Alta 4 USDT', function () {
     await registerAndFund(token, contract, extra, '20');
     await registerAndFund(token, contract, user, '20', extra.address);
     const liqBefore = await contract.totalLiquidity(tokenAddr);
+    const fondoBefore = await contract.fondoSeguro(tokenAddr);
     const padreBefore = await token.balanceOf(extra.address);
     await expect(alta.connect(user).vencerPadrinoAlPool(user.address)).to.be.reverted;
     await ethers.provider.send('evm_increaseTime', [7 * 24 * 60 * 60 + 1]);
@@ -99,7 +100,10 @@ describe('Alta 4 USDT', function () {
     await alta.connect(user).vencerPadrinoAlPool(user.address);
     expectAmt(await alta.padrinoApartado(user.address), 0n);
     expectAmt((await token.balanceOf(extra.address)) - padreBefore, 0n);
-    expectAmt(await contract.totalLiquidity(tokenAddr), liqBefore + ethers.parseUnits('1', 18));
+    const uno = ethers.parseUnits('1', 18);
+    const seguro = uno / 20n;
+    expectAmt(await contract.totalLiquidity(tokenAddr), liqBefore + uno - seguro);
+    expectAmt(await contract.fondoSeguro(tokenAddr), fondoBefore + seguro);
     await contract.connect(user).solicitarPrestamo(tokenAddr, 0);
     const deuda = await contract.obtenerDeuda(user.address);
     await contract.connect(user).pagarPrestamo(tokenAddr, deuda[2]);

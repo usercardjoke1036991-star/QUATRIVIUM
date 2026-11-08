@@ -1,11 +1,24 @@
 const { ethers } = require('hardhat');
 const { getLinkedCreditFactory } = require('../scripts/linkCredit.cjs');
 
-async function deployFamaAndCredit(factory, tokenAddr, owner, feeBp, admins, confirms) {
-  const Aggregator = await ethers.getContractFactory('MockV3Aggregator');
-  const sequencer = await Aggregator.deploy(0, 0);
-  const block = await ethers.provider.getBlock('latest');
-  await sequencer.setRound(1, 0, block.timestamp - 7200, block.timestamp, 1);
+async function deployFamaAndCredit(
+  factory,
+  tokenAddr,
+  owner,
+  feeBp,
+  admins,
+  confirms,
+  sequencerOpt
+) {
+  let sequencerAddress = sequencerOpt;
+  let sequencer = null;
+  if (sequencerAddress == null) {
+    const Aggregator = await ethers.getContractFactory('MockV3Aggregator');
+    sequencer = await Aggregator.deploy(0, 0);
+    const block = await ethers.provider.getBlock('latest');
+    await sequencer.setRound(1, 0, block.timestamp - 7200, block.timestamp, 1);
+    sequencerAddress = await sequencer.getAddress();
+  }
   const nonce = await ethers.provider.getTransactionCount(owner.address);
   const famaAddr = ethers.getCreateAddress({ from: owner.address, nonce });
   const creditAddr = ethers.getCreateAddress({ from: owner.address, nonce: nonce + 1 });
@@ -21,7 +34,7 @@ async function deployFamaAndCredit(factory, tokenAddr, owner, feeBp, admins, con
     admins,
     confirms,
     await fama.getAddress(),
-    await sequencer.getAddress()
+    sequencerAddress
   );
   await contract.waitForDeployment();
   if ((await contract.getAddress()).toLowerCase() !== creditAddr.toLowerCase()) {
@@ -211,7 +224,8 @@ async function assertNavInvariant(token, contract, tokenAddr, contractAddr) {
   const outstanding = await contract.outstandingLoans(tokenAddr);
   const liquidity = await contract.totalLiquidity(tokenAddr);
   const fees = await contract.collectedFees(tokenAddr);
-  expectAmt(cash + outstanding, liquidity + fees);
+  const fondo = await contract.fondoSeguro(tokenAddr);
+  expectAmt(cash + outstanding, liquidity + fees + fondo);
 }
 
 function expectAmt(actual, expected) {

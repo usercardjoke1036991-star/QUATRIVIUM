@@ -135,7 +135,8 @@ contract QuatriviumBlindajesTest is Test {
     function _assertNav() internal view {
         assertEq(
             token.balanceOf(address(credit)) + credit.outstandingLoans(address(token)),
-            credit.totalLiquidity(address(token)) + credit.collectedFees(address(token)),
+            credit.totalLiquidity(address(token)) + credit.collectedFees(address(token))
+                + credit.fondoSeguro(address(token)),
             "NAV"
         );
     }
