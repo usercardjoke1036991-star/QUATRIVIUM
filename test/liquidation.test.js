@@ -105,8 +105,7 @@ describe('QuatriviumCredit - Liquidation', function () {
     await registerAndFund(token, contract, user);
     await contract.connect(user).solicitarPrestamo(tokenAddr, 0);
 
-    await expect(proposeAndExecute(contract, owner, 'setTokenConfig', [tokenAddr, false])).to.be
-      .reverted;
+    expect(contract.interface.hasFunction('setTokenConfig')).to.equal(false);
   });
 
   it('liquidates overdue loans permissionlessly without any pause gate', async () => {

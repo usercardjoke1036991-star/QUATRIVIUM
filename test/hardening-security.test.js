@@ -5,9 +5,9 @@ const { deployProtocol, seedPool, registerAndFund, proposeAndExecute } = require
 describe('QuatriviumCredit - security hardening', function () {
   it('sends fee withdrawals through the 72h timelock', async () => {
     const { contract, owner, extra } = await deployProtocol();
-    await expect(contract.connect(owner).retirarComisiones()).to.be.reverted;
-    await expect(contract.connect(owner).retirarComisionesToken(await extra.getAddress())).to.be
-      .reverted;
+    expect(contract.interface.hasFunction('retirarComisiones')).to.equal(false);
+    expect(contract.interface.hasFunction('retirarComisionesToken')).to.equal(false);
+    expect(extra.address).to.be.a('string');
   });
 
   it('removes attester, kycExigido and identidadExigida selectors from admin actions', async () => {

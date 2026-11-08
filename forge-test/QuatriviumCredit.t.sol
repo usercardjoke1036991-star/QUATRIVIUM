@@ -29,8 +29,10 @@ contract QuatriviumCreditForgeTest is Test {
 
         token = new ERC20Mock();
         feed = new MockV3Aggregator(8, 100000000);
-        address[] memory admins = new address[](1);
+        address[] memory admins = new address[](3);
         admins[0] = owner;
+        admins[1] = makeAddr("admin-b");
+        admins[2] = makeAddr("admin-c");
         uint64 nonce = vm.getNonce(owner);
         address predictedCredit = vm.computeCreateAddress(owner, nonce + 1);
         address predictedReserva = vm.computeCreateAddress(owner, nonce + 2);

@@ -18,7 +18,7 @@ async function deployHarness() {
     tokenAddr,
     owner,
     500,
-    [owner.address],
+    [owner.address, user.address, extra.address],
     1
   );
   return { token, contract, owner, user, extra, third, tokenAddr, signers };

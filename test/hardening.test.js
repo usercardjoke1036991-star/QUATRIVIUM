@@ -48,11 +48,11 @@ describe('QuatriviumCredit - hardening', function () {
     const signers = await ethers.getSigners();
     const owner = signers[0];
     const admin2 = signers[1];
+    const admin3 = signers[2];
     const { contract } = await deployProtocol({
-      admins: [owner.address, admin2.address],
-      confirms: 2,
+      admins: [owner.address, admin2.address, admin3.address],
     });
-    const data = contract.interface.encodeFunctionData('setFeeBP', [100]);
+    const data = contract.interface.encodeFunctionData('removeAdmin', [admin3.address]);
     await contract.connect(owner).proposeAdminAction(data);
     await expect(contract.connect(admin2).cancelAdminAction(1)).to.be.reverted;
     await contract.connect(owner).cancelAdminAction(1);

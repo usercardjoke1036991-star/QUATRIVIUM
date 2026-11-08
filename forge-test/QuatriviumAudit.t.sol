@@ -33,8 +33,10 @@ contract QuatriviumAuditForgeTest is Test {
 
         token = new ERC20Mock();
         feed = new MockV3Aggregator(8, 100000000);
-        address[] memory admins = new address[](1);
+        address[] memory admins = new address[](3);
         admins[0] = owner;
+        admins[1] = makeAddr("admin-b");
+        admins[2] = makeAddr("admin-c");
         uint64 nonce = vm.getNonce(owner);
         address predictedCredit = vm.computeCreateAddress(owner, nonce + 1);
         address predictedReserva = vm.computeCreateAddress(owner, nonce + 2);
@@ -181,7 +183,8 @@ contract QuatriviumAuditForgeTest is Test {
     }
 
     function test_failed_admin_execute_can_retry() public {
-        bytes memory data = abi.encodeWithSelector(QuatriviumCredit.retirarComisionesToken.selector, address(token));
+        address third = credit.ownerList(2);
+        bytes memory data = abi.encodeWithSelector(QuatriviumCredit.removeAdmin.selector, third);
         vm.prank(owner);
         uint256 id = credit.proposeAdminAction(data);
         vm.warp(block.timestamp + 72 hours + 1);
@@ -203,11 +206,14 @@ contract QuatriviumAuditForgeTest is Test {
         credit.liquidate(user, address(token));
         assertGt(credit.collectedFees(address(token)), 0);
 
+        vm.prank(credit.ownerList(1));
+        credit.confirmAdminAction(id);
         vm.prank(owner);
         credit.executeAdminAction(id);
         (,,,, bool done,) = credit.proposals(id);
         assertTrue(done);
-        assertEq(credit.collectedFees(address(token)), 0);
+        assertFalse(credit.admins(third));
+        assertGt(credit.collectedFees(address(token)), 0);
         _assertNav();
     }
 

@@ -42,7 +42,7 @@ async function deployHarness() {
     tokenAddr,
     owner,
     500,
-    [owner.address],
+    [owner.address, user.address, signers[2].address],
     1
   );
   const contractAddr = await contract.getAddress();

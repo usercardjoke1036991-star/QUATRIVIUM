@@ -50,8 +50,11 @@ async function deployProtocol(opts = {}) {
   const feed = await Aggregator.deploy(8, pegAnswer);
   const tokenAddr = await token.getAddress();
   const feedAddr = await feed.getAddress();
-  const admins = opts.admins || [owner.address];
-  const confirms = opts.confirms ?? 1;
+  const admins = opts.admins || [owner.address, user.address, extra.address];
+  if (admins.length !== 3) {
+    throw new Error('QuatriviumCredit exige exactamente 3 admins');
+  }
+  const confirms = 2;
 
   const { contract, fama, reserva, alta } = await deployFamaAndCredit(
     QuatriviumCredit,

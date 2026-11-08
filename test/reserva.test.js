@@ -321,7 +321,7 @@ describe('QuatriviumReserva', function () {
       tokenAddr,
       owner,
       500,
-      [owner.address],
+      [owner.address, user.address, padre.address],
       1
     );
     const contractAddr = await contract.getAddress();

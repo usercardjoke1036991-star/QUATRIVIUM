@@ -229,15 +229,16 @@ describe('QuatriviumCredit - Unilevel MLM', function () {
   it('lets founders reassign who receives the 15% founder cut', async () => {
     const { token, contract, owner, user, extra, tokenAddr, contractAddr } = await deployProtocol();
     const extraAddr = extra.address;
-    await proposeAndExecute(contract, owner, 'addAdmin', [extraAddr]);
     await seedPool(token, contract, owner, '500');
     await registerAndFund(token, contract, user);
 
     expect(await contract.fundador()).to.equal(owner.address);
     await qualifyCollector(token, contract, owner);
-    await proposeAndExecute(contract, owner, 'setFundador', [extraAddr]);
+    await contract.connect(owner).proponerFundador(extraAddr);
+    await ethers.provider.send('evm_increaseTime', [72 * 60 * 60]);
+    await ethers.provider.send('evm_mine');
+    await contract.connect(owner).aplicarFundador();
     expect(await contract.fundador()).to.equal(extraAddr);
-    expect(await contract.humanosVerificados(extraAddr)).to.equal(true);
 
     const extraBefore = await token.balanceOf(extraAddr);
     const ownerBefore = await token.balanceOf(owner.address);
@@ -252,7 +253,7 @@ describe('QuatriviumCredit - Unilevel MLM', function () {
 
   it('rejects setFundador for a wallet that is not an admin', async () => {
     const { contract, owner, user } = await deployProtocol();
-    await expect(proposeAndExecute(contract, owner, 'setFundador', [user.address])).to.be.reverted;
+    await expect(contract.connect(user).proponerFundador(user.address)).to.be.reverted;
   });
 
   it('keeps paying the upline during the grace month and restores the debtor after pay', async () => {

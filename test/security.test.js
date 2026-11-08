@@ -55,110 +55,53 @@ describe('Quatrivium Finance - uncollateralized credit and admin locks', functio
     expect(progress.nivelActual).to.equal(1n);
   });
 
-  it('blocks direct admin changes; they must pass timelock', async () => {
-    const { contract, owner } = await deployProtocol();
-    await expect(contract.connect(owner).setFeeBP(100)).to.be.reverted;
-  });
-
-  it('executes admin actions only after 72h timelock', async () => {
-    const { contract, owner } = await deployProtocol();
-    const data = contract.interface.encodeFunctionData('setFeeBP', [100]);
-    await contract.connect(owner).proposeAdminAction(data);
-    await expect(contract.connect(owner).executeAdminAction(1)).to.be.reverted;
-
-    await proposeAndExecute(contract, owner, 'setFeeBP', [100]);
-    expect(await contract.feeBasisPoints()).to.equal(100n);
-  });
-
-  it('requires two confirmations when configured as 2-of-2', async () => {
-    const signers = await ethers.getSigners();
-    const owner = signers[0];
-    const admin2 = signers[1];
-    const { contract } = await deployProtocol({
-      admins: [owner.address, admin2.address],
-      confirms: 2,
-    });
-
-    const data = contract.interface.encodeFunctionData('setFeeBP', [200]);
-    await contract.connect(owner).proposeAdminAction(data);
-    await ethers.provider.send('evm_increaseTime', [72 * 60 * 60]);
-    await ethers.provider.send('evm_mine');
-    await expect(contract.connect(owner).executeAdminAction(1)).to.be.reverted;
-
-    await contract.connect(admin2).confirmAdminAction(1);
-    await contract.connect(owner).executeAdminAction(1);
-    expect(await contract.feeBasisPoints()).to.equal(200n);
-  });
-
-  it('locks 2-of-3 as soon as the third founder is added', async () => {
-    const signers = await ethers.getSigners();
-    const owner = signers[0];
-    const admin2 = signers[2];
-    const admin3 = signers[3];
+  it('blocks direct fee changes because admins cannot move rates', async () => {
     const { contract } = await deployProtocol();
-
-    await proposeAndExecute(contract, owner, 'addAdmin', [admin2.address]);
-    await proposeAndExecute(contract, owner, 'addAdmin', [admin3.address]);
-    expect(await contract.requiredConfirmations()).to.equal(2n);
-
-    const data = contract.interface.encodeFunctionData('setFeeBP', [250]);
-    await contract.connect(owner).proposeAdminAction(data);
-    const id = await contract.proposalCount();
-    await ethers.provider.send('evm_increaseTime', [72 * 60 * 60]);
-    await ethers.provider.send('evm_mine');
-    await expect(contract.connect(owner).executeAdminAction(id)).to.be.reverted;
-
-    await contract.connect(admin2).confirmAdminAction(id);
-    await contract.connect(owner).executeAdminAction(id);
-    expect(await contract.feeBasisPoints()).to.equal(250n);
+    expect(contract.interface.hasFunction('setFeeBP')).to.equal(false);
+    expect(contract.interface.hasFunction('setOwner')).to.equal(false);
+    expect(contract.interface.hasFunction('retirarComisiones')).to.equal(false);
   });
 
-  it('forces 2-of-3 even if deploy asked for 1 signature with three admins', async () => {
-    const signers = await ethers.getSigners();
-    const [owner, , admin2, admin3] = signers;
-    const { contract } = await deployProtocol({
-      admins: [owner.address, admin2.address, admin3.address],
-      confirms: 1,
-    });
+  it('removes an admin only with 2 of 3 and a 72h timelock, and keeps quorum at 2', async () => {
+    const { contract, owner, user, extra } = await deployProtocol();
     expect(await contract.requiredConfirmations()).to.equal(2n);
-
-    const data = contract.interface.encodeFunctionData('setFeeBP', [300]);
+    const data = contract.interface.encodeFunctionData('removeAdmin', [extra.address]);
     await contract.connect(owner).proposeAdminAction(data);
     await ethers.provider.send('evm_increaseTime', [72 * 60 * 60]);
     await ethers.provider.send('evm_mine');
     await expect(contract.connect(owner).executeAdminAction(1)).to.be.reverted;
-
-    await contract.connect(admin2).confirmAdminAction(1);
+    await contract.connect(user).confirmAdminAction(1);
     await contract.connect(owner).executeAdminAction(1);
-    expect(await contract.feeBasisPoints()).to.equal(300n);
-  });
-
-  it('lets two founders remove a third without that third signature', async () => {
-    const signers = await ethers.getSigners();
-    const [owner, , admin2, hacked] = signers;
-    const { contract } = await deployProtocol({
-      admins: [owner.address, admin2.address, hacked.address],
-      confirms: 2,
-    });
-
-    const data = contract.interface.encodeFunctionData('removeAdmin', [hacked.address]);
-    await contract.connect(owner).proposeAdminAction(data);
-    await contract.connect(admin2).confirmAdminAction(1);
-    await ethers.provider.send('evm_increaseTime', [72 * 60 * 60]);
-    await ethers.provider.send('evm_mine');
-    await contract.connect(owner).executeAdminAction(1);
-
-    expect(await contract.admins(hacked.address)).to.equal(false);
+    expect(await contract.admins(extra.address)).to.equal(false);
     expect(await contract.requiredConfirmations()).to.equal(2n);
   });
 
-  it('exposes no pause or banWallet kill switches while keeping founder rotation under timelock', async () => {
-    const { contract, owner, extra } = await deployProtocol();
-    expect(contract.interface.hasFunction('pausarContrato')).to.equal(false);
-    expect(contract.interface.hasFunction('despausarContrato')).to.equal(false);
-    expect(contract.interface.hasFunction('banWallet')).to.equal(false);
-    await proposeAndExecute(contract, owner, 'addAdmin', [extra.address]);
-    await proposeAndExecute(contract, owner, 'setFundador', [extra.address]);
+  it('pauses only new loans for 7 days and still accepts repayment', async () => {
+    const { token, contract, owner, user, tokenAddr } = await deployProtocol();
+    await seedPool(token, contract, owner, '50');
+    await registerAndFund(token, contract, user);
+    await contract.connect(user).solicitarPrestamo(tokenAddr, 0);
+    await contract.connect(owner).pausarPrestamosNuevos();
+    const debt = await contract.obtenerDeuda(user.address);
+    await expect(contract.connect(user).pagarPrestamo(tokenAddr, debt.total)).to.not.be.reverted;
+    await ethers.provider.send('evm_increaseTime', [48 * 60 * 60]);
+    await ethers.provider.send('evm_mine');
+    await expect(contract.connect(user).solicitarPrestamo(tokenAddr, 0)).to.be.reverted;
+    await ethers.provider.send('evm_increaseTime', [7 * 24 * 60 * 60]);
+    await ethers.provider.send('evm_mine');
+    await expect(contract.connect(user).solicitarPrestamo(tokenAddr, 0)).to.not.be.reverted;
+  });
+
+  it('lets only the current founder rotate the founder wallet after 72h', async () => {
+    const { contract, owner, user, extra } = await deployProtocol();
+    await expect(contract.connect(user).proponerFundador(extra.address)).to.be.reverted;
+    await contract.connect(owner).proponerFundador(extra.address);
+    await contract.connect(owner).cancelarFundador();
+    await expect(contract.connect(owner).aplicarFundador()).to.be.reverted;
+    await contract.connect(owner).proponerFundador(extra.address);
+    await ethers.provider.send('evm_increaseTime', [72 * 60 * 60]);
+    await ethers.provider.send('evm_mine');
+    await contract.connect(owner).aplicarFundador();
     expect(await contract.fundador()).to.equal(extra.address);
   });
 

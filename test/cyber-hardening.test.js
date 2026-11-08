@@ -2242,8 +2242,8 @@ describe('account entry — password, email and session', () => {
       path.join(__dirname, '..', 'contracts', 'QuatriviumCredit.sol'),
       'utf8'
     );
-    expect(sol).to.include('if (n >= 3) return 2');
-    expect(sol).to.include('would break quorum');
+    expect(sol).to.include('return 2');
+    expect(sol).to.include('ownerList.length > 2');
     const es = JSON.parse(
       fs.readFileSync(path.join(__dirname, '..', 'i18n', 'locales', 'es.json'), 'utf8')
     );

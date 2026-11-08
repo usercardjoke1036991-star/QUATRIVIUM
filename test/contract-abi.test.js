@@ -3,21 +3,7 @@ const path = require('path');
 const { expect } = require('chai');
 const { Interface } = require('ethers');
 
-const ADMIN_SELECTORS = [
-  'setFeeBP',
-  'setTokenConfig',
-  'setInterestModelParams',
-  'setReputationParams',
-  'setFeeCollector',
-  'addAdmin',
-  'removeAdmin',
-  'setOwner',
-  'setFundador',
-  'setRequiredConfirmations',
-  'setSecurityParams',
-  'retirarComisiones',
-  'retirarComisionesToken',
-];
+const ADMIN_SELECTORS = ['addAdmin', 'removeAdmin', 'pausarPrestamosNuevos', 'proponerFundador'];
 
 function clientInterface() {
   const src = fs.readFileSync(path.join(__dirname, '..', 'constants', 'contractConfig.ts'), 'utf8');
@@ -35,11 +21,11 @@ describe('CONTRACT_ABI', function () {
     expect(() => iface.getFunction('proposeAdminAction')).to.not.throw();
     expect(
       iface.parseTransaction({
-        data: iface.encodeFunctionData('setFundador', [
+        data: iface.encodeFunctionData('proponerFundador', [
           '0x0000000000000000000000000000000000000001',
         ]),
       }).name
-    ).to.equal('setFundador');
+    ).to.equal('proponerFundador');
   });
 
   it('encodes every sovereign money and onboarding path the app calls', function () {
