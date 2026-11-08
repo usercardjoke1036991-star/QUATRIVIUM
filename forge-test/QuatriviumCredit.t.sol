@@ -45,9 +45,10 @@ contract QuatriviumCreditForgeTest is Test {
             500,
             admins,
             1,
-            address(fama)
+            address(fama),
+            address(0)
         );
-        new QuatriviumReserva(address(token), owner, predictedCredit, address(fama), predictedAlta);
+        new QuatriviumReserva(address(token), owner, predictedCredit, address(fama), predictedAlta, admins);
         alta = new QuatriviumAlta(address(token), predictedCredit, predictedReserva);
         vm.stopPrank();
         require(address(credit) == predictedCredit, "credit pred");

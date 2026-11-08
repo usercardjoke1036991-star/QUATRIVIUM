@@ -164,10 +164,11 @@ contract QuatriviumInvariantTest is Test {
             500,
             admins,
             1,
-            address(fama)
+            address(fama),
+            address(0)
         );
         require(address(credit) == predictedCredit, "credit pred");
-        reserva = new QuatriviumReserva(address(token), owner, address(credit), address(fama), predictedAlta);
+        reserva = new QuatriviumReserva(address(token), owner, address(credit), address(fama), predictedAlta, admins);
         QuatriviumAlta alta = new QuatriviumAlta(address(token), address(credit), address(reserva));
         token.mint(owner, 20_000 ether);
         token.approve(address(credit), type(uint256).max);

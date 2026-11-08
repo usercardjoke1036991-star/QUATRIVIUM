@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {AggregatorV3Interface} from "./interfaces/AggregatorV3Interface.sol";
 import {LoanTierSeed} from "./libraries/LoanTierSeed.sol";
 import {Usuario} from "./libraries/Usuario.sol";
 import {QuatriviumFamaLib} from "./libraries/QuatriviumFamaLib.sol";
@@ -40,6 +41,7 @@ contract QuatriviumCredit is ReentrancyGuard {
     uint256 public constant PAUSA_PRESTAMOS = 7 days;
     uint256 public constant COOLDOWN_PRESTAMO = 48 hours;
     uint256 public constant LIQUIDACION_GRACIA = 48 hours;
+    uint256 public constant SEQUENCER_GRACIA = 1 hours;
     uint256 internal constant GRACIA_MORA = 30 days;
     uint256 internal constant FAMA_POR_DIA_MORA = 10;
     uint256 public constant ORIGINATION_WINDOW = 1 days;
@@ -73,6 +75,11 @@ contract QuatriviumCredit is ReentrancyGuard {
     address public fundadorPendiente;
     uint256 public fundadorEta;
     uint256 public pausaPrestamosHasta;
+    /// @notice Feed de uptime del sequencer de Arbitrum. Cero = sin feed (la gracia de 48 h sola).
+    AggregatorV3Interface public immutable sequencerFeed;
+    /// @notice Tiempo que el sequencer estuvo caído y que se suma a la gracia de liquidación.
+    uint256 public graciaSequencer;
+    uint256 public sequencerCaidoDesde;
     uint256 public feeBasisPoints;
 
     mapping(address => bool) public admins;
@@ -235,7 +242,8 @@ contract QuatriviumCredit is ReentrancyGuard {
         uint256 _feeBP,
         address[] memory _initialAdmins,
         uint256 _requiredConfirmations,
-        address _famaHermano
+        address _famaHermano,
+        address _sequencerFeed
     ) {
         require(_usdtAddress != address(0), "zero token");
         require(_feeCollector != address(0), "zero fee collector");
@@ -292,6 +300,7 @@ contract QuatriviumCredit is ReentrancyGuard {
         allowedAdminSelector[this.addAdmin.selector] = true;
         allowedAdminSelector[this.removeAdmin.selector] = true;
         famaHermano = _famaHermano;
+        sequencerFeed = AggregatorV3Interface(_sequencerFeed);
     }
 
     function _syncQuorum() internal {
@@ -836,13 +845,56 @@ contract QuatriviumCredit is ReentrancyGuard {
         _aplicarMoraSiVencido(usuario);
     }
 
+    /// @notice Deja escrito el tiempo caído. Una liquidación que revierte no puede guardarlo.
+    function anotarSequencer() external {
+        _syncSequencer();
+    }
+
+    /// @dev answer 0 = sequencer arriba. Otro valor, o un feed que revierte, pospone solo la liquidación.
+    function _syncSequencer() internal returns (uint256 extra, bool posponer) {
+        extra = graciaSequencer;
+        if (address(sequencerFeed) == address(0)) return (extra, false);
+        try sequencerFeed.latestRoundData() returns (
+            uint80,
+            int256 answer,
+            uint256 startedAt,
+            uint256 updatedAt,
+            uint80
+        ) {
+            if (updatedAt == 0 || startedAt == 0 || updatedAt > block.timestamp || startedAt > block.timestamp) {
+                return (extra, true);
+            }
+            if (answer != 0) {
+                if (sequencerCaidoDesde == 0) sequencerCaidoDesde = startedAt;
+                return (extra, true);
+            }
+            if (sequencerCaidoDesde != 0) {
+                uint256 fin = startedAt > sequencerCaidoDesde ? startedAt : block.timestamp;
+                if (fin > sequencerCaidoDesde) {
+                    graciaSequencer += fin - sequencerCaidoDesde;
+                    extra = graciaSequencer;
+                }
+                sequencerCaidoDesde = 0;
+            }
+            if (block.timestamp < startedAt + SEQUENCER_GRACIA) return (extra, true);
+            return (extra, false);
+        } catch {
+            return (extra, true);
+        }
+    }
+
     function liquidate(address deudor, address tokenAddress) external nonReentrant onlySupportedToken(tokenAddress) {
         require(tx.origin == msg.sender, "no contracts");
         require(msg.sender != deudor, "self");
         require(usuarios[deudor].montoActivo > 0, "no active loan");
         require(usuarios[deudor].monedaActivo == tokenAddress, "token mismatch");
         require(_estaVencido(deudor), "not defaulted");
-        require(block.timestamp > usuarios[deudor].vencimiento + LIQUIDACION_GRACIA, "grace");
+        (uint256 extra, bool posponer) = _syncSequencer();
+        if (posponer) revert("sequencer");
+        require(
+            block.timestamp > usuarios[deudor].vencimiento + LIQUIDACION_GRACIA + extra,
+            "grace"
+        );
 
         uint256 principal = usuarios[deudor].montoActivo;
         (, uint256 interest, uint256 totalDue, ) = _deudaActual(deudor);

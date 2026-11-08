@@ -2,6 +2,10 @@ const { ethers } = require('hardhat');
 const { getLinkedCreditFactory } = require('../scripts/linkCredit.cjs');
 
 async function deployFamaAndCredit(factory, tokenAddr, owner, feeBp, admins, confirms) {
+  const Aggregator = await ethers.getContractFactory('MockV3Aggregator');
+  const sequencer = await Aggregator.deploy(0, 0);
+  const block = await ethers.provider.getBlock('latest');
+  await sequencer.setRound(1, 0, block.timestamp - 7200, block.timestamp, 1);
   const nonce = await ethers.provider.getTransactionCount(owner.address);
   const famaAddr = ethers.getCreateAddress({ from: owner.address, nonce });
   const creditAddr = ethers.getCreateAddress({ from: owner.address, nonce: nonce + 1 });
@@ -16,19 +20,27 @@ async function deployFamaAndCredit(factory, tokenAddr, owner, feeBp, admins, con
     feeBp,
     admins,
     confirms,
-    await fama.getAddress()
+    await fama.getAddress(),
+    await sequencer.getAddress()
   );
   await contract.waitForDeployment();
   if ((await contract.getAddress()).toLowerCase() !== creditAddr.toLowerCase()) {
     throw new Error('predicted Credit address mismatch');
   }
   const Reserva = await ethers.getContractFactory('QuatriviumReserva');
-  const reserva = await Reserva.deploy(tokenAddr, owner.address, creditAddr, famaAddr, altaAddr);
+  const reserva = await Reserva.deploy(
+    tokenAddr,
+    owner.address,
+    creditAddr,
+    famaAddr,
+    altaAddr,
+    admins
+  );
   await reserva.waitForDeployment();
   const Alta = await ethers.getContractFactory('QuatriviumAlta');
   const alta = await Alta.deploy(tokenAddr, creditAddr, reservaAddr);
   await alta.waitForDeployment();
-  return { contract, fama, reserva, alta };
+  return { contract, fama, reserva, alta, sequencer };
 }
 
 async function deployProtocol(opts = {}) {
@@ -56,7 +68,7 @@ async function deployProtocol(opts = {}) {
   }
   const confirms = 2;
 
-  const { contract, fama, reserva, alta } = await deployFamaAndCredit(
+  const { contract, fama, reserva, alta, sequencer } = await deployFamaAndCredit(
     QuatriviumCredit,
     tokenAddr,
     owner,
@@ -73,6 +85,7 @@ async function deployProtocol(opts = {}) {
     fama,
     reserva,
     alta,
+    sequencer,
     owner,
     user,
     extra,

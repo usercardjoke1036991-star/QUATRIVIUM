@@ -49,9 +49,10 @@ contract QuatriviumAuditForgeTest is Test {
             500,
             admins,
             1,
-            address(fama)
+            address(fama),
+            address(0)
         );
-        new QuatriviumReserva(address(token), owner, predictedCredit, address(fama), predictedAlta);
+        new QuatriviumReserva(address(token), owner, predictedCredit, address(fama), predictedAlta, admins);
         alta = new QuatriviumAlta(address(token), predictedCredit, predictedReserva);
         vm.stopPrank();
         require(address(credit) == predictedCredit, "credit pred");
@@ -272,7 +273,11 @@ contract QuatriviumAuditForgeTest is Test {
         CreditViewMock vista = new CreditViewMock();
         address founder = makeAddr("boost-founder");
         address locker = makeAddr("boost-locker");
-        QuatriviumReserva reserva = new QuatriviumReserva(address(token), founder, address(vista), address(vista), address(1));
+        address[] memory radmins = new address[](3);
+        radmins[0] = founder;
+        radmins[1] = locker;
+        radmins[2] = address(1);
+        QuatriviumReserva reserva = new QuatriviumReserva(address(token), founder, address(vista), address(vista), address(1), radmins);
         vista.setAdmin(founder, true);
         vista.setNivel(locker, 10);
         vista.setPayToken(address(token));
@@ -292,11 +297,7 @@ contract QuatriviumAuditForgeTest is Test {
         vm.expectRevert(QuatriviumReserva.TopeDiario.selector);
         vista.triggerBoost(address(reserva), locker, 1_000_000 ether, salt);
 
-        address g2 = makeAddr("g2");
-        reserva.addGuardian(g2);
-        vm.warp(block.timestamp + 72 hours + 1);
-        reserva.applyGuardian();
-        assertEq(reserva.guardianes(), 2);
+        assertEq(reserva.requiredConfirmations(), 2);
     }
 
     function _onboard(address who) internal {

@@ -54,10 +54,12 @@ describe('security audit remediations', function () {
       'utf8'
     );
     expect(reserva).to.include('function boostIdOf');
-    expect(reserva).to.include('function applyFamaCaja');
+    expect(reserva).to.not.include('function applyFamaCaja');
     expect(reserva).to.include('BOOST_GAP');
     expect(reserva).to.include('BOOST_DIA_TOPE');
-    expect(reserva).to.include('function addGuardian');
+    expect(reserva).to.not.include('function addGuardian');
+    expect(reserva).to.include('function proponerAdmin');
+    expect(reserva).to.not.include('function proponerRetiroBote');
     expect(reserva).to.not.include('function pausarBoost');
   });
 

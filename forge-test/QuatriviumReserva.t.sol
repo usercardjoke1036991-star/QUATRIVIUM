@@ -70,7 +70,11 @@ contract QuatriviumReservaForgeTest is Test {
         token = new ERC20Mock();
         CreditViewMock credit = new CreditViewMock();
         address founder = makeAddr("reserva-founder");
-        reserva = new QuatriviumReserva(address(token), founder, address(credit), address(credit), address(1));
+        address[] memory radmins = new address[](3);
+        radmins[0] = founder;
+        radmins[1] = address(0xB0B);
+        radmins[2] = address(0xB0C);
+        reserva = new QuatriviumReserva(address(token), founder, address(credit), address(credit), address(1), radmins);
         handler = new ReservaHandler(reserva, token, founder, credit);
         targetContract(address(handler));
     }
@@ -89,7 +93,11 @@ contract QuatriviumReservaForgeTest is Test {
         address locker = makeAddr("reserva-locker");
         address founder = makeAddr("reserva-founder-pay");
         CreditViewMock credit = new CreditViewMock();
-        QuatriviumReserva local = new QuatriviumReserva(address(token), founder, address(credit), address(credit), address(1));
+        address[] memory localAdmins = new address[](3);
+        localAdmins[0] = founder;
+        localAdmins[1] = locker;
+        localAdmins[2] = address(1);
+        QuatriviumReserva local = new QuatriviumReserva(address(token), founder, address(credit), address(credit), address(1), localAdmins);
         credit.setNivel(locker, 10);
         credit.setPayToken(address(token));
         token.mint(address(credit), 50 ether);

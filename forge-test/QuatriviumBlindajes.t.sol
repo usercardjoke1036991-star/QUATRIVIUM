@@ -47,9 +47,10 @@ contract QuatriviumBlindajesTest is Test {
             500,
             admins,
             1,
-            address(fama)
+            address(fama),
+            address(0)
         );
-        reserva = new QuatriviumReserva(address(token), owner, address(credit), address(fama), predictedAlta);
+        reserva = new QuatriviumReserva(address(token), owner, address(credit), address(fama), predictedAlta, admins);
         alta = new QuatriviumAlta(address(token), address(credit), address(reserva));
         token.mint(owner, 50_000 ether);
         token.approve(address(credit), type(uint256).max);
