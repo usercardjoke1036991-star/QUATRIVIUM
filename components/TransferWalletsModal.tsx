@@ -158,9 +158,9 @@ export const TransferWalletsModal: React.FC<TransferWalletsModalProps> = ({
         kind: direction === 'in' ? 'transfer_in' : 'transfer_out',
         from,
         to,
-        amountLabel: `${parsed} ${asset === 'bnb' ? 'BNB' : selectedToken.symbol}`,
-        tokenSymbol: asset === 'bnb' ? 'BNB' : selectedToken.symbol,
-        platform: 'BSC',
+        amountLabel: `${parsed} ${asset === 'bnb' ? 'ETH' : selectedToken.symbol}`,
+        tokenSymbol: asset === 'bnb' ? 'ETH' : selectedToken.symbol,
+        platform: 'Arbitrum One',
         timestamp: Date.now(),
       });
       Alert.alert(t('ready'), t('appWalletSent'));
@@ -304,14 +304,14 @@ export const TransferWalletsModal: React.FC<TransferWalletsModalProps> = ({
                       },
                     ]}
                   >
-                    <AppText style={[styles.chipText, { color: colors.text }]}>BNB</AppText>
+                    <AppText style={[styles.chipText, { color: colors.text }]}>ETH</AppText>
                   </TouchableOpacity>
                 </View>
                 <AppTextInput
                   value={amount}
                   onChangeText={setAmount}
                   keyboardType="decimal-pad"
-                  placeholder={asset === 'bnb' ? '0.001' : '1'}
+                  placeholder={asset === 'bnb' ? '0.0001' : '1'}
                   placeholderTextColor={colors.textMuted}
                   style={[
                     styles.input,

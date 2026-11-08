@@ -32,15 +32,15 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       'Reserva',
-      'Reserva lets you lock USDT for 30 days. The locked amount returns to your account when the period ends. If a separate provision has funds, an estimated yield of up to 12% a year may be added for those days. That yield is not guaranteed and can be zero. Reserva is not a bank deposit, not a fixed term and not an investment product. Locking is available from level 10 and, on the Real account, after the same identity steps as credit.',
+      'Reserva lets you lock LUSD for 30 days. The locked amount returns to your account when the period ends. If a separate provision has funds, an estimated yield of up to 12% a year may be added for those days. That yield is not guaranteed and can be zero. Reserva is not a bank deposit, not a fixed term and not an investment product. Locking is available from level 10 and, on the Real account, after the same identity steps as credit.',
     ],
     [
       'Common fund and donations',
-      'USDT placed in the common fund stays there to lend. A contribution is not a product you can withdraw. Donations are voluntary, go to the project wallet and do not enter the fund. There are no purchases inside Google Play: value moves on the public network.',
+      'LUSD placed in the common fund stays there to lend. A contribution is not a product you can withdraw. Donations are voluntary, go to the project wallet and do not enter the fund. There are no purchases inside Google Play: value moves on the public network.',
     ],
     [
       'Risks and the law where you live',
-      'USDT and network fees can change in value. Transfers on the network cannot be reversed. If you lose the recovery phrase, that account cannot be reopened. A high credit level may have no funds. Quatrivium Finance provides the application; the protocol runs on the network. Credit, referrals and Reserva may be regulated where you live. You are responsible for using the app only where you are allowed to do so. These texts are information, not a licence, not legal advice and not a promise that the service is authorised in every country.',
+      'LUSD and network fees can change in value. Transfers on the network cannot be reversed. If you lose the recovery phrase, that account cannot be reopened. A high credit level may have no funds. Quatrivium Finance provides the application; the protocol runs on the network. Credit, referrals and Reserva may be regulated where you live. You are responsible for using the app only where you are allowed to do so. These texts are information, not a licence, not legal advice and not a promise that the service is authorised in every country.',
     ],
     [
       'Limits of the service',
@@ -66,15 +66,15 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       'Reserva',
-      'Reserva permite bloquear USDT durante 30 días. El monto bloqueado vuelve a su cuenta al terminar el periodo. Si una provisión aparte tiene fondos, puede sumarse un rendimiento estimado de hasta el 12% anual sobre esos días. Ese rendimiento no está garantizado y puede ser cero. Reserva no es un depósito bancario, no es un plazo fijo y no es un producto de inversión. Se puede bloquear desde el nivel 10 y, en la cuenta Real, con los mismos pasos de identidad que el crédito.',
+      'Reserva permite bloquear LUSD durante 30 días. El monto bloqueado vuelve a su cuenta al terminar el periodo. Si una provisión aparte tiene fondos, puede sumarse un rendimiento estimado de hasta el 12% anual sobre esos días. Ese rendimiento no está garantizado y puede ser cero. Reserva no es un depósito bancario, no es un plazo fijo y no es un producto de inversión. Se puede bloquear desde el nivel 10 y, en la cuenta Real, con los mismos pasos de identidad que el crédito.',
     ],
     [
       'Fondo común y donaciones',
-      'El USDT que entra al fondo común permanece ahí para prestar. Aportar no es un producto que se pueda retirar. Donar es voluntario, va a la billetera del proyecto y no entra al fondo. No hay compras dentro de Google Play: el valor se mueve en la red pública.',
+      'El LUSD que entra al fondo común permanece ahí para prestar. Aportar no es un producto que se pueda retirar. Donar es voluntario, va a la billetera del proyecto y no entra al fondo. No hay compras dentro de Google Play: el valor se mueve en la red pública.',
     ],
     [
       'Riesgos y la ley de su país',
-      'USDT y las comisiones de red pueden cambiar de valor. Las transferencias en la red no se deshacen. Si pierde la frase de respaldo, esa cuenta no se reabre. Un nivel alto de crédito puede no tener fondos. Quatrivium Finance pone la aplicación; el protocolo se ejecuta en la red. El crédito, los referidos y Reserva pueden estar regulados donde usted vive. Usted es responsable de usar la aplicación solo donde le esté permitido. Estos textos informan; no son una licencia, no son asesoría legal y no prometen que el servicio esté autorizado en todos los países.',
+      'LUSD y las comisiones de red pueden cambiar de valor. Las transferencias en la red no se deshacen. Si pierde la frase de respaldo, esa cuenta no se reabre. Un nivel alto de crédito puede no tener fondos. Quatrivium Finance pone la aplicación; el protocolo se ejecuta en la red. El crédito, los referidos y Reserva pueden estar regulados donde usted vive. Usted es responsable de usar la aplicación solo donde le esté permitido. Estos textos informan; no son una licencia, no son asesoría legal y no prometen que el servicio esté autorizado en todos los países.',
     ],
     [
       'Límites del servicio',
@@ -100,15 +100,15 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       '储备',
-      '储备可将 USDT 锁定 30 天。期满后锁定金额退回账户。若另有资金池，可能就这些天数加算最高约每年 12% 的预估收益。该收益不保证，可为零。储备不是银行存款、不是定期、也不是投资产品。自 10 级起可锁定；在真实账户中须完成与信贷相同的身份步骤。',
+      '储备可将 LUSD 锁定 30 天。期满后锁定金额退回账户。若另有资金池，可能就这些天数加算最高约每年 12% 的预估收益。该收益不保证，可为零。储备不是银行存款、不是定期、也不是投资产品。自 10 级起可锁定；在真实账户中须完成与信贷相同的身份步骤。',
     ],
     [
       '共同基金与捐赠',
-      '进入共同基金的 USDT 留作放贷。出资不是可赎回产品。捐赠出于自愿，进入项目钱包，不进入基金。没有 Google Play 内购：价值在公开网络上流动。',
+      '进入共同基金的 LUSD 留作放贷。出资不是可赎回产品。捐赠出于自愿，进入项目钱包，不进入基金。没有 Google Play 内购：价值在公开网络上流动。',
     ],
     [
       '风险与所在地法律',
-      'USDT 与网络手续费可能波动。网络转账不可撤销。若丢失恢复短语，该账户无法重开。高等级可能没有资金。Quatrivium Finance 提供应用，协议在网络上执行。信贷、推荐与储备在您居住地可能受监管。您须仅在被允许的地方使用本应用。这些文本仅供说明，不是许可、不是法律意见，也不保证服务在各国均获授权。',
+      'LUSD 与网络手续费可能波动。网络转账不可撤销。若丢失恢复短语，该账户无法重开。高等级可能没有资金。Quatrivium Finance 提供应用，协议在网络上执行。信贷、推荐与储备在您居住地可能受监管。您须仅在被允许的地方使用本应用。这些文本仅供说明，不是许可、不是法律意见，也不保证服务在各国均获授权。',
     ],
     [
       '服务限制',
@@ -134,15 +134,15 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       'रिज़र्व',
-      'रिज़र्व USDT को 30 दिन बाँधता है। अवधि समाप्त पर राशि खाते में लौटती है। यदि अलग निधि हो तो उन दिनों पर वार्षिक लगभग 12% तक अनुमानित प्रतिफल जुड़ सकता है। वह प्रतिफल गारंटी नहीं और शून्य हो सकता है। रिज़र्व बैंक जमा, सावधि या निवेश उत्पाद नहीं है। स्तर 10 से बाँधा जा सकता है; वास्तविक खाते में ऋण जैसी पहचान चाहिए।',
+      'रिज़र्व LUSD को 30 दिन बाँधता है। अवधि समाप्त पर राशि खाते में लौटती है। यदि अलग निधि हो तो उन दिनों पर वार्षिक लगभग 12% तक अनुमानित प्रतिफल जुड़ सकता है। वह प्रतिफल गारंटी नहीं और शून्य हो सकता है। रिज़र्व बैंक जमा, सावधि या निवेश उत्पाद नहीं है। स्तर 10 से बाँधा जा सकता है; वास्तविक खाते में ऋण जैसी पहचान चाहिए।',
     ],
     [
       'साझा कोष और दान',
-      'साझा कोष में गया USDT उधार देने रहता है। अंशदान निकाला नहीं जाता। दान स्वैच्छिक है, परियोजना बटुए में जाता है, कोष में नहीं। Google Play में खरीदारी नहीं: मूल्य सार्वजनिक नेटवर्क पर चलता है।',
+      'साझा कोष में गया LUSD उधार देने रहता है। अंशदान निकाला नहीं जाता। दान स्वैच्छिक है, परियोजना बटुए में जाता है, कोष में नहीं। Google Play में खरीदारी नहीं: मूल्य सार्वजनिक नेटवर्क पर चलता है।',
     ],
     [
       'जोखिम और आपके देश का कानून',
-      'USDT और नेटवर्क शुल्क बदल सकते हैं। नेटवर्क अंतरण उल्टे नहीं होते। वाक्य खोएँ तो वह खाता नहीं खुलता। ऊँचे स्तर पर धन न हो। Quatrivium Finance ऐप देती है; प्रोटोकॉल नेटवर्क पर चलता है। ऋण, आमंत्रण और रिज़र्व आपके देश में विनियमित हो सकते हैं। आप केवल जहाँ अनुमति हो वहीं ऐप उपयोग के लिए जिम्मेदार हैं। ये पाठ जानकारी हैं; लाइसेंस, कानूनी सलाह या हर देश में अनुमति का वादा नहीं।',
+      'LUSD और नेटवर्क शुल्क बदल सकते हैं। नेटवर्क अंतरण उल्टे नहीं होते। वाक्य खोएँ तो वह खाता नहीं खुलता। ऊँचे स्तर पर धन न हो। Quatrivium Finance ऐप देती है; प्रोटोकॉल नेटवर्क पर चलता है। ऋण, आमंत्रण और रिज़र्व आपके देश में विनियमित हो सकते हैं। आप केवल जहाँ अनुमति हो वहीं ऐप उपयोग के लिए जिम्मेदार हैं। ये पाठ जानकारी हैं; लाइसेंस, कानूनी सलाह या हर देश में अनुमति का वादा नहीं।',
     ],
     [
       'सेवा की सीमाएँ',
@@ -168,15 +168,15 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       'الاحتياطي',
-      'يتيح الاحتياطي تجميد USDT لمدة 30 يوماً. يعود المبلغ المجمّد إلى حسابك عند انتهاء المدة. إن توفّر صندوق منفصل فقد يُضاف عائد تقديري حتى 12% سنوياً لتلك الأيام. ذلك العائد غير مضمون وقد يكون صفراً. الاحتياطي ليس وديعة مصرفية ولا أجلاً ثابتاً ولا منتج استثمار. يُتاح التجميد من المستوى 10، وفي الحساب الحقيقي بعد خطوات الهوية نفسها الخاصة بالائتمان.',
+      'يتيح الاحتياطي تجميد LUSD لمدة 30 يوماً. يعود المبلغ المجمّد إلى حسابك عند انتهاء المدة. إن توفّر صندوق منفصل فقد يُضاف عائد تقديري حتى 12% سنوياً لتلك الأيام. ذلك العائد غير مضمون وقد يكون صفراً. الاحتياطي ليس وديعة مصرفية ولا أجلاً ثابتاً ولا منتج استثمار. يُتاح التجميد من المستوى 10، وفي الحساب الحقيقي بعد خطوات الهوية نفسها الخاصة بالائتمان.',
     ],
     [
       'الصندوق المشترك والتبرعات',
-      'يبقى USDT الذي يدخل الصندوق المشترك للإقراض. المساهمة ليست منتج سحب. التبرع اختياري ويذهب إلى محفظة المشروع ولا يدخل الصندوق. لا مشتريات داخل Google Play: القيمة تتحرك على الشبكة العامة.',
+      'يبقى LUSD الذي يدخل الصندوق المشترك للإقراض. المساهمة ليست منتج سحب. التبرع اختياري ويذهب إلى محفظة المشروع ولا يدخل الصندوق. لا مشتريات داخل Google Play: القيمة تتحرك على الشبكة العامة.',
     ],
     [
       'المخاطر وقانون بلدك',
-      'قد تتغيّر قيمة USDT ورسوم الشبكة. تحويلات الشبكة لا تُعكس. إن فقدت عبارة الاسترداد لا يُعاد فتح ذلك الحساب. قد لا تتوفر أموال لمستوى مرتفع. تقدّم Quatrivium Finance التطبيق؛ ويعمل البروتوكول على الشبكة. قد يخضع الائتمان والإحالات والاحتياطي للتنظيم حيث تعيش. أنت مسؤول عن استخدام التطبيق حيث يُسمح لك فقط. هذه النصوص معلومات وليست ترخيصاً ولا استشارة قانونية ولا وعداً بأن الخدمة مرخّصة في كل بلد.',
+      'قد تتغيّر قيمة LUSD ورسوم الشبكة. تحويلات الشبكة لا تُعكس. إن فقدت عبارة الاسترداد لا يُعاد فتح ذلك الحساب. قد لا تتوفر أموال لمستوى مرتفع. تقدّم Quatrivium Finance التطبيق؛ ويعمل البروتوكول على الشبكة. قد يخضع الائتمان والإحالات والاحتياطي للتنظيم حيث تعيش. أنت مسؤول عن استخدام التطبيق حيث يُسمح لك فقط. هذه النصوص معلومات وليست ترخيصاً ولا استشارة قانونية ولا وعداً بأن الخدمة مرخّصة في كل بلد.',
     ],
     [
       'حدود الخدمة',
@@ -202,15 +202,15 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       'রিজার্ভ',
-      'রিজার্ভ USDT ৩০ দিন আটকায়। মেয়াদ শেষে অর্থ অ্যাকাউন্টে ফেরে। আলাদা তহবিল থাকলে সেই দিনগুলিতে বার্ষিক সর্বোচ্চ প্রায় ১২% অনুমানিত আয় যোগ হতে পারে। সেই আয় নিশ্চিত নয়, শূন্য হতে পারে। রিজার্ভ ব্যাংক আমানত, মেয়াদি বা বিনিয়োগ পণ্য নয়। স্তর ১০ থেকে আটকানো যায়; আসল অ্যাকাউন্টে ঋণের মতো পরিচয় ধাপ লাগে।',
+      'রিজার্ভ LUSD ৩০ দিন আটকায়। মেয়াদ শেষে অর্থ অ্যাকাউন্টে ফেরে। আলাদা তহবিল থাকলে সেই দিনগুলিতে বার্ষিক সর্বোচ্চ প্রায় ১২% অনুমানিত আয় যোগ হতে পারে। সেই আয় নিশ্চিত নয়, শূন্য হতে পারে। রিজার্ভ ব্যাংক আমানত, মেয়াদি বা বিনিয়োগ পণ্য নয়। স্তর ১০ থেকে আটকানো যায়; আসল অ্যাকাউন্টে ঋণের মতো পরিচয় ধাপ লাগে।',
     ],
     [
       'সাধারণ তহবিল ও দান',
-      'সাধারণ তহবিলে যাওয়া USDT ধার দিতে থাকে। অবদান তোলা যায় না। দান স্বেচ্ছায়, প্রকল্প ওয়ালেটে যায়, তহবিলে নয়। Google Play কেনা নেই: মূল্য পাবলিক নেটওয়ার্কে চলে।',
+      'সাধারণ তহবিলে যাওয়া LUSD ধার দিতে থাকে। অবদান তোলা যায় না। দান স্বেচ্ছায়, প্রকল্প ওয়ালেটে যায়, তহবিলে নয়। Google Play কেনা নেই: মূল্য পাবলিক নেটওয়ার্কে চলে।',
     ],
     [
       'ঝুঁকি ও আপনার দেশের আইন',
-      'USDT ও নেটওয়ার্ক ফি বদলাতে পারে। নেটওয়ার্ক স্থানান্তর ফেরে না। বাক্য হারালে সেই অ্যাকাউন্ট খোলে না। উচ্চ স্তরে তহবিল নাও থাকতে পারে। Quatrivium Finance অ্যাপ দেয়; প্রোটোকল নেটওয়ার্কে চলে। ঋণ, আমন্ত্রণ ও রিজার্ভ আপনার দেশে নিয়ন্ত্রিত হতে পারে। আপনি শুধু যেখানে অনুমতি আছে সেখানে ব্যবহারের জন্য দায়ী। এগুলো তথ্য; লাইসেন্স, আইনি পরামর্শ বা সব দেশে অনুমতির প্রতিশ্রুতি নয়।',
+      'LUSD ও নেটওয়ার্ক ফি বদলাতে পারে। নেটওয়ার্ক স্থানান্তর ফেরে না। বাক্য হারালে সেই অ্যাকাউন্ট খোলে না। উচ্চ স্তরে তহবিল নাও থাকতে পারে। Quatrivium Finance অ্যাপ দেয়; প্রোটোকল নেটওয়ার্কে চলে। ঋণ, আমন্ত্রণ ও রিজার্ভ আপনার দেশে নিয়ন্ত্রিত হতে পারে। আপনি শুধু যেখানে অনুমতি আছে সেখানে ব্যবহারের জন্য দায়ী। এগুলো তথ্য; লাইসেন্স, আইনি পরামর্শ বা সব দেশে অনুমতির প্রতিশ্রুতি নয়।',
     ],
     [
       'সেবার সীমা',
@@ -236,15 +236,15 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       'Reserva',
-      'A Reserva permite bloquear USDT durante 30 dias. O montante bloqueado volta à conta no fim do período. Se uma provisão à parte tiver fundos, pode somar-se um rendimento estimado de até 12% ao ano sobre esses dias. Esse rendimento não é garantido e pode ser zero. A Reserva não é depósito bancário, não é prazo fixo e não é um produto de investimento. Pode bloquear-se a partir do nível 10 e, na Conta Real, com os mesmos passos de identidade do crédito.',
+      'A Reserva permite bloquear LUSD durante 30 dias. O montante bloqueado volta à conta no fim do período. Se uma provisão à parte tiver fundos, pode somar-se um rendimento estimado de até 12% ao ano sobre esses dias. Esse rendimento não é garantido e pode ser zero. A Reserva não é depósito bancário, não é prazo fixo e não é um produto de investimento. Pode bloquear-se a partir do nível 10 e, na Conta Real, com os mesmos passos de identidade do crédito.',
     ],
     [
       'Fundo comum e donativos',
-      'O USDT que entra no fundo comum permanece para emprestar. Aportar não é um produto de levantamento. Doar é voluntário, vai para a carteira do projeto e não entra no fundo. Não há compras na Google Play: o valor move-se na rede pública.',
+      'O LUSD que entra no fundo comum permanece para emprestar. Aportar não é um produto de levantamento. Doar é voluntário, vai para a carteira do projeto e não entra no fundo. Não há compras na Google Play: o valor move-se na rede pública.',
     ],
     [
       'Riscos e a lei do seu país',
-      'USDT e as comissões de rede podem mudar de valor. As transferências na rede não se desfazem. Se perder a frase de recuperação, essa conta não se reabre. Um nível alto pode não ter fundos. A Quatrivium Finance oferece a aplicação; o protocolo corre na rede. O crédito, as indicações e a Reserva podem estar regulados onde vive. É responsável por usar a aplicação só onde lhe for permitido. Estes textos informam; não são licença, aconselhamento jurídico nem promessa de autorização em todos os países.',
+      'LUSD e as comissões de rede podem mudar de valor. As transferências na rede não se desfazem. Se perder a frase de recuperação, essa conta não se reabre. Um nível alto pode não ter fundos. A Quatrivium Finance oferece a aplicação; o protocolo corre na rede. O crédito, as indicações e a Reserva podem estar regulados onde vive. É responsável por usar a aplicação só onde lhe for permitido. Estes textos informam; não são licença, aconselhamento jurídico nem promessa de autorização em todos os países.',
     ],
     [
       'Limites do serviço',
@@ -270,15 +270,15 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       'Резерв',
-      'Резерв позволяет заблокировать USDT на 30 дней. Заблокированная сумма возвращается на счёт по окончании срока. Если отдельное резервное обеспечение имеет средства, за эти дни может начислиться оценочная доходность до 12% годовых. Она не гарантирована и может быть нулевой. Резерв — не банковский вклад, не срочный депозит и не инвестиционный продукт. Блокировка доступна с 10-го уровня и, в реальном счёте, после тех же шагов идентификации, что и кредит.',
+      'Резерв позволяет заблокировать LUSD на 30 дней. Заблокированная сумма возвращается на счёт по окончании срока. Если отдельное резервное обеспечение имеет средства, за эти дни может начислиться оценочная доходность до 12% годовых. Она не гарантирована и может быть нулевой. Резерв — не банковский вклад, не срочный депозит и не инвестиционный продукт. Блокировка доступна с 10-го уровня и, в реальном счёте, после тех же шагов идентификации, что и кредит.',
     ],
     [
       'Общий фонд и пожертвования',
-      'USDT, поступивший в общий фонд, остаётся там для выдачи. Взнос нельзя вывести. Пожертвование добровольно, идёт на кошелёк проекта и в фонд не входит. Покупок в Google Play нет: стоимость движется в открытой сети.',
+      'LUSD, поступивший в общий фонд, остаётся там для выдачи. Взнос нельзя вывести. Пожертвование добровольно, идёт на кошелёк проекта и в фонд не входит. Покупок в Google Play нет: стоимость движется в открытой сети.',
     ],
     [
       'Риски и закон вашей страны',
-      'USDT и сетевые комиссии могут менять стоимость. Переводы в сети необратимы. Потеряв фразу восстановления, вы не откроете этот счёт. На высоком уровне может не быть средств. Quatrivium Finance даёт приложение; протокол исполняется в сети. Кредит, приглашения и Резерв могут регулироваться там, где вы живёте. Вы отвечаете за использование приложения только там, где это разрешено. Эти тексты — информация, не лицензия, не юридическая консультация и не обещание разрешения во всех странах.',
+      'LUSD и сетевые комиссии могут менять стоимость. Переводы в сети необратимы. Потеряв фразу восстановления, вы не откроете этот счёт. На высоком уровне может не быть средств. Quatrivium Finance даёт приложение; протокол исполняется в сети. Кредит, приглашения и Резерв могут регулироваться там, где вы живёте. Вы отвечаете за использование приложения только там, где это разрешено. Эти тексты — информация, не лицензия, не юридическая консультация и не обещание разрешения во всех странах.',
     ],
     [
       'Ограничения сервиса',
@@ -304,15 +304,15 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       'ریزرو',
-      'ریزرو USDT کو 30 دن مقفل کرتا ہے۔ مدت ختم پر رقم اکاؤنٹ میں لوٹتی ہے۔ اگر الگ برتن میں وسائل ہوں تو ان دنوں پر سالانہ تقریباً 12% تک تخمینی منافع لگ سکتا ہے۔ وہ منافع ضمانت نہیں اور صفر ہو سکتا ہے۔ ریزرو بینک جمع، میعادی یا سرمایہ کاری مصنوع نہیں۔ درجہ 10 سے مقفل ہو سکتا ہے؛ حقیقی اکاؤنٹ میں قرض جیسے شناخت کے مراحل درکار ہیں۔',
+      'ریزرو LUSD کو 30 دن مقفل کرتا ہے۔ مدت ختم پر رقم اکاؤنٹ میں لوٹتی ہے۔ اگر الگ برتن میں وسائل ہوں تو ان دنوں پر سالانہ تقریباً 12% تک تخمینی منافع لگ سکتا ہے۔ وہ منافع ضمانت نہیں اور صفر ہو سکتا ہے۔ ریزرو بینک جمع، میعادی یا سرمایہ کاری مصنوع نہیں۔ درجہ 10 سے مقفل ہو سکتا ہے؛ حقیقی اکاؤنٹ میں قرض جیسے شناخت کے مراحل درکار ہیں۔',
     ],
     [
       'مشترکہ فنڈ اور عطیات',
-      'مشترکہ فنڈ میں گیا USDT قرض دینے رہتا ہے۔ حصہ نہیں نکالا جاتا۔ عطیہ رضاکارانہ ہے، منصوبے کے والیٹ میں جاتا ہے، فنڈ میں نہیں۔ Google Play خرید نہیں: قدر عوامی نیٹ ورک پر چلتی ہے۔',
+      'مشترکہ فنڈ میں گیا LUSD قرض دینے رہتا ہے۔ حصہ نہیں نکالا جاتا۔ عطیہ رضاکارانہ ہے، منصوبے کے والیٹ میں جاتا ہے، فنڈ میں نہیں۔ Google Play خرید نہیں: قدر عوامی نیٹ ورک پر چلتی ہے۔',
     ],
     [
       'خطرات اور آپ کے ملک کا قانون',
-      'USDT اور نیٹ ورک فیس بدل سکتی ہیں۔ نیٹ ورک ترسیل واپس نہیں ہوتیں۔ جملہ کھوئیں تو وہ اکاؤنٹ نہیں کھلتا۔ اونچے درجے پر فنڈ نہ ہو۔ Quatrivium Finance ایپ دیتی ہے؛ پروٹوکول نیٹ ورک پر چلتا ہے۔ قرض، دعوتیں اور ریزرو آپ کے ملک میں زیر ضابطہ ہو سکتے ہیں۔ آپ صرف جہاں اجازت ہو وہاں استعمال کے ذمہ دار ہیں۔ یہ متن معلومات ہے؛ لائسنس، قانونی مشورہ یا ہر ملک میں اجازت کا وعدہ نہیں۔',
+      'LUSD اور نیٹ ورک فیس بدل سکتی ہیں۔ نیٹ ورک ترسیل واپس نہیں ہوتیں۔ جملہ کھوئیں تو وہ اکاؤنٹ نہیں کھلتا۔ اونچے درجے پر فنڈ نہ ہو۔ Quatrivium Finance ایپ دیتی ہے؛ پروٹوکول نیٹ ورک پر چلتا ہے۔ قرض، دعوتیں اور ریزرو آپ کے ملک میں زیر ضابطہ ہو سکتے ہیں۔ آپ صرف جہاں اجازت ہو وہاں استعمال کے ذمہ دار ہیں۔ یہ متن معلومات ہے؛ لائسنس، قانونی مشورہ یا ہر ملک میں اجازت کا وعدہ نہیں۔',
     ],
     [
       'خدمت کی حدیں',
@@ -338,15 +338,15 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       'Cadangan',
-      'Cadangan memungkinkan mengunci USDT selama 30 hari. Jumlah terkunci kembali ke akun saat periode berakhir. Jika provisi terpisah punya dana, imbal hasil perkiraan hingga 12% setahun dapat ditambahkan untuk hari-hari itu. Imbal hasil itu tidak dijamin dan bisa nol. Cadangan bukan simpanan bank, bukan deposito berjangka, dan bukan produk investasi. Penguncian tersedia dari tingkat 10 dan, di Akun Nyata, setelah langkah identitas yang sama dengan kredit.',
+      'Cadangan memungkinkan mengunci LUSD selama 30 hari. Jumlah terkunci kembali ke akun saat periode berakhir. Jika provisi terpisah punya dana, imbal hasil perkiraan hingga 12% setahun dapat ditambahkan untuk hari-hari itu. Imbal hasil itu tidak dijamin dan bisa nol. Cadangan bukan simpanan bank, bukan deposito berjangka, dan bukan produk investasi. Penguncian tersedia dari tingkat 10 dan, di Akun Nyata, setelah langkah identitas yang sama dengan kredit.',
     ],
     [
       'Dana bersama dan donasi',
-      'USDT yang masuk dana bersama tetap untuk dipinjamkan. Kontribusi bukan produk yang dapat ditarik. Donasi sukarela, ke dompet proyek, dan tidak masuk dana. Tidak ada pembelian di Google Play: nilai bergerak di jaringan publik.',
+      'LUSD yang masuk dana bersama tetap untuk dipinjamkan. Kontribusi bukan produk yang dapat ditarik. Donasi sukarela, ke dompet proyek, dan tidak masuk dana. Tidak ada pembelian di Google Play: nilai bergerak di jaringan publik.',
     ],
     [
       'Risiko dan hukum negara Anda',
-      'USDT dan biaya jaringan dapat berubah nilainya. Transfer jaringan tidak dapat dibatalkan. Jika frasa pemulihan hilang, akun itu tidak dapat dibuka. Tingkat tinggi mungkin tidak berdana. Quatrivium Finance menyediakan aplikasi; protokol berjalan di jaringan. Kredit, undangan, dan Cadangan dapat diatur di tempat Anda tinggal. Anda bertanggung jawab memakai aplikasi hanya di mana diizinkan. Teks ini informasi, bukan lisensi, bukan nasihat hukum, dan bukan janji izin di setiap negara.',
+      'LUSD dan biaya jaringan dapat berubah nilainya. Transfer jaringan tidak dapat dibatalkan. Jika frasa pemulihan hilang, akun itu tidak dapat dibuka. Tingkat tinggi mungkin tidak berdana. Quatrivium Finance menyediakan aplikasi; protokol berjalan di jaringan. Kredit, undangan, dan Cadangan dapat diatur di tempat Anda tinggal. Anda bertanggung jawab memakai aplikasi hanya di mana diizinkan. Teks ini informasi, bukan lisensi, bukan nasihat hukum, dan bukan janji izin di setiap negara.',
     ],
     [
       'Batas layanan',
@@ -372,15 +372,15 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       'Réserve',
-      'Réserve permet de bloquer des USDT pendant 30 jours. Le montant bloqué revient sur le compte à la fin de la période. Si une provision distincte a des fonds, un rendement estimé jusqu’à 12 % par an peut s’ajouter pour ces jours. Ce rendement n’est pas garanti et peut être nul. Réserve n’est ni un dépôt bancaire, ni un terme fixe, ni un produit d’investissement. Le blocage est possible à partir du niveau 10 et, sur le compte réel, après les mêmes étapes d’identité que le crédit.',
+      'Réserve permet de bloquer des LUSD pendant 30 jours. Le montant bloqué revient sur le compte à la fin de la période. Si une provision distincte a des fonds, un rendement estimé jusqu’à 12 % par an peut s’ajouter pour ces jours. Ce rendement n’est pas garanti et peut être nul. Réserve n’est ni un dépôt bancaire, ni un terme fixe, ni un produit d’investissement. Le blocage est possible à partir du niveau 10 et, sur le compte réel, après les mêmes étapes d’identité que le crédit.',
     ],
     [
       'Fonds commun et dons',
-      'Les USDT versés au fonds commun y restent pour prêter. Un apport n’est pas un produit de retrait. Le don est volontaire, va au portefeuille du projet et n’entre pas dans le fonds. Pas d’achats Google Play : la valeur circule sur le réseau public.',
+      'Les LUSD versés au fonds commun y restent pour prêter. Un apport n’est pas un produit de retrait. Le don est volontaire, va au portefeuille du projet et n’entre pas dans le fonds. Pas d’achats Google Play : la valeur circule sur le réseau public.',
     ],
     [
       'Risques et le droit de votre pays',
-      'L’USDT et les frais de réseau peuvent changer de valeur. Les virements sur le réseau sont irréversibles. Sans la phrase de reprise, ce compte ne se rouvre pas. Un niveau élevé peut manquer de fonds. Quatrivium Finance fournit l’application ; le protocole s’exécute sur le réseau. Le crédit, les parrainages et Réserve peuvent être réglementés là où vous vivez. Vous êtes responsable d’utiliser l’application seulement là où cela vous est permis. Ces textes informent ; ils ne sont ni une licence, ni un conseil juridique, ni une promesse d’autorisation dans tous les pays.',
+      'L’LUSD et les frais de réseau peuvent changer de valeur. Les virements sur le réseau sont irréversibles. Sans la phrase de reprise, ce compte ne se rouvre pas. Un niveau élevé peut manquer de fonds. Quatrivium Finance fournit l’application ; le protocole s’exécute sur le réseau. Le crédit, les parrainages et Réserve peuvent être réglementés là où vous vivez. Vous êtes responsable d’utiliser l’application seulement là où cela vous est permis. Ces textes informent ; ils ne sont ni une licence, ni un conseil juridique, ni une promesse d’autorisation dans tous les pays.',
     ],
     [
       'Limites du service',
@@ -406,15 +406,15 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       '準備',
-      '準備は USDT を30日間ロックできます。期間終了後、ロック額は口座に戻ります。別ポットに資金があれば、その日数につき年率最大約12%の見積収益が加算されることがあります。その収益は保証されず、ゼロになり得ます。準備は銀行預金でも定期でも投資商品でもありません。ロックは等級10から、本番口座では与信と同じ本人確認の後に利用できます。',
+      '準備は LUSD を30日間ロックできます。期間終了後、ロック額は口座に戻ります。別ポットに資金があれば、その日数につき年率最大約12%の見積収益が加算されることがあります。その収益は保証されず、ゼロになり得ます。準備は銀行預金でも定期でも投資商品でもありません。ロックは等級10から、本番口座では与信と同じ本人確認の後に利用できます。',
     ],
     [
       '共同基金と寄付',
-      '共同基金に入った USDT は貸付け用に残ります。拠出は引出商品ではありません。寄付は任意でプロジェクトウォレットへ行き、基金には入りません。Google Play 内課金はありません。価値は公開ネットワーク上で動きます。',
+      '共同基金に入った LUSD は貸付け用に残ります。拠出は引出商品ではありません。寄付は任意でプロジェクトウォレットへ行き、基金には入りません。Google Play 内課金はありません。価値は公開ネットワーク上で動きます。',
     ],
     [
       'リスクとお住まいの国の法令',
-      'USDT とネットワーク手数料は変動し得ます。ネットワーク送金は取り消せません。復旧フレーズを失うとその口座は再開できません。高い等級に資金が無いことがあります。Quatrivium Finance がアプリを提供し、プロトコルはネットワーク上で実行されます。与信、紹介、準備は居住地で規制されることがあります。許可された場所でのみ利用する責任はお客様にあります。本文は説明であり、許諾でも法律助言でも、すべての国で認可されているという約束でもありません。',
+      'LUSD とネットワーク手数料は変動し得ます。ネットワーク送金は取り消せません。復旧フレーズを失うとその口座は再開できません。高い等級に資金が無いことがあります。Quatrivium Finance がアプリを提供し、プロトコルはネットワーク上で実行されます。与信、紹介、準備は居住地で規制されることがあります。許可された場所でのみ利用する責任はお客様にあります。本文は説明であり、許諾でも法律助言でも、すべての国で認可されているという約束でもありません。',
     ],
     [
       'サービスの限界',
@@ -440,15 +440,15 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       'Reserve',
-      'Reserve erlaubt, USDT 30 Tage zu sperren. Der gesperrte Betrag kehrt am Periodenende auf Ihr Konto zurück. Verfügt eine gesonderte Rückstellung über Mittel, kann für diese Tage eine geschätzte Rendite von bis zu 12 % jährlich hinzukommen. Diese Rendite ist nicht garantiert und kann null sein. Reserve ist keine Bankeinlage, kein Festgeld und kein Anlageprodukt. Sperren ist ab Stufe 10 möglich und, im Echtkonto, nach denselben Identitäts schritten wie der Kredit.',
+      'Reserve erlaubt, LUSD 30 Tage zu sperren. Der gesperrte Betrag kehrt am Periodenende auf Ihr Konto zurück. Verfügt eine gesonderte Rückstellung über Mittel, kann für diese Tage eine geschätzte Rendite von bis zu 12 % jährlich hinzukommen. Diese Rendite ist nicht garantiert und kann null sein. Reserve ist keine Bankeinlage, kein Festgeld und kein Anlageprodukt. Sperren ist ab Stufe 10 möglich und, im Echtkonto, nach denselben Identitäts schritten wie der Kredit.',
     ],
     [
       'Gemeinsamer Fonds und Zuwendungen',
-      'USDT im gemeinsamen Fonds bleibt dort zum Verleihen. Ein Beitrag ist kein Auszahlungsprodukt. Zuwendungen sind freiwillig, gehen an die Projekt-Wallet und fließen nicht in den Fonds. Keine Käufe über Google Play: der Wert bewegt sich im öffentlichen Netz.',
+      'LUSD im gemeinsamen Fonds bleibt dort zum Verleihen. Ein Beitrag ist kein Auszahlungsprodukt. Zuwendungen sind freiwillig, gehen an die Projekt-Wallet und fließen nicht in den Fonds. Keine Käufe über Google Play: der Wert bewegt sich im öffentlichen Netz.',
     ],
     [
       'Risiken und das Recht Ihres Landes',
-      'USDT und Netzgebühren können im Wert schwanken. Überweisungen im Netz sind unumkehrbar. Ohne Wiederherstellungsphrase öffnet sich dieses Konto nicht wieder. Eine hohe Stufe kann ohne Mittel sein. Quatrivium Finance stellt die Anwendung; das Protokoll läuft im Netz. Kredit, Empfehlungen und Reserve können dort, wo Sie leben, reguliert sein. Sie sind dafür verantwortlich, die App nur dort zu nutzen, wo es Ihnen erlaubt ist. Diese Texte informieren; sie sind keine Lizenz, keine Rechtsberatung und kein Versprechen, dass der Dienst in jedem Land zugelassen ist.',
+      'LUSD und Netzgebühren können im Wert schwanken. Überweisungen im Netz sind unumkehrbar. Ohne Wiederherstellungsphrase öffnet sich dieses Konto nicht wieder. Eine hohe Stufe kann ohne Mittel sein. Quatrivium Finance stellt die Anwendung; das Protokoll läuft im Netz. Kredit, Empfehlungen und Reserve können dort, wo Sie leben, reguliert sein. Sie sind dafür verantwortlich, die App nur dort zu nutzen, wo es Ihnen erlaubt ist. Diese Texte informieren; sie sind keine Lizenz, keine Rechtsberatung und kein Versprechen, dass der Dienst in jedem Land zugelassen ist.',
     ],
     [
       'Grenzen des Dienstes',
@@ -474,15 +474,15 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       '준비금',
-      '준비금은 USDT를 30일 잠글 수 있습니다. 기간이 끝나면 잠긴 금액이 계정으로 돌아갑니다. 별도 자금이 있으면 그 일수에 대해 연 최대 약 12%의 추정 수익이 더해질 수 있습니다. 그 수익은 보장되지 않으며 0일 수 있습니다. 준비금은 은행 예금, 정기, 투자 상품이 아닙니다. 잠금은 10등급부터, 실제 계정에서는 신용과 같은 신원 단계 후에 가능합니다.',
+      '준비금은 LUSD를 30일 잠글 수 있습니다. 기간이 끝나면 잠긴 금액이 계정으로 돌아갑니다. 별도 자금이 있으면 그 일수에 대해 연 최대 약 12%의 추정 수익이 더해질 수 있습니다. 그 수익은 보장되지 않으며 0일 수 있습니다. 준비금은 은행 예금, 정기, 투자 상품이 아닙니다. 잠금은 10등급부터, 실제 계정에서는 신용과 같은 신원 단계 후에 가능합니다.',
     ],
     [
       '공동 기금과 기부',
-      '공동 기금에 들어간 USDT는 대출용으로 남습니다. 출자는 인출 상품이 아닙니다. 기부는 자발적이며 프로젝트 지갑으로 가고 기금에 들어가지 않습니다. Google Play 인앱 구매는 없습니다. 가치는 공개 네트워크에서 움직입니다.',
+      '공동 기금에 들어간 LUSD는 대출용으로 남습니다. 출자는 인출 상품이 아닙니다. 기부는 자발적이며 프로젝트 지갑으로 가고 기금에 들어가지 않습니다. Google Play 인앱 구매는 없습니다. 가치는 공개 네트워크에서 움직입니다.',
     ],
     [
       '위험과 거주 국가의 법',
-      'USDT와 네트워크 수수료는 가치가 변할 수 있습니다. 네트워크 이체는 되돌릴 수 없습니다. 복구 구문을 잃으면 그 계정을 다시 열 수 없습니다. 높은 등급에 자금이 없을 수 있습니다. Quatrivium Finance가 앱을 제공하고 프로토콜은 네트워크에서 실행됩니다. 신용, 추천, 준비금은 거주 국가에서 규제될 수 있습니다. 허용된 곳에서만 앱을 사용할 책임은 귀하에게 있습니다. 이 문구는 정보이며 허가, 법률 자문, 모든 국가에서 인가되었다는 약속이 아닙니다.',
+      'LUSD와 네트워크 수수료는 가치가 변할 수 있습니다. 네트워크 이체는 되돌릴 수 없습니다. 복구 구문을 잃으면 그 계정을 다시 열 수 없습니다. 높은 등급에 자금이 없을 수 있습니다. Quatrivium Finance가 앱을 제공하고 프로토콜은 네트워크에서 실행됩니다. 신용, 추천, 준비금은 거주 국가에서 규제될 수 있습니다. 허용된 곳에서만 앱을 사용할 책임은 귀하에게 있습니다. 이 문구는 정보이며 허가, 법률 자문, 모든 국가에서 인가되었다는 약속이 아닙니다.',
     ],
     [
       '서비스의 한계',
@@ -508,15 +508,15 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       'Rezerv',
-      'Rezerv, USDT’yi 30 gün kilitlemenizi sağlar. Kilitli tutar dönem bitince hesabınıza döner. Ayrı bir karşılıkta kaynak varsa o günler için yıllık en fazla yaklaşık %12 tahmini getiri eklenebilir. Bu getiri garanti değildir ve sıfır olabilir. Rezerv banka mevduatı, vadeli hesap veya yatırım ürünü değildir. Kilitleme düzey 10’dan itibaren ve Gerçek hesapta krediyle aynı kimlik adımlarından sonra yapılabilir.',
+      'Rezerv, LUSD’yi 30 gün kilitlemenizi sağlar. Kilitli tutar dönem bitince hesabınıza döner. Ayrı bir karşılıkta kaynak varsa o günler için yıllık en fazla yaklaşık %12 tahmini getiri eklenebilir. Bu getiri garanti değildir ve sıfır olabilir. Rezerv banka mevduatı, vadeli hesap veya yatırım ürünü değildir. Kilitleme düzey 10’dan itibaren ve Gerçek hesapta krediyle aynı kimlik adımlarından sonra yapılabilir.',
     ],
     [
       'Ortak fon ve bağışlar',
-      'Ortak fona giren USDT ödünç vermek için kalır. Katkı çekilebilir bir ürün değildir. Bağış isteğe bağlıdır, proje cüzdanına gider ve fona girmez. Google Play içi satın alma yoktur: değer kamuya açık ağda hareket eder.',
+      'Ortak fona giren LUSD ödünç vermek için kalır. Katkı çekilebilir bir ürün değildir. Bağış isteğe bağlıdır, proje cüzdanına gider ve fona girmez. Google Play içi satın alma yoktur: değer kamuya açık ağda hareket eder.',
     ],
     [
       'Riskler ve yaşadığınız ülkenin hukuku',
-      'USDT ve ağ ücretleri değer değiştirebilir. Ağ transferleri geri alınamaz. Kurtarma cümlesini kaybederseniz o hesap açılmaz. Yüksek düzeyde fon olmayabilir. Quatrivium Finance uygulamayı sunar; protokol ağda çalışır. Kredi, davetler ve Rezerv yaşadığınız yerde düzenlenebilir. Uygulamayı yalnızca izinli olduğunuz yerde kullanmaktan siz sorumlusunuz. Bu metinler bilgidir; lisans, hukuki tavsiye veya her ülkede yetki vaadi değildir.',
+      'LUSD ve ağ ücretleri değer değiştirebilir. Ağ transferleri geri alınamaz. Kurtarma cümlesini kaybederseniz o hesap açılmaz. Yüksek düzeyde fon olmayabilir. Quatrivium Finance uygulamayı sunar; protokol ağda çalışır. Kredi, davetler ve Rezerv yaşadığınız yerde düzenlenebilir. Uygulamayı yalnızca izinli olduğunuz yerde kullanmaktan siz sorumlusunuz. Bu metinler bilgidir; lisans, hukuki tavsiye veya her ülkede yetki vaadi değildir.',
     ],
     [
       'Hizmetin sınırları',
@@ -542,15 +542,15 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       'Dự trữ',
-      'Dự trữ cho phép khóa USDT 30 ngày. Số khóa trả về tài khoản khi hết kỳ. Nếu quỹ riêng có nguồn, có thể cộng lợi suất ước tính tối đa 12%/năm cho những ngày đó. Lợi suất đó không bảo đảm và có thể bằng không. Dự trữ không phải tiền gửi ngân hàng, không phải kỳ hạn cố định và không phải sản phẩm đầu tư. Khóa từ cấp 10 và, ở tài khoản thật, sau cùng bước danh tính như tín dụng.',
+      'Dự trữ cho phép khóa LUSD 30 ngày. Số khóa trả về tài khoản khi hết kỳ. Nếu quỹ riêng có nguồn, có thể cộng lợi suất ước tính tối đa 12%/năm cho những ngày đó. Lợi suất đó không bảo đảm và có thể bằng không. Dự trữ không phải tiền gửi ngân hàng, không phải kỳ hạn cố định và không phải sản phẩm đầu tư. Khóa từ cấp 10 và, ở tài khoản thật, sau cùng bước danh tính như tín dụng.',
     ],
     [
       'Quỹ chung và quyên góp',
-      'USDT vào quỹ chung ở lại để cho vay. Góp không phải sản phẩm rút. Quyên góp tự nguyện, vào ví dự án, không vào quỹ. Không mua trong Google Play: giá trị chuyển trên mạng công khai.',
+      'LUSD vào quỹ chung ở lại để cho vay. Góp không phải sản phẩm rút. Quyên góp tự nguyện, vào ví dự án, không vào quỹ. Không mua trong Google Play: giá trị chuyển trên mạng công khai.',
     ],
     [
       'Rủi ro và luật nơi bạn sống',
-      'USDT và phí mạng có thể đổi giá trị. Chuyển trên mạng không hoàn. Mất cụm khôi phục thì không mở lại tài khoản đó. Cấp cao có thể không có quỹ. Quatrivium Finance cung cấp ứng dụng; giao thức chạy trên mạng. Tín dụng, giới thiệu và Dự trữ có thể bị điều tiết nơi bạn sống. Bạn chịu trách nhiệm chỉ dùng ứng dụng nơi được phép. Các văn bản này là thông tin, không phải giấy phép, tư vấn pháp lý hay lời hứa dịch vụ được cấp phép ở mọi quốc gia.',
+      'LUSD và phí mạng có thể đổi giá trị. Chuyển trên mạng không hoàn. Mất cụm khôi phục thì không mở lại tài khoản đó. Cấp cao có thể không có quỹ. Quatrivium Finance cung cấp ứng dụng; giao thức chạy trên mạng. Tín dụng, giới thiệu và Dự trữ có thể bị điều tiết nơi bạn sống. Bạn chịu trách nhiệm chỉ dùng ứng dụng nơi được phép. Các văn bản này là thông tin, không phải giấy phép, tư vấn pháp lý hay lời hứa dịch vụ được cấp phép ở mọi quốc gia.',
     ],
     [
       'Giới hạn dịch vụ',
@@ -576,15 +576,15 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       'Riserva',
-      'Riserva consente di bloccare USDT per 30 giorni. L’importo bloccato torna sul conto al termine del periodo. Se un fondo separato ha risorse, può aggiungersi un rendimento stimato fino al 12% annuo per quei giorni. Quel rendimento non è garantito e può essere zero. Riserva non è un deposito bancario, non è un vincolo a termine e non è un prodotto di investimento. Il blocco è disponibile dal livello 10 e, nel Conto reale, dopo gli stessi passi di identità del credito.',
+      'Riserva consente di bloccare LUSD per 30 giorni. L’importo bloccato torna sul conto al termine del periodo. Se un fondo separato ha risorse, può aggiungersi un rendimento stimato fino al 12% annuo per quei giorni. Quel rendimento non è garantito e può essere zero. Riserva non è un deposito bancario, non è un vincolo a termine e non è un prodotto di investimento. Il blocco è disponibile dal livello 10 e, nel Conto reale, dopo gli stessi passi di identità del credito.',
     ],
     [
       'Fondo comune e donazioni',
-      'Gli USDT che entrano nel fondo comune restano destinati a prestare. Un versamento non è un prodotto di prelievo. Donare è volontario, va al portafoglio del progetto e non entra nel fondo. Non ci sono acquisti su Google Play: il valore si muove sulla rete pubblica.',
+      'Gli LUSD che entrano nel fondo comune restano destinati a prestare. Un versamento non è un prodotto di prelievo. Donare è volontario, va al portafoglio del progetto e non entra nel fondo. Non ci sono acquisti su Google Play: il valore si muove sulla rete pubblica.',
     ],
     [
       'Rischi e la legge del suo Paese',
-      'USDT e le commissioni di rete possono cambiare valore. I trasferimenti in rete non si annullano. Se perde la frase di ripristino, quel conto non si riapre. Un livello alto può restare senza fondi. Quatrivium Finance offre l’applicazione; il protocollo gira sulla rete. Il credito, gli inviti e Riserva possono essere regolati dove vive. È responsabile di usare l’applicazione solo dove le è consentito. Questi testi informano; non sono una licenza, non sono consulenza legale e non promettono l’autorizzazione in tutti i Paesi.',
+      'LUSD e le commissioni di rete possono cambiare valore. I trasferimenti in rete non si annullano. Se perde la frase di ripristino, quel conto non si riapre. Un livello alto può restare senza fondi. Quatrivium Finance offre l’applicazione; il protocollo gira sulla rete. Il credito, gli inviti e Riserva possono essere regolati dove vive. È responsabile di usare l’applicazione solo dove le è consentito. Questi testi informano; non sono una licenza, non sono consulenza legale e non promettono l’autorizzazione in tutti i Paesi.',
     ],
     [
       'Limiti del servizio',

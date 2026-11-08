@@ -1,15 +1,14 @@
 /**
- * Lista lo que falta para mainnet. No imprime secretos.
+ * Lista lo que falta para mainnet soberano en Arbitrum One (chainId: 42161). No imprime secretos.
  * Uso: npm run production:check
  *      npm run production:check -- --strict   (sale 1 si mainnet no está completo)
- *      npm run production:check:ci            (solo el repo; no pide SMS ni correo)
+ *      npm run production:check:ci            (solo el repo; sin variables de entorno locales)
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 
 const { isHexAddress, isZero } = createRequire(import.meta.url)('./bscNetworks.cjs');
-const { isTextbeltConfigured } = createRequire(import.meta.url)('./textbeltSms.cjs');
 
 const root = resolve(process.cwd());
 const strict = process.argv.includes('--strict');
@@ -24,7 +23,7 @@ function quotedAddress(src, name) {
   return (key) => body.match(new RegExp(`${key}: '(0x[0-9a-fA-F]{40})'`))?.[1] || '';
 }
 
-/** Actions no tiene .env. No pide SMS, Twilio ni Resend. */
+/** Actions no tiene .env. Verifica la configuración soberana del repositorio en Arbitrum One (42161). */
 function runRepoCi() {
   const failures = [];
   const easPath = resolve(root, 'eas.json');
@@ -51,38 +50,46 @@ function runRepoCi() {
   if (String(prod.EXPO_PUBLIC_APP_ENV) !== 'production') {
     failures.push('eas.json production: EXPO_PUBLIC_APP_ENV debe ser production');
   }
-  if (String(prod.EXPO_PUBLIC_CHAIN_ID) !== '56') {
-    failures.push('eas.json production: EXPO_PUBLIC_CHAIN_ID debe ser 56');
+  if (String(prod.EXPO_PUBLIC_CHAIN_ID) !== '42161') {
+    failures.push('eas.json production: EXPO_PUBLIC_CHAIN_ID debe ser 42161 (Arbitrum One)');
   }
-  if (/testnet/i.test(String(prod.EXPO_PUBLIC_CHAIN_NAME || ''))) {
+  if (/testnet|sepolia/i.test(String(prod.EXPO_PUBLIC_CHAIN_NAME || ''))) {
     failures.push('eas.json production no debe usar una red de testnet');
   }
   const credit = String(prod.EXPO_PUBLIC_CONTRACT_ADDRESS_MAINNET || '');
-  if (
-    !isHexAddress(credit) ||
-    banned.includes(lower(credit)) ||
-    lower(credit) !== lower(liveMain)
-  ) {
-    failures.push('el crédito de production no es el de mainnet del repo');
+  if (liveMain) {
+    if (
+      !isHexAddress(credit) ||
+      banned.includes(lower(credit)) ||
+      lower(credit) !== lower(liveMain)
+    ) {
+      failures.push('el crédito de production no es el de mainnet del repo');
+    }
+  } else if (credit && !isZero(credit)) {
+    failures.push(
+      'eas.json production tiene contrato mainnet distinto de 0x000… antes del despliegue en Arbitrum One'
+    );
   }
   const demo = String(prod.EXPO_PUBLIC_CONTRACT_ADDRESS_TESTNET || '');
-  if (demo && (lower(demo) !== lower(liveDemo) || lower(demo) === lower(credit))) {
+  if (demo && liveDemo && (lower(demo) !== lower(liveDemo) || lower(demo) === lower(credit))) {
     failures.push(
       'la dirección de prueba del perfil production no es la Demo viva, o coincide con mainnet'
     );
   }
   const usdt = String(prod.EXPO_PUBLIC_USDT_ADDRESS || '');
-  if (!usdt || lower(usdt) !== lower(liveUsdt) || lower(usdt) === lower(demoUsdt)) {
-    failures.push('el USDT de production es el de testnet o no coincide con el repo');
+  if (!usdt || lower(usdt) !== lower(liveUsdt) || (demoUsdt && lower(usdt) === lower(demoUsdt))) {
+    failures.push('el LUSD de production no coincide con DEPLOYED_MAINNET.usdt');
   }
   const altaSrc = existsSync(resolve(root, 'constants/altaConfig.ts'))
     ? readFileSync(resolve(root, 'constants/altaConfig.ts'), 'utf8')
     : '';
   if (!/export const CREDIT_ALTA_USDT = 4;/.test(altaSrc)) {
-    failures.push('constants/altaConfig.ts debe cobrar el alta de 4 USDT');
+    failures.push('constants/altaConfig.ts debe cobrar el alta de 4 LUSD');
   }
-  const sameAddress = (left, right) =>
-    isHexAddress(String(left || '')) && lower(left) === lower(right);
+  const sameAddress = (left, right) => {
+    if (!right) return !left || isZero(String(left));
+    return isHexAddress(String(left || '')) && lower(left) === lower(right);
+  };
   const watched = [
     ['EXPO_PUBLIC_FAMA_ADDRESS_MAINNET', mainnet('fama')],
     ['EXPO_PUBLIC_RESERVA_ADDRESS_MAINNET', mainnet('reserva')],
@@ -97,14 +104,14 @@ function runRepoCi() {
     }
   }
 
-  console.log('production:check:ci — solo el repo, sin secretos');
+  console.log('production:check:ci — solo el repo, 100% soberano (sin secretos ni worker)');
   if (failures.length) {
     for (const item of failures) console.error('FALTA  ' + item);
     process.exit(1);
   }
-  console.log('OK  eas.json production: APP_ENV=production, chain 56');
-  console.log('OK  crédito, USDT, Alta, Reserva y Fama coinciden con el repo');
-  console.log('OK  SMS, Twilio y Resend no se comprueban aquí');
+  console.log('OK  eas.json production: APP_ENV=production, chain 42161 (Arbitrum One)');
+  console.log('OK  LUSD (0x93b346b6BC2548dA6A1E7d98E9a421B42541425b) y contratos alineados con el repo');
+  console.log('OK  Modo 100% soberano (sin servidores Web2, SMS ni attester)');
   process.exit(0);
 }
 
@@ -129,27 +136,7 @@ function loadEnv(filePath) {
   return map;
 }
 
-const local = loadEnv(resolve(root, '.env'));
-const worker = loadEnv(resolve(root, '.env.worker'));
-const WORKER_KEYS = [
-  'EXPO_PUBLIC_NOTIFY_API',
-  'NOTIFY_CORS_ORIGIN',
-  'NOTIFY_DATA_KEY',
-  'TEXTBELT_API_KEY',
-  'TEXTBELT_KEY',
-  'TWILIO_ACCOUNT_SID',
-  'TWILIO_AUTH_TOKEN',
-  'TWILIO_FROM',
-  'WHATSAPP_TOKEN',
-  'WHATSAPP_PHONE_NUMBER_ID',
-  'ATTESTER_PRIVATE_KEY',
-  'RESEND_API_KEY',
-  'EMAIL_FROM',
-];
-const env = { ...local };
-for (const key of WORKER_KEYS) {
-  if (worker[key]) env[key] = worker[key];
-}
+const env = loadEnv(resolve(root, '.env'));
 
 const get = (key) => String(env[key] || '').trim();
 const set = (key) => {
@@ -181,17 +168,18 @@ const checks = [
       get('EXPO_PUBLIC_CONTRACT_ADDRESS_MAINNET').toLowerCase() !== STALE_MAINNET,
     need:
       get('EXPO_PUBLIC_CONTRACT_ADDRESS_MAINNET').toLowerCase() === STALE_MAINNET
-        ? 'El contrato mainnet guardado es de una versión vieja. Hay que desplegar QuatriviumCredit de nuevo (CONFIRM_MAINNET=yes)'
-        : 'Desplegar QuatriviumCredit en BSC mainnet (CONFIRM_MAINNET=yes)',
+        ? 'El contrato mainnet guardado es de una versión vieja. Hay que desplegar QuatriviumCredit en Arbitrum One (CONFIRM_MAINNET=yes)'
+        : 'Desplegar QuatriviumCredit en Arbitrum One mainnet (CONFIRM_MAINNET=yes && npm run deploy:arbitrum)',
   },
   {
     id: 'demo-contract',
     who: 'code',
     ok:
       !get('EXPO_PUBLIC_CONTRACT_ADDRESS_TESTNET') ||
-      (get('EXPO_PUBLIC_CONTRACT_ADDRESS_TESTNET').toLowerCase() === LIVE_TESTNET.toLowerCase() &&
-        get('EXPO_PUBLIC_CONTRACT_ADDRESS_TESTNET').toLowerCase() !== STALE_TESTNET),
-    need: 'EXPO_PUBLIC_CONTRACT_ADDRESS_TESTNET debe ser el protocolo vivo 0xD318… (no el legado 0xD2d2 ni el retirado 0x1E5118)',
+      isZero(get('EXPO_PUBLIC_CONTRACT_ADDRESS_TESTNET')) ||
+      (get('EXPO_PUBLIC_CONTRACT_ADDRESS_TESTNET').toLowerCase() !== STALE_TESTNET.toLowerCase() &&
+        get('EXPO_PUBLIC_CONTRACT_ADDRESS_TESTNET').toLowerCase() !== LEGACY_TESTNET.toLowerCase()),
+    need: 'EXPO_PUBLIC_CONTRACT_ADDRESS_TESTNET no debe apuntar al contrato retirado 0x1E5118 ni al legado 0xD2d2',
   },
   {
     id: 'admins',
@@ -222,56 +210,18 @@ const checks = [
   {
     id: 'rpc',
     who: 'code',
-    ok: https('BSC_MAINNET_RPC_URL') || https('EXPO_PUBLIC_BSC_RPC_URL_PRIMARY'),
-    need: 'RPC de pago (QuickNode / Ankr / Alchemy) en BSC_MAINNET_RPC_URL',
-  },
-  {
-    id: 'notify',
-    who: 'you',
-    ok: https('EXPO_PUBLIC_NOTIFY_API'),
-    need: 'EXPO_PUBLIC_NOTIFY_API = HTTPS público del worker (VPS o túnel)',
-  },
-  {
-    id: 'cors',
-    who: 'code',
-    ok: set('NOTIFY_CORS_ORIGIN') && get('NOTIFY_CORS_ORIGIN') !== '*',
-    need: 'NOTIFY_CORS_ORIGIN = https://quatriviumcredit.app en .env.worker (no *)',
-  },
-  {
-    id: 'data-key',
-    who: 'code',
-    ok: get('NOTIFY_DATA_KEY').length >= 16,
-    need: 'NOTIFY_DATA_KEY ≥ 16 caracteres (npm run production:prepare)',
-  },
-  {
-    id: 'sms',
-    who: 'you',
     ok:
-      isTextbeltConfigured(get('TEXTBELT_API_KEY') || get('TEXTBELT_KEY')) ||
-      (set('TWILIO_ACCOUNT_SID') && set('TWILIO_AUTH_TOKEN') && set('TWILIO_FROM')) ||
-      (set('WHATSAPP_TOKEN') && set('WHATSAPP_PHONE_NUMBER_ID')),
-    need: 'TEXTBELT_API_KEY (pago) en .env.worker, o Twilio, o WhatsApp Cloud API',
-  },
-  {
-    id: 'email',
-    who: 'you',
-    ok: set('RESEND_API_KEY') && /@/.test(get('EMAIL_FROM')),
-    need: 'RESEND_API_KEY y EMAIL_FROM en .env.worker (avisos y código de alta)',
-  },
-  {
-    id: 'attester',
-    who: 'you',
-    ok:
-      set('ATTESTER_PRIVATE_KEY') &&
-      get('ATTESTER_PRIVATE_KEY').replace(/^0x/i, '').toLowerCase() !==
-        get('PRIVATE_KEY').replace(/^0x/i, '').toLowerCase(),
-    need: 'ATTESTER_PRIVATE_KEY distinta de PRIVATE_KEY (no use la del deployer)',
+      https('ARBITRUM_MAINNET_RPC_URL') ||
+      https('EXPO_PUBLIC_ARBITRUM_RPC_URL') ||
+      https('BSC_MAINNET_RPC_URL') ||
+      https('EXPO_PUBLIC_BSC_RPC_URL_PRIMARY'),
+    need: 'RPC HTTPS para Arbitrum One en ARBITRUM_MAINNET_RPC_URL (o usa el pool público por defecto)',
   },
   {
     id: 'invite',
     who: 'code',
-    ok: https('EXPO_PUBLIC_INVITE_WEB_BASE') || https('EXPO_PUBLIC_PLAY_STORE_URL'),
-    need: 'Dominio de invitaciones o URL de Play Store',
+    ok: https('EXPO_PUBLIC_INVITE_WEB_BASE'),
+    need: 'Dominio del portal web de invitaciones y descarga directa de APK en EXPO_PUBLIC_INVITE_WEB_BASE',
   },
   {
     id: 'eas-store',
@@ -283,14 +233,14 @@ const checks = [
         const prod = JSON.parse(readFileSync(easPath, 'utf8'))?.build?.production?.env || {};
         return (
           String(prod.EXPO_PUBLIC_APP_ENV) === 'production' &&
-          String(prod.EXPO_PUBLIC_CHAIN_ID) === '56' &&
+          String(prod.EXPO_PUBLIC_CHAIN_ID) === '42161' &&
           !prod.EXPO_PUBLIC_CONTRACT_ADDRESS_TESTNET
         );
       } catch {
         return false;
       }
     })(),
-    need: 'eas.json production: APP_ENV=production, chain 56, sin contrato de testnet',
+    need: 'eas.json production: APP_ENV=production, chain 42161 (Arbitrum One), sin contrato de testnet',
   },
 ];
 
@@ -302,14 +252,11 @@ const deployDay = {
 
 const missing = checks.filter((item) => !item.ok);
 const youDo = checks.filter((item) => item.who === 'you' && !item.ok);
-const chainId = Number(local.EXPO_PUBLIC_CHAIN_ID || '97');
-const appEnv = local.EXPO_PUBLIC_APP_ENV || 'development';
+const chainId = Number(env.EXPO_PUBLIC_CHAIN_ID || '421614');
+const appEnv = env.EXPO_PUBLIC_APP_ENV || 'development';
 
-console.log('Quatrivium Finance — listo para lo real');
+console.log('Quatrivium Sovereign — verificación de producción en Arbitrum One (42161)');
 console.log(`App local ahora: APP_ENV=${appEnv || '(vacío)'}  chainId=${chainId}`);
-console.log(
-  `.env.worker: ${existsSync(resolve(root, '.env.worker')) ? 'sí' : 'no (npm run production:prepare)'}`
-);
 console.log('');
 for (const item of checks) {
   const tag = item.who === 'you' ? 'TÚ  ' : 'repo';
@@ -321,10 +268,9 @@ console.log(
   `${deployDay.ok ? 'OK   ' : 'LUEGO'}  TÚ    ${deployDay.id.padEnd(14)}  ${deployDay.ok ? '' : deployDay.need}`
 );
 console.log('');
-if (chainId !== 56) {
-  console.log('La app del teléfono sigue en testnet. Eso es correcto.');
-  console.log('No ponga EXPO_PUBLIC_CHAIN_ID=56 en .env local.');
-  console.log('El APK de tienda usa el perfil EAS production (chain 56).');
+if (chainId !== 42161) {
+  console.log('La app del teléfono sigue en testnet (Arbitrum Sepolia). Eso es correcto.');
+  console.log('El APK de producción usa el perfil EAS production (chain 42161 — Arbitrum One).');
 }
 console.log(`Config: ${checks.length - missing.length}/${checks.length} listos.`);
 
@@ -332,15 +278,15 @@ if (youDo.length) {
   console.log('\nLo que solo puede hacer usted:');
   for (const item of youDo) console.log('  - ' + item.need);
   console.log(
-    '  - BNB de gas en la wallet deployer, luego CONFIRM_MAINNET=yes y npm run deploy:bsc'
+    '  - ETH de gas en Arbitrum One en la wallet deployer, luego CONFIRM_MAINNET=yes y npm run deploy:arbitrum'
   );
-  console.log('  - Depositar USDT real al pool desde la app en modo Real');
-  console.log('  - eas build --platform android --profile production');
+  console.log('  - Depositar LUSD real al pool desde la app en modo Real');
+  console.log('  - Compilar el APK soberano cuando se autorice el lanzamiento');
 }
 
 if (strict && (missing.length || !deployDay.ok)) {
   process.exit(1);
 }
 if (!missing.length) {
-  console.log('\nConfig lista. Día del deploy: CONFIRM_MAINNET=yes && npm run deploy:bsc');
+  console.log('\nConfig lista. Día del deploy: CONFIRM_MAINNET=yes && npm run deploy:arbitrum');
 }

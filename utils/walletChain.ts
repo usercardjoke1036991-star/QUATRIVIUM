@@ -26,14 +26,14 @@ function chainAddParams(expected: number) {
   const chain = live ? BSC_MAINNET : BSC_TESTNET;
   return {
     chainId: `0x${expected.toString(16)}`,
-    chainName: live ? 'BNB Smart Chain' : 'BNB Smart Chain Testnet',
-    nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+    chainName: live ? 'Arbitrum One' : 'Arbitrum Sepolia',
+    nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     rpcUrls: [...chain.rpc],
-    blockExplorerUrls: [live ? 'https://bscscan.com' : 'https://testnet.bscscan.com'],
+    blockExplorerUrls: [live ? 'https://arbiscan.io' : 'https://sepolia.arbiscan.io'],
   };
 }
 
-/** La billetera externa debe estar en la misma red que el mundo activo (97 Demo, 56 Real). */
+/** La billetera externa debe estar en la misma red que el mundo activo (421614 Demo, 42161 Real). */
 export async function ensureExternalWalletOnAppChain(provider: Eip1193Provider): Promise<void> {
   const expected = NETWORK_CONFIG.chainId;
   let current = 0;

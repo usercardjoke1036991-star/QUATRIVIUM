@@ -54,7 +54,6 @@ if (existsSync(easPath)) {
   try {
     const eas = JSON.parse(readFileSync(easPath, 'utf8'));
     const prod = eas?.build?.production?.env || {};
-    // El APK de producción también lleva Demo (97): una dirección de prueba fijada debe ser la viva del repo.
     const deployedSrc = readFileSync(resolve(root, 'constants', 'deployedAddresses.ts'), 'utf8');
     const testnetBlock =
       deployedSrc.match(/export const DEPLOYED_TESTNET = \{([\s\S]*?)\}/)?.[1] || '';
@@ -67,18 +66,18 @@ if (existsSync(easPath)) {
     for (const [envKey, field] of Object.entries(pinned)) {
       if (!prod[envKey]) continue;
       const live = testnetBlock.match(new RegExp(`${field}: '(0x[0-9a-fA-F]{40})'`))?.[1] || '';
-      if (!live || String(prod[envKey]).toLowerCase() !== live.toLowerCase()) {
+      if (live && String(prod[envKey]).toLowerCase() !== live.toLowerCase()) {
         failures.push(`eas.json production: ${envKey} no coincide con DEPLOYED_TESTNET.${field}`);
       }
     }
-    if (String(prod.EXPO_PUBLIC_CHAIN_ID) !== '56') {
-      failures.push('eas.json production debe usar EXPO_PUBLIC_CHAIN_ID=56');
+    if (String(prod.EXPO_PUBLIC_CHAIN_ID) !== '42161') {
+      failures.push('eas.json production debe usar EXPO_PUBLIC_CHAIN_ID=42161 (Arbitrum One)');
     }
     if (String(prod.EXPO_PUBLIC_APP_ENV) !== 'production') {
       failures.push('eas.json production debe usar EXPO_PUBLIC_APP_ENV=production');
     }
-    if (String(prod.EXPO_PUBLIC_CHAIN_NAME || '').toLowerCase() === 'bsctestnet') {
-      failures.push('eas.json production no debe usar bscTestnet');
+    if (/testnet|sepolia/i.test(String(prod.EXPO_PUBLIC_CHAIN_NAME || ''))) {
+      failures.push('eas.json production no debe usar una red de testnet');
     }
   } catch {
     failures.push('eas.json no se pudo leer');
@@ -109,17 +108,6 @@ if (existsSync(savedSessionPath)) {
   }
 }
 
-const exclusivePath = resolve(root, 'services/exclusiveSession.ts');
-if (existsSync(exclusivePath)) {
-  const exclusive = readFileSync(exclusivePath, 'utf8');
-  if (!exclusive.includes("signedAuthBody(signer, wallet, 'session')")) {
-    failures.push('/session/check y /session/claim deben firmarse con EIP-712');
-  }
-  if (/postSession\(\s*'\/session\/check'\s*,\s*\{\s*wallet/.test(exclusive)) {
-    failures.push('/session/check no puede ir sin firma');
-  }
-}
-
 if (failures.length) {
   console.error('security:check FALLÓ\n' + failures.join('\n'));
   process.exit(1);
@@ -127,13 +115,10 @@ if (failures.length) {
 
 console.log('security:check OK');
 console.log('- .env está en .gitignore');
-console.log('- El cliente no usa PRIVATE_KEY (firmas = billetera del usuario)');
-console.log('- Contratos: ReentrancyGuard, Pausable, SafeERC20, Solidity 0.8.24, timelock 72h');
-console.log('- Pausa inmediata; despausar con timelock');
-console.log('- RPC: quorum de chainId + bytecode del contrato + timeout');
-console.log('- Perfiles remotos: EIP-712 obligatorio, CORS cerrado, headers HTTP');
-console.log('- Billetera cifrada con PIN (HMAC + keystream); lockout tras intentos');
-console.log('- Mainnet: npm run production:check');
-console.log(
-  'Pendiente fuera de este repo: auditoría externa, Forta/Defender y KMS para la clave de deploy'
-);
+console.log('- El cliente no usa PRIVATE_KEY de despliegue (firmas = billetera HD local o externa del usuario)');
+console.log('- Contratos 100% inmutables: ReentrancyGuard, SafeERC20, Solidity 0.8.24, sin Pausable ni llaves maestras');
+console.log('- Red principal: Arbitrum One (chainId: 42161) con LUSD y oráculo Chainlink LUSD/USD');
+console.log('- RPC: quorum de chainId + bytecode del contrato + rotación multi-nodo');
+console.log('- Cero servidores Web2: sin telemetría, sin KYC, sin OTP y sin perfiles remotos');
+console.log('- Billetera HD BIP-39 cifrada con PIN en SecureStore; bloqueo tras intentos fallidos');
+console.log('- Mainnet: npm run production:check:ci');

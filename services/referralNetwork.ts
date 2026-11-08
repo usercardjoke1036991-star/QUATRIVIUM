@@ -76,11 +76,11 @@ export interface ReferralNetworkSnapshot {
 const EMPTY: ReferralNetworkSnapshot = {
   directs: [],
   totalEarnedWei: '0',
-  totalEarnedLabel: '0.00 USDT',
+  totalEarnedLabel: '0.00 LUSD',
   commissionTotalWei: '0',
-  commissionTotalLabel: '0.00 USDT',
+  commissionTotalLabel: '0.00 LUSD',
   bonusTotalWei: '0',
-  bonusTotalLabel: '0.00 USDT',
+  bonusTotalLabel: '0.00 LUSD',
   activity: [],
   partial: false,
 };
@@ -118,7 +118,7 @@ function asText(value: unknown): string {
 function formatToken(amount: bigint, token?: string): string {
   const meta = token ? getTokenMeta(token) : undefined;
   const decimals = meta?.decimals ?? 18;
-  const symbol = meta?.symbol ?? 'USDT';
+  const symbol = meta?.symbol ?? 'LUSD';
   return `${Number(formatUnits(amount, decimals)).toFixed(4)} ${symbol}`;
 }
 

@@ -63,8 +63,7 @@ jobs:
         run: npm run format:check
 
       - name: Production repo check
-        # No abre .env ni .env.worker. No falla si faltan SMS, Twilio o Resend.
-        # Mira eas.json production: APP_ENV, chain 56, y que el crédito de
-        # mainnet no sea un contrato de testnet. La Demo viva puede figurar
-        # aparte para el modo Demo del APK.
+        # Verificación 100% soberana del repo sin variables de entorno ni servidores Web2.
+        # Comprueba eas.json production: APP_ENV=production, chain 42161 (Arbitrum One),
+        # LUSD (0x93b346b6BC2548dA6A1E7d98E9a421B42541425b) y coherencia con deployedAddresses.ts.
         run: npm run production:check:ci

@@ -3,31 +3,63 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Invitación Quatrivium Finance</title>
-  <meta name="description" content="Lo invitan a Quatrivium Finance. Abra la aplicación e ingrese el código para activar su línea de crédito." />
-  <meta property="og:title" content="Invitación Quatrivium Finance" />
-  <meta property="og:description" content="Abra este enlace para unirse con un código de invitación." />
+  <title>Invitación Quatrivium Finance · Edición Soberana</title>
+  <meta name="description" content="Lo invitan a Quatrivium Finance en Arbitrum One (LUSD). Abra la aplicación soberana o descargue el APK oficial verificado por SHA-256." />
+  <meta property="og:title" content="Invitación Quatrivium Finance · Arbitrum One" />
+  <meta property="og:description" content="Abra este enlace para unirse con un código de invitación en la red Arbitrum One con LUSD." />
   <meta property="og:type" content="website" />
   <style>
-    body { margin: 0; font-family: Inter, Segoe UI, sans-serif; background: #f4fbf7; color: #163326; }
-    main { max-width: 520px; margin: 0 auto; padding: 40px 20px; text-align: center; }
-    h1 { margin: 0 0 8px; }
-    p { line-height: 1.5; color: #2d4a38; }
-    .code {
-      font-family: ui-monospace, Consolas, monospace;
+    :root { color-scheme: light; }
+    body { margin: 0; font-family: Inter, Segoe UI, system-ui, sans-serif; background: #f4fbf7; color: #163326; }
+    main { max-width: 560px; margin: 0 auto; padding: 36px 20px 56px; text-align: center; }
+    .badge {
+      display: inline-block;
+      font-size: 12px;
       font-weight: 700;
+      text-transform: uppercase;
       letter-spacing: 0.6px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      background: #e1f5ea;
+      color: #146C2E;
+      margin-bottom: 12px;
+    }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    p { line-height: 1.55; color: #2d4a38; }
+    .code-box {
       background: #fff;
-      border: 1px solid #1f8a4c;
-      border-radius: 10px;
-      padding: 14px 12px;
+      border: 1.5px solid #1f8a4c;
+      border-radius: 12px;
+      padding: 16px 14px;
       margin: 18px 0;
+      box-shadow: 0 2px 8px rgba(20, 108, 46, 0.06);
+    }
+    .code-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #3d5c48;
+      margin-bottom: 6px;
+    }
+    .code {
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-weight: 700;
+      font-size: 20px;
+      letter-spacing: 1px;
+      color: #146C2E;
       word-break: break-all;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin: 18px 0 26px;
     }
     a.btn, button.btn {
       display: inline-block;
-      margin: 8px 6px 0;
-      padding: 14px 18px;
+      padding: 14px 20px;
       border-radius: 10px;
       background: #146C2E;
       color: #fff;
@@ -35,36 +67,163 @@
       border: 0;
       font-weight: 700;
       font-size: 15px;
+      cursor: pointer;
     }
-    .hint { font-size: 13px; color: #3d5c48; }
+    a.btn.secondary, button.btn.secondary {
+      background: #fff;
+      color: #146C2E;
+      border: 1.5px solid #146C2E;
+    }
+    .apk-card {
+      text-align: left;
+      background: #ffffff;
+      border: 1px solid #cce5d6;
+      border-radius: 14px;
+      padding: 20px;
+      margin-top: 24px;
+      box-shadow: 0 4px 14px rgba(16, 48, 30, 0.05);
+    }
+    .apk-card h2 {
+      margin: 0 0 8px;
+      font-size: 18px;
+      color: #146C2E;
+    }
+    .apk-card p {
+      margin: 0 0 14px;
+      font-size: 14px;
+    }
+    .apk-meta {
+      font-size: 13px;
+      color: #3d5c48;
+      margin-bottom: 14px;
+    }
+    .sha-block {
+      background: #f0f7f3;
+      border: 1px solid #b8dec6;
+      border-radius: 10px;
+      padding: 12px;
+      margin-top: 14px;
+    }
+    .sha-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: #163326;
+      margin-bottom: 6px;
+    }
+    .sha-copy {
+      background: #e1f5ea;
+      color: #146C2E;
+      border: 1px solid #1f8a4c;
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .sha-value {
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.45;
+      color: #163326;
+      word-break: break-all;
+      user-select: all;
+    }
+    .verify-cmd {
+      margin-top: 10px;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 11px;
+      color: #3d5c48;
+      background: #e8f3ec;
+      padding: 8px 10px;
+      border-radius: 6px;
+      word-break: break-all;
+    }
+    .hint { font-size: 13px; color: #3d5c48; margin-top: 20px; }
   </style>
 </head>
 <body>
   <main>
+    <div class="badge">Arbitrum One · LUSD · 100% Soberano</div>
     <h1>Quatrivium Finance</h1>
-    <p>Lo invitan a Quatrivium Finance. Si ya tiene la aplicación, ábrala con este enlace. Si no, copie el código y péguelo al crear la cuenta.</p>
-    <div class="code" id="code">—</div>
-    <p>
-      <a class="btn" id="open">Abrir Quatrivium Finance</a>
-    </p>
-    <p class="hint">Si la aplicación no se abre, use el código. APK directo soberano. Paquete id=com.quatrivium.sovereign.</p>
+    <p id="lead">Lo invitan a Quatrivium Finance. Si ya tiene instalada la aplicación soberana, ábrala con este enlace. Si no, descargue el APK oficial y pegue el código al crear su billetera.</p>
+
+    <div class="code-box">
+      <div class="code-label">Código de invitación</div>
+      <div class="code" id="code">—</div>
+    </div>
+
+    <div class="actions">
+      <a class="btn" id="open" href="quatrivium-sovereign://invite?c=">Abrir Quatrivium Finance</a>
+      <button class="btn secondary" id="copyCodeBtn" type="button">Copiar código</button>
+    </div>
+
+    <section class="apk-card" aria-labelledby="apk-title">
+      <h2 id="apk-title">Descarga Directa · APK Soberano (Android)</h2>
+      <p>Distribución soberana directa sin intermediarios ni tiendas de terceros. Verifique siempre la firma criptográfica SHA-256 antes de instalar.</p>
+      <div class="apk-meta">
+        <strong>Paquete:</strong> <code>id=com.quatrivium.sovereign</code> &nbsp;·&nbsp;
+        <strong>Esquema:</strong> <code>quatrivium-sovereign://</code> &nbsp;·&nbsp;
+        <strong>Red:</strong> Arbitrum One (<code>42161</code>)
+      </div>
+      <p style="margin-bottom: 12px;">
+        <a class="btn" id="downloadApk" href="/apk/quatrivium-sovereign.apk" download="quatrivium-sovereign.apk">Descargar APK Soberano</a>
+      </p>
+
+      <div class="sha-block">
+        <div class="sha-header">
+          <span>Hash de Verificación SHA-256 (APK / Certificado)</span>
+          <button class="sha-copy" id="copyShaBtn" type="button">Copiar SHA-256</button>
+        </div>
+        <div class="sha-value" id="apkSha256">dfefccd00039725eb73aa67db0e77e910ae7464dee8df2748654e21da73ed24a</div>
+        <div class="verify-cmd">
+          Linux / macOS: sha256sum quatrivium-sovereign.apk<br />
+          Windows PowerShell: Get-FileHash .\quatrivium-sovereign.apk -Algorithm SHA256
+        </div>
+      </div>
+    </section>
+
+    <p class="hint">Sin servidores centrales, sin KYC y sin intermediarios. Billetera HD local BIP-39 de 24 palabras sobre Arbitrum One con LUSD (<code>0x93b346b6BC2548dA6A1E7d98E9a421B42541425b</code>).</p>
   </main>
   <script>
     const params = new URLSearchParams(location.search);
     const raw = (params.get('c') || params.get('code') || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
     const inviter = (params.get('n') || params.get('name') || '').trim();
+    const apkShaParam = (params.get('sha256') || '').trim().toLowerCase();
     const grouped = raw ? (raw.match(/.{1,4}/g) || []).join('-') : '';
     const codeEl = document.getElementById('code');
     const open = document.getElementById('open');
-    const lead = document.querySelector('main p');
+    const lead = document.getElementById('lead');
+    const shaEl = document.getElementById('apkSha256');
+    const copyCodeBtn = document.getElementById('copyCodeBtn');
+    const copyShaBtn = document.getElementById('copyShaBtn');
+
     codeEl.textContent = grouped || 'Código no disponible';
+    if (/^[a-f0-9]{64}$/.test(apkShaParam) && shaEl) {
+      shaEl.textContent = apkShaParam;
+    }
     if (inviter && lead) {
-      lead.textContent = inviter + ' lo invita a Quatrivium Finance. Si ya tiene la aplicación, ábrala con este enlace. Si no, copie el código y péguelo al crear la cuenta.';
+      lead.textContent = inviter + ' lo invita a Quatrivium Finance. Si ya tiene instalada la aplicación soberana, ábrala con este enlace. Si no, descargue el APK oficial y pegue el código al crear su billetera.';
     }
     const appUrl = 'quatrivium-sovereign://invite?c=' + raw + (inviter ? '&n=' + encodeURIComponent(inviter) : '');
     open.href = appUrl;
     if (raw) {
       try { location.href = appUrl; } catch (e) {}
+    }
+    if (copyCodeBtn) {
+      copyCodeBtn.addEventListener('click', function () {
+        if (!grouped) return;
+        navigator.clipboard && navigator.clipboard.writeText(grouped);
+        copyCodeBtn.textContent = 'Código copiado';
+      });
+    }
+    if (copyShaBtn && shaEl) {
+      copyShaBtn.addEventListener('click', function () {
+        navigator.clipboard && navigator.clipboard.writeText(shaEl.textContent.trim());
+        copyShaBtn.textContent = 'Copiado';
+      });
     }
   </script>
 </body>

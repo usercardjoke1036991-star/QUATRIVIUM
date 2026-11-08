@@ -356,12 +356,21 @@ interface TokenLogoProps {
 }
 
 export const TokenLogo: React.FC<TokenLogoProps> = ({ symbol, size = 20 }) => {
-  if (symbol === 'USDT') {
+  if (symbol === 'LUSD' || symbol === 'USDT') {
     return (
       <Svg width={size} height={size} viewBox="0 0 24 24">
         <Circle cx="12" cy="12" r="11" fill="#26A17B" />
         <Path d="M8 8h8M12 8v9" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" />
         <Path d="M8.3 12.6h7.4" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" />
+      </Svg>
+    );
+  }
+  if (symbol === 'ETH') {
+    return (
+      <Svg width={size} height={size} viewBox="0 0 24 24">
+        <Circle cx="12" cy="12" r="11" fill="#627EEA" />
+        <Polygon points="12,4.5 16.5,12 12,14.6 7.5,12" fill="#fff" />
+        <Polygon points="12,15.8 16.5,13.2 12,19.5 7.5,13.2" fill="#E0E7FF" />
       </Svg>
     );
   }

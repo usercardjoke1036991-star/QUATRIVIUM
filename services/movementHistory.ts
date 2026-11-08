@@ -164,7 +164,7 @@ function asBigInt(value: unknown): bigint {
 function formatToken(amount: bigint, token?: string): { label: string; symbol: string } {
   const meta = token ? getTokenMeta(token) : undefined;
   const decimals = meta?.decimals ?? 18;
-  const symbol = meta?.symbol ?? 'USDT';
+  const symbol = meta?.symbol ?? 'LUSD';
   return {
     label: `${Number(formatUnits(amount, decimals)).toFixed(4)} ${symbol}`,
     symbol,
@@ -311,7 +311,7 @@ function mergeMovements(local: Movement[], chain: Movement[]): Movement[] {
               ? item.kind
               : prev.kind,
           platform:
-            item.platform && item.platform !== 'BSC' && item.platform !== prev.platform
+            item.platform && item.platform !== 'Arbitrum One' && item.platform !== prev.platform
               ? item.platform
               : prev.platform,
         });
@@ -485,7 +485,7 @@ export async function loadMovementHistory(walletAddress: string): Promise<Moveme
         to,
         amountLabel: amount.label,
         tokenSymbol: amount.symbol,
-        platform: 'BSC',
+        platform: 'Arbitrum One',
         world,
         timestamp: (stamps.get(event.blockNumber) || 0) * 1000,
         txHash: hash,
@@ -506,7 +506,7 @@ export async function loadMovementHistory(walletAddress: string): Promise<Moveme
         to: self,
         amountLabel: amount.label,
         tokenSymbol: amount.symbol,
-        platform: 'BSC',
+        platform: 'Arbitrum One',
         world,
         timestamp: (stamps.get(event.blockNumber) || 0) * 1000,
         txHash: hash,

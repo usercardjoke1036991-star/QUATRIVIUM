@@ -42,7 +42,7 @@ function skipSpace(text, index) {
   return j;
 }
 
-/** 1/2/4 USDT o 4-USDT, sin cuantificadores anidados. */
+/** 1/2/4 LUSD o 4-LUSD, sin cuantificadores anidados. */
 function hasUsdtAmount(text, digits, bounded) {
   const lower = String(text).toLowerCase();
   for (let i = 0; i < lower.length; i += 1) {
@@ -50,7 +50,7 @@ function hasUsdtAmount(text, digits, bounded) {
     if (bounded && isWordChar(lower[i - 1])) continue;
     let j = skipSpace(lower, i + 1);
     if (lower[j] === '-') j = skipSpace(lower, j + 1);
-    if (lower.slice(j, j + 4) !== 'usdt') continue;
+    if (lower.slice(j, j + 4) !== 'lusd') continue;
     if (bounded && isWordChar(lower[j + 4])) continue;
     return true;
   }
@@ -58,16 +58,19 @@ function hasUsdtAmount(text, digits, bounded) {
 }
 
 const OBSOLETE_ACCESS = [
+  'alta de 1 lusd',
+  'alta de 2 lusd',
+  'acceso de 1 lusd',
+  'acceso de 2 lusd',
+  '1 lusd de acceso',
+  '2 lusd de acceso',
+  'one-time 1 lusd access',
+  'one-time 2 lusd access',
+  'a single 1 lusd access',
+  'a single 2 lusd access',
   'alta de 1 usdt',
   'alta de 2 usdt',
-  'acceso de 1 usdt',
-  'acceso de 2 usdt',
-  '1 usdt de acceso',
-  '2 usdt de acceso',
-  'one-time 1 usdt access',
-  'one-time 2 usdt access',
-  'a single 1 usdt access',
-  'a single 2 usdt access',
+  '4 usdt',
 ];
 
 function hasObsoleteAccess(text) {
@@ -145,7 +148,7 @@ for (const lang of langs) {
   for (const key of accessKeys) {
     const text = String(data[key] || '');
     if (hasUsdtAmount(text, '12', true) || !hasUsdtAmount(text, '4', false)) {
-      console.error(`${lang}.${key} access fee is not 4 USDT`);
+      console.error(`${lang}.${key} access fee is not 4 LUSD`);
       failed = true;
     }
   }

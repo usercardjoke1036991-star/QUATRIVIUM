@@ -38,7 +38,7 @@ function formatWhen(timestamp: number): string {
 }
 
 function poolLabel(wei: bigint): string {
-  return `${Number(formatUnits(wei, 18)).toFixed(4)} USDT`;
+  return `${Number(formatUnits(wei, 18)).toFixed(4)} LUSD`;
 }
 
 const MovementCard: React.FC<{ item: Movement }> = ({ item }) => {

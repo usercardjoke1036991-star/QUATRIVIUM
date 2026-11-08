@@ -19,7 +19,7 @@ const es: LegalDoc = {
   privacy: sections(
     [
       'Quiénes somos',
-      'Quatrivium Finance opera la aplicación Quatrivium Credit. Ofrecemos una línea de crédito en USDT sobre BNB Smart Chain, una red pública. No somos un banco, no captamos depósitos y no estamos cubiertos por un fondo de garantía de depósitos. Esta política describe el tratamiento de su información. Informa; no es un dictamen jurídico ni una licencia.',
+      'Quatrivium Finance opera la aplicación Quatrivium Credit. Ofrecemos una línea de crédito en LUSD sobre Arbitrum One, una red pública. No somos un banco, no captamos depósitos y no estamos cubiertos por un fondo de garantía de depósitos. Esta política describe el tratamiento de su información. Informa; no es un dictamen jurídico ni una licencia.',
     ],
     [
       'Responsable y contacto',
@@ -27,7 +27,7 @@ const es: LegalDoc = {
     ],
     [
       'Datos que tratamos y para qué',
-      'Correo y teléfono sirven para operar la cuenta, enviar avisos y recuperar el acceso en este teléfono, sin cargo adicional. La imagen de perfil es opcional. La foto del documento se toma en este teléfono para verificar que la línea es suya; no se envía a nuestros archivos. El alta de 4 USDT se paga una sola vez. El crédito, la reputación, las invitaciones y los bloqueos de Reserva quedan en la red pública. La frase de 24 palabras es la llave de su cuenta: vive en este teléfono y en el respaldo que usted haga, no en la red. PIN, huella y contraseña solo desbloquean este teléfono. No custodiamos esa frase ni esos desbloqueos.',
+      'Correo y teléfono sirven para operar la cuenta, enviar avisos y recuperar el acceso en este teléfono, sin cargo adicional. La imagen de perfil es opcional. La foto del documento se toma en este teléfono para verificar que la línea es suya; no se envía a nuestros archivos. El alta de 4 LUSD se paga una sola vez. El crédito, la reputación, las invitaciones y los bloqueos de Reserva quedan en la red pública. La frase de 24 palabras es la llave de su cuenta: vive en este teléfono y en el respaldo que usted haga, no en la red. PIN, huella y contraseña solo desbloquean este teléfono. No custodiamos esa frase ni esos desbloqueos.',
     ],
     [
       'Lo que no haremos',
@@ -37,7 +37,7 @@ const es: LegalDoc = {
   terms: sections(
     [
       'Naturaleza del servicio',
-      'Quatrivium Finance pone a su disposición crédito en USDT sobre una red pública, con mil niveles que avanzan si paga a tiempo. Puede invitar, percibir comisiones de red y reclamar bonos al cumplir hitos. Cada monto, plazo e interés se muestran en la aplicación antes de confirmar. No hay compras dentro de Google Play: el valor se mueve en la red. No somos un banco ni un producto de depósito.',
+      'Quatrivium Finance pone a su disposición crédito en LUSD sobre una red pública, con mil niveles que avanzan si paga a tiempo. Puede invitar, percibir comisiones de red y reclamar bonos al cumplir hitos. Cada monto, plazo e interés se muestran en la aplicación antes de confirmar. No hay compras dentro de Google Play: el valor se mueve en la red. No somos un banco ni un producto de depósito.',
     ],
     [
       'Cómo opera el crédito',
@@ -49,7 +49,7 @@ const es: LegalDoc = {
     ],
     [
       'Retraso, riesgos y ley aplicable',
-      'Hay un periodo para regularizar. No cobramos a través de sus contactos ni con amenazas. Hasta ponerse al día, su reputación en la red se ve afectada. El valor de USDT y las comisiones de red pueden variar. Un nivel alto puede no tener fondos. Usted es responsable de usar el servicio solo donde le esté permitido. Estos textos informan; no son asesoría legal ni prometen autorización en todos los países.\n\nAtención: soporte@quatriviumcredit.app',
+      'Hay un periodo para regularizar. No cobramos a través de sus contactos ni con amenazas. Hasta ponerse al día, su reputación en la red se ve afectada. El valor de LUSD y las comisiones de red pueden variar. Un nivel alto puede no tener fondos. Usted es responsable de usar el servicio solo donde le esté permitido. Estos textos informan; no son asesoría legal ni prometen autorización en todos los países.\n\nAtención: soporte@quatriviumcredit.app',
     ]
   ),
 };
@@ -58,7 +58,7 @@ const en: LegalDoc = {
   privacy: sections(
     [
       'Who we are',
-      'Quatrivium Finance operates the Quatrivium Credit application. We offer a USDT credit line on BNB Smart Chain, a public network. We are not a bank, we do not take deposits and we are not covered by a deposit-guarantee scheme. This policy describes how your information is handled. It is information, not legal advice and not a licence.',
+      'Quatrivium Finance operates the Quatrivium Credit application. We offer a LUSD credit line on Arbitrum One, a public network. We are not a bank, we do not take deposits and we are not covered by a deposit-guarantee scheme. This policy describes how your information is handled. It is information, not legal advice and not a licence.',
     ],
     [
       'Controller and contact',
@@ -66,7 +66,7 @@ const en: LegalDoc = {
     ],
     [
       'Data we handle and why',
-      'Email and phone are used to run the account, send notices and recover access on this phone, with no extra fee. A profile image is optional. The identity photo is taken on this phone to confirm the line is yours; it is not sent to our files. The 4 USDT access payment is made once. Credit, reputation, invitations and Reserva locks are written on the public network. The 24-word phrase is the key to your account: it stays on this phone and in the backup you make, not on the network. PIN, fingerprint and password only unlock this phone. We do not hold that phrase or those unlock methods.',
+      'Email and phone are used to run the account, send notices and recover access on this phone, with no extra fee. A profile image is optional. The identity photo is taken on this phone to confirm the line is yours; it is not sent to our files. The 4 LUSD access payment is made once. Credit, reputation, invitations and Reserva locks are written on the public network. The 24-word phrase is the key to your account: it stays on this phone and in the backup you make, not on the network. PIN, fingerprint and password only unlock this phone. We do not hold that phrase or those unlock methods.',
     ],
     [
       'What we will not do',
@@ -76,7 +76,7 @@ const en: LegalDoc = {
   terms: sections(
     [
       'Nature of the service',
-      'Quatrivium Finance provides USDT credit on a public network, across one thousand levels that advance when you pay on time. You may invite others, receive network commissions and claim bonuses at milestones. Amount, term and interest are shown in the app before you confirm. There are no Google Play in-app purchases: value moves on the network. We are not a bank and this is not a deposit product.',
+      'Quatrivium Finance provides LUSD credit on a public network, across one thousand levels that advance when you pay on time. You may invite others, receive network commissions and claim bonuses at milestones. Amount, term and interest are shown in the app before you confirm. There are no Google Play in-app purchases: value moves on the network. We are not a bank and this is not a deposit product.',
     ],
     [
       'How credit operates',
@@ -88,7 +88,7 @@ const en: LegalDoc = {
     ],
     [
       'Delay, risks and local law',
-      'There is a period to catch up. We do not collect through your contacts or with threats. Until you are current, your on-network reputation is affected. The value of USDT and network fees can change. A high level may not have funds. You are responsible for using the service only where you are allowed to do so. These texts are information; they are not legal advice and do not promise that the service is authorised in every country.\n\nSupport: soporte@quatriviumcredit.app',
+      'There is a period to catch up. We do not collect through your contacts or with threats. Until you are current, your on-network reputation is affected. The value of LUSD and network fees can change. A high level may not have funds. You are responsible for using the service only where you are allowed to do so. These texts are information; they are not legal advice and do not promise that the service is authorised in every country.\n\nSupport: soporte@quatriviumcredit.app',
     ]
   ),
 };
@@ -100,11 +100,11 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     privacy: sections(
       [
         '我们是谁',
-        'Quatrivium Finance 是数字信贷机构，在公开网络上提供 USDT 额度。我们不是银行，也不吸收存款。本政策只说明如何保护您的信息。',
+        'Quatrivium Finance 是数字信贷机构，在公开网络上提供 LUSD 额度。我们不是银行，也不吸收存款。本政策只说明如何保护您的信息。',
       ],
       [
         '应用如何运作',
-        '您开立账户，将恢复短语保存在本机，并按等级申请信贷。4 USDT 开通只支付一次。邮箱和电话用于账户、通知并确认线路属于您。证件照片在本机拍摄，不会存入我们的档案。',
+        '您开立账户，将恢复短语保存在本机，并按等级申请信贷。4 LUSD 开通只支付一次。邮箱和电话用于账户、通知并确认线路属于您。证件照片在本机拍摄，不会存入我们的档案。',
       ],
       [
         '我们处理的信息',
@@ -130,7 +130,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
       ],
       [
         '若付款延迟',
-        '有一段补缴时间。我们不会通过通讯录或威胁催收。在结清前，网络声誉会受影响。USDT 价值可能变动，高等级也可能没有足够资金。\n\n支持：soporte@quatriviumcredit.app',
+        '有一段补缴时间。我们不会通过通讯录或威胁催收。在结清前，网络声誉会受影响。LUSD 价值可能变动，高等级也可能没有足够资金。\n\n支持：soporte@quatriviumcredit.app',
       ]
     ),
   },
@@ -138,11 +138,11 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     privacy: sections(
       [
         'हम कौन हैं',
-        'Quatrivium Finance एक डिजिटल ऋण संस्थान है। हम सार्वजनिक नेटवर्क पर USDT रेखा देते हैं। हम बैंक नहीं हैं और जमा नहीं लेते। यह नीति केवल आपकी जानकारी की रक्षा बताती है।',
+        'Quatrivium Finance एक डिजिटल ऋण संस्थान है। हम सार्वजनिक नेटवर्क पर LUSD रेखा देते हैं। हम बैंक नहीं हैं और जमा नहीं लेते। यह नीति केवल आपकी जानकारी की रक्षा बताती है।',
       ],
       [
         'ऐप कैसे काम करती है',
-        'आप खाता खोलते हैं, पुनर्प्राप्ति वाक्य इसी फ़ोन पर रखते हैं और अपने स्तर पर ऋण माँगते हैं। 4 USDT प्रवेश एक बार होता है। ईमेल और फ़ोन खाते, सूचनाओं और यह पुष्टि करने के लिए हैं कि रेखा आपकी है। पहचान फ़ोटो इसी उपकरण पर ली जाती है; हमारी फाइलों में नहीं जाती।',
+        'आप खाता खोलते हैं, पुनर्प्राप्ति वाक्य इसी फ़ोन पर रखते हैं और अपने स्तर पर ऋण माँगते हैं। 4 LUSD प्रवेश एक बार होता है। ईमेल और फ़ोन खाते, सूचनाओं और यह पुष्टि करने के लिए हैं कि रेखा आपकी है। पहचान फ़ोटो इसी उपकरण पर ली जाती है; हमारी फाइलों में नहीं जाती।',
       ],
       [
         'जो जानकारी हम संभालते हैं',
@@ -168,7 +168,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
       ],
       [
         'यदि भुगतान देर हो',
-        'सुधार की अवधि मिलती है। संपर्कों या धमकी से वसूली नहीं। जब तक चालू नहीं होते, नेटवर्क प्रतिष्ठा प्रभावित रहती है। USDT का मूल्य बदल सकता है और ऊँचे स्तर पर धन न हो।\n\nसहायता: soporte@quatriviumcredit.app',
+        'सुधार की अवधि मिलती है। संपर्कों या धमकी से वसूली नहीं। जब तक चालू नहीं होते, नेटवर्क प्रतिष्ठा प्रभावित रहती है। LUSD का मूल्य बदल सकता है और ऊँचे स्तर पर धन न हो।\n\nसहायता: soporte@quatriviumcredit.app',
       ]
     ),
   },
@@ -176,11 +176,11 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     privacy: sections(
       [
         'من نحن',
-        'Quatrivium Finance دار ائتمان رقمية. نقدّم خطاً بـ USDT على شبكة عامة. لسنا مصرفاً ولا نتلقى ودائع. توضّح هذه السياسة فقط كيف نحمي معلوماتك.',
+        'Quatrivium Finance دار ائتمان رقمية. نقدّم خطاً بـ LUSD على شبكة عامة. لسنا مصرفاً ولا نتلقى ودائع. توضّح هذه السياسة فقط كيف نحمي معلوماتك.',
       ],
       [
         'كيف تعمل التطبيق',
-        'تفتح حسابك وتحفظ عبارة الاسترداد على هذا الهاتف وتطلب الائتمان حسب مستواك. دفع دخول 4 USDT مرة واحدة. البريد والهاتف للحساب والتنبيهات ولتأكيد أن الخط لك. صورة الهوية تُلتقط على هذا الجهاز ولا تُرسل إلى ملفاتنا.',
+        'تفتح حسابك وتحفظ عبارة الاسترداد على هذا الهاتف وتطلب الائتمان حسب مستواك. دفع دخول 4 LUSD مرة واحدة. البريد والهاتف للحساب والتنبيهات ولتأكيد أن الخط لك. صورة الهوية تُلتقط على هذا الجهاز ولا تُرسل إلى ملفاتنا.',
       ],
       [
         'المعلومات التي نعالجها',
@@ -206,7 +206,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
       ],
       [
         'إذا تأخر الدفع',
-        'هناك مهلة للتسوية. لا نحصّل عبر جهات الاتصال ولا بالتهديد. حتى تسوية الحساب تتأثر سمعتك على الشبكة. قد يتغير سعر USDT وقد لا تتوفر أموال لمستوى مرتفع.\n\nالدعم: soporte@quatriviumcredit.app',
+        'هناك مهلة للتسوية. لا نحصّل عبر جهات الاتصال ولا بالتهديد. حتى تسوية الحساب تتأثر سمعتك على الشبكة. قد يتغير سعر LUSD وقد لا تتوفر أموال لمستوى مرتفع.\n\nالدعم: soporte@quatriviumcredit.app',
       ]
     ),
   },
@@ -214,11 +214,11 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     privacy: sections(
       [
         'আমরা কারা',
-        'Quatrivium Finance একটি ডিজিটাল ঋণপ্রতিষ্ঠান। আমরা পাবলিক নেটওয়ার্কে USDT সীমা দিই। আমরা ব্যাংক নই, আমানত নিই না। এই নীতি শুধু আপনার তথ্য কীভাবে রক্ষা করি তা বলে।',
+        'Quatrivium Finance একটি ডিজিটাল ঋণপ্রতিষ্ঠান। আমরা পাবলিক নেটওয়ার্কে LUSD সীমা দিই। আমরা ব্যাংক নই, আমানত নিই না। এই নীতি শুধু আপনার তথ্য কীভাবে রক্ষা করি তা বলে।',
       ],
       [
         'অ্যাপ কীভাবে কাজ করে',
-        'আপনি অ্যাকাউন্ট খুলেন, পুনরুদ্ধার বাক্য এই ফোনে রাখেন এবং স্তর অনুযায়ী ঋণ চান। 4 USDT প্রবেশ একবার। ইমেইল ও ফোন অ্যাকাউন্ট, নোটিশ এবং লাইন আপনার কিনা নিশ্চিত করতে। পরিচয়ের ছবি এই যন্ত্রে তোলা হয়, আমাদের ফাইলে যায় না।',
+        'আপনি অ্যাকাউন্ট খুলেন, পুনরুদ্ধার বাক্য এই ফোনে রাখেন এবং স্তর অনুযায়ী ঋণ চান। 4 LUSD প্রবেশ একবার। ইমেইল ও ফোন অ্যাকাউন্ট, নোটিশ এবং লাইন আপনার কিনা নিশ্চিত করতে। পরিচয়ের ছবি এই যন্ত্রে তোলা হয়, আমাদের ফাইলে যায় না।',
       ],
       [
         'যে তথ্য আমরা ব্যবহার করি',
@@ -244,7 +244,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
       ],
       [
         'পরিশোধ দেরি হলে',
-        'নিয়মিত করার সময় আছে। কন্টাক্ট বা হুমকি দিয়ে আদায় নেই। পরিশোধ না হওয়া পর্যন্ত নেটওয়ার্ক সুনাম ক্ষতিগ্রস্ত। USDT মান বদলাতে পারে, উচ্চ স্তরে তহবিল নাও থাকতে পারে।\n\nসহায়তা: soporte@quatriviumcredit.app',
+        'নিয়মিত করার সময় আছে। কন্টাক্ট বা হুমকি দিয়ে আদায় নেই। পরিশোধ না হওয়া পর্যন্ত নেটওয়ার্ক সুনাম ক্ষতিগ্রস্ত। LUSD মান বদলাতে পারে, উচ্চ স্তরে তহবিল নাও থাকতে পারে।\n\nসহায়তা: soporte@quatriviumcredit.app',
       ]
     ),
   },
@@ -252,11 +252,11 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     privacy: sections(
       [
         'Quem somos',
-        'A Quatrivium Finance opera crédito digital. Oferecemos uma linha em USDT numa rede pública. Não somos um banco nem recebemos depósitos. Esta política explica apenas como cuidamos da sua informação.',
+        'A Quatrivium Finance opera crédito digital. Oferecemos uma linha em LUSD numa rede pública. Não somos um banco nem recebemos depósitos. Esta política explica apenas como cuidamos da sua informação.',
       ],
       [
         'Como trabalha a aplicação',
-        'Abre a conta, guarda a frase de recuperação neste telefone e pede crédito segundo o seu nível. O acesso de 4 USDT paga-se uma vez. O correio e o telefone servem a conta, os avisos e a confirmar que a linha é sua. A foto do documento fica neste telefone; não vai para os nossos ficheiros.',
+        'Abre a conta, guarda a frase de recuperação neste telefone e pede crédito segundo o seu nível. O acesso de 4 LUSD paga-se uma vez. O correio e o telefone servem a conta, os avisos e a confirmar que a linha é sua. A foto do documento fica neste telefone; não vai para os nossos ficheiros.',
       ],
       [
         'Informação que tratamos',
@@ -282,7 +282,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
       ],
       [
         'Se o pagamento se atrasa',
-        'Há um período para regularizar. Não cobramos pelos contactos nem com ameaças. Até estar em dia, a reputação na rede é afetada. O valor do USDT pode variar e um nível alto pode não ter fundos.\n\nApoio: soporte@quatriviumcredit.app',
+        'Há um período para regularizar. Não cobramos pelos contactos nem com ameaças. Até estar em dia, a reputação na rede é afetada. O valor do LUSD pode variar e um nível alto pode não ter fundos.\n\nApoio: soporte@quatriviumcredit.app',
       ]
     ),
   },
@@ -290,11 +290,11 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     privacy: sections(
       [
         'Кто мы',
-        'Quatrivium Finance — оператор цифрового кредита. Мы даём линию в USDT в открытой сети. Мы не банк и не принимаем вклады. Эта политика объясняет лишь, как мы бережём ваши сведения.',
+        'Quatrivium Finance — оператор цифрового кредита. Мы даём линию в LUSD в открытой сети. Мы не банк и не принимаем вклады. Эта политика объясняет лишь, как мы бережём ваши сведения.',
       ],
       [
         'Как работает приложение',
-        'Вы открываете счёт, храните фразу восстановления на этом телефоне и запрашиваете кредит по своему уровню. Плата за доступ 4 USDT вносится один раз. Почта и телефон нужны для счёта, уведомлений и подтверждения, что линия ваша. Фото документа делается на устройстве и не уходит в наши файлы.',
+        'Вы открываете счёт, храните фразу восстановления на этом телефоне и запрашиваете кредит по своему уровню. Плата за доступ 4 LUSD вносится один раз. Почта и телефон нужны для счёта, уведомлений и подтверждения, что линия ваша. Фото документа делается на устройстве и не уходит в наши файлы.',
       ],
       [
         'Какие сведения мы обрабатываем',
@@ -320,7 +320,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
       ],
       [
         'Если платёж задержан',
-        'Есть срок, чтобы погасить. Мы не взыскиваем через контакты и не угрожаем. Пока долг открыт, сетевая репутация страдает. Курс USDT может измениться, на высокий уровень может не хватить средств.\n\nПоддержка: soporte@quatriviumcredit.app',
+        'Есть срок, чтобы погасить. Мы не взыскиваем через контакты и не угрожаем. Пока долг открыт, сетевая репутация страдает. Курс LUSD может измениться, на высокий уровень может не хватить средств.\n\nПоддержка: soporte@quatriviumcredit.app',
       ]
     ),
   },
@@ -328,11 +328,11 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     privacy: sections(
       [
         'ہم کون ہیں',
-        'Quatrivium Finance ایک ڈیجیٹل قرض ادارہ ہے۔ ہم عوامی نیٹ ورک پر USDT لائن دیتے ہیں۔ ہم بینک نہیں اور جمعہ نہیں لیتے۔ یہ پالیسی صرف یہ بتاتی ہے کہ آپ کی معلومات کیسے سنبھالتے ہیں۔',
+        'Quatrivium Finance ایک ڈیجیٹل قرض ادارہ ہے۔ ہم عوامی نیٹ ورک پر LUSD لائن دیتے ہیں۔ ہم بینک نہیں اور جمعہ نہیں لیتے۔ یہ پالیسی صرف یہ بتاتی ہے کہ آپ کی معلومات کیسے سنبھالتے ہیں۔',
       ],
       [
         'ایپ کیسے کام کرتی ہے',
-        'آپ اکاؤنٹ کھولتے ہیں، بحالی کا جملہ اسی فون پر رکھتے ہیں اور اپنے درجے پر قرض مانگتے ہیں۔ 4 USDT رسائی ایک بار ادا ہوتی ہے۔ ای میل اور فون اکاؤنٹ، نوٹس اور یہ تصدیق کہ لائن آپ کی ہے۔ شناختی تصویر اسی آلے پر لی جاتی ہے، ہماری فائلوں میں نہیں جاتی۔',
+        'آپ اکاؤنٹ کھولتے ہیں، بحالی کا جملہ اسی فون پر رکھتے ہیں اور اپنے درجے پر قرض مانگتے ہیں۔ 4 LUSD رسائی ایک بار ادا ہوتی ہے۔ ای میل اور فون اکاؤنٹ، نوٹس اور یہ تصدیق کہ لائن آپ کی ہے۔ شناختی تصویر اسی آلے پر لی جاتی ہے، ہماری فائلوں میں نہیں جاتی۔',
       ],
       [
         'جو معلومات ہم سنبھالتے ہیں',
@@ -358,7 +358,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
       ],
       [
         'اگر ادائیگی دیر ہو',
-        'درست کرنے کا وقت ہے۔ رابطوں یا دھمکی سے وصولی نہیں۔ جب تک حساب صاف نہ ہو، نیٹ ورک شہرت متاثر رہتی ہے۔ USDT کی قیمت بدل سکتی ہے اور اونچے درجے پر فنڈ نہ ہو۔\n\nمدد: soporte@quatriviumcredit.app',
+        'درست کرنے کا وقت ہے۔ رابطوں یا دھمکی سے وصولی نہیں۔ جب تک حساب صاف نہ ہو، نیٹ ورک شہرت متاثر رہتی ہے۔ LUSD کی قیمت بدل سکتی ہے اور اونچے درجے پر فنڈ نہ ہو۔\n\nمدد: soporte@quatriviumcredit.app',
       ]
     ),
   },
@@ -366,11 +366,11 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     privacy: sections(
       [
         'Siapa kami',
-        'Quatrivium Finance adalah rumah kredit digital. Kami menawarkan jalur USDT di jaringan publik. Kami bukan bank dan tidak menerima simpanan. Kebijakan ini hanya menjelaskan cara kami menjaga informasi Anda.',
+        'Quatrivium Finance adalah rumah kredit digital. Kami menawarkan jalur LUSD di jaringan publik. Kami bukan bank dan tidak menerima simpanan. Kebijakan ini hanya menjelaskan cara kami menjaga informasi Anda.',
       ],
       [
         'Cara kerja aplikasi',
-        'Anda membuka akun, menyimpan frasa pemulihan di ponsel ini, dan mengajukan kredit sesuai tingkat. Pembayaran akses 4 USDT sekali. Email dan telepon untuk akun, pemberitahuan, dan memastikan jalur itu milik Anda. Foto identitas diambil di perangkat ini; tidak dikirim ke berkas kami.',
+        'Anda membuka akun, menyimpan frasa pemulihan di ponsel ini, dan mengajukan kredit sesuai tingkat. Pembayaran akses 4 LUSD sekali. Email dan telepon untuk akun, pemberitahuan, dan memastikan jalur itu milik Anda. Foto identitas diambil di perangkat ini; tidak dikirim ke berkas kami.',
       ],
       [
         'Informasi yang kami kelola',
@@ -396,7 +396,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
       ],
       [
         'Jika pembayaran terlambat',
-        'Ada masa untuk menuntaskan. Kami tidak menagih lewat kontak atau ancaman. Hingga lunas, reputasi di jaringan terpengaruh. Nilai USDT dapat berubah dan tingkat tinggi mungkin tidak berdana.\n\nDukungan: soporte@quatriviumcredit.app',
+        'Ada masa untuk menuntaskan. Kami tidak menagih lewat kontak atau ancaman. Hingga lunas, reputasi di jaringan terpengaruh. Nilai LUSD dapat berubah dan tingkat tinggi mungkin tidak berdana.\n\nDukungan: soporte@quatriviumcredit.app',
       ]
     ),
   },
@@ -404,11 +404,11 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     privacy: sections(
       [
         'Qui nous sommes',
-        'Quatrivium Finance est une maison de crédit numérique. Nous offrons une ligne en USDT sur un réseau public. Nous ne sommes pas une banque et n’acceptons pas de dépôts. Cette politique explique seulement comment nous protégeons vos informations.',
+        'Quatrivium Finance est une maison de crédit numérique. Nous offrons une ligne en LUSD sur un réseau public. Nous ne sommes pas une banque et n’acceptons pas de dépôts. Cette politique explique seulement comment nous protégeons vos informations.',
       ],
       [
         'Comment l’application travaille',
-        'Vous ouvrez votre compte, conservez la phrase de reprise sur ce téléphone et demandez un crédit selon votre niveau. L’accès de 4 USDT se paie une fois. L’e-mail et le téléphone servent le compte, les avis et à confirmer que la ligne est la vôtre. La photo d’identité est prise sur ce téléphone ; elle n’est pas envoyée dans nos dossiers.',
+        'Vous ouvrez votre compte, conservez la phrase de reprise sur ce téléphone et demandez un crédit selon votre niveau. L’accès de 4 LUSD se paie une fois. L’e-mail et le téléphone servent le compte, les avis et à confirmer que la ligne est la vôtre. La photo d’identité est prise sur ce téléphone ; elle n’est pas envoyée dans nos dossiers.',
       ],
       [
         'Informations que nous traitons',
@@ -434,7 +434,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
       ],
       [
         'Si le paiement retarde',
-        'Il existe un délai pour régulariser. Nous ne recouvrons pas par vos contacts ni par menaces. Tant que le compte n’est pas à jour, la réputation sur le réseau est affectée. La valeur de l’USDT peut varier et un niveau élevé peut manquer de fonds.\n\nAssistance : soporte@quatriviumcredit.app',
+        'Il existe un délai pour régulariser. Nous ne recouvrons pas par vos contacts ni par menaces. Tant que le compte n’est pas à jour, la réputation sur le réseau est affectée. La valeur de l’LUSD peut varier et un niveau élevé peut manquer de fonds.\n\nAssistance : soporte@quatriviumcredit.app',
       ]
     ),
   },
@@ -442,11 +442,11 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     privacy: sections(
       [
         '私たちについて',
-        'Quatrivium Finance はデジタル与信を運営します。公開ネットワーク上で USDT の枠を提供します。銀行ではなく、預金は扱いません。本方針は情報の守り方のみを説明します。',
+        'Quatrivium Finance はデジタル与信を運営します。公開ネットワーク上で LUSD の枠を提供します。銀行ではなく、預金は扱いません。本方針は情報の守り方のみを説明します。',
       ],
       [
         'アプリの働き',
-        '口座を開き、復旧フレーズをこの端末に保管し、等級に応じて与信を申込みます。4 USDT の入場は一度だけです。メールと電話は口座・通知・回線の確認に使います。身分証の写真はこの端末で撮り、当社のファイルには送りません。',
+        '口座を開き、復旧フレーズをこの端末に保管し、等級に応じて与信を申込みます。4 LUSD の入場は一度だけです。メールと電話は口座・通知・回線の確認に使います。身分証の写真はこの端末で撮り、当社のファイルには送りません。',
       ],
       [
         '取り扱う情報',
@@ -472,7 +472,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
       ],
       [
         '支払が遅れた場合',
-        '是正の期間があります。連絡先や脅迫による取立てはありません。完済までネットワーク上の評価は影響を受けます。USDT の価値は変動し、高い等級に資金が無い場合があります。\n\nサポート: soporte@quatriviumcredit.app',
+        '是正の期間があります。連絡先や脅迫による取立てはありません。完済までネットワーク上の評価は影響を受けます。LUSD の価値は変動し、高い等級に資金が無い場合があります。\n\nサポート: soporte@quatriviumcredit.app',
       ]
     ),
   },
@@ -480,11 +480,11 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     privacy: sections(
       [
         'Wer wir sind',
-        'Quatrivium Finance betreibt digitalen Kredit. Wir bieten eine USDT-Linie in einem öffentlichen Netz. Wir sind keine Bank und nehmen keine Einlagen. Diese Richtlinie erklärt nur, wie wir Ihre Angaben schützen.',
+        'Quatrivium Finance betreibt digitalen Kredit. Wir bieten eine LUSD-Linie in einem öffentlichen Netz. Wir sind keine Bank und nehmen keine Einlagen. Diese Richtlinie erklärt nur, wie wir Ihre Angaben schützen.',
       ],
       [
         'Wie die Anwendung arbeitet',
-        'Sie eröffnen Ihr Konto, bewahren die Wiederherstellungsphrase auf diesem Telefon und beantragen Kredit nach Ihrem Niveau. Die Zugangsgebühr von 4 USDT fällt einmal an. E-Mail und Telefon dienen Konto, Hinweisen und der Bestätigung, dass die Linie Ihnen gehört. Das Ausweisfoto entsteht auf diesem Gerät und geht nicht in unsere Akten.',
+        'Sie eröffnen Ihr Konto, bewahren die Wiederherstellungsphrase auf diesem Telefon und beantragen Kredit nach Ihrem Niveau. Die Zugangsgebühr von 4 LUSD fällt einmal an. E-Mail und Telefon dienen Konto, Hinweisen und der Bestätigung, dass die Linie Ihnen gehört. Das Ausweisfoto entsteht auf diesem Gerät und geht nicht in unsere Akten.',
       ],
       [
         'Angaben, die wir verarbeiten',
@@ -510,7 +510,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
       ],
       [
         'Wenn die Zahlung spät ist',
-        'Es gibt eine Frist zum Ausgleich. Wir ziehen nicht über Kontakte ein und drohen nicht. Bis Sie aktuell sind, leidet der Ruf im Netz. Der USDT-Wert kann schwanken, eine hohe Stufe kann ohne Mittel sein.\n\nSupport: soporte@quatriviumcredit.app',
+        'Es gibt eine Frist zum Ausgleich. Wir ziehen nicht über Kontakte ein und drohen nicht. Bis Sie aktuell sind, leidet der Ruf im Netz. Der LUSD-Wert kann schwanken, eine hohe Stufe kann ohne Mittel sein.\n\nSupport: soporte@quatriviumcredit.app',
       ]
     ),
   },
@@ -518,11 +518,11 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     privacy: sections(
       [
         '우리는 누구인가',
-        'Quatrivium Finance는 디지털 신용을 운영합니다. 공개 네트워크에서 USDT 한도를 제공합니다. 은행이 아니며 예금을 받지 않습니다. 이 방침은 정보 보호 방식만 설명합니다.',
+        'Quatrivium Finance는 디지털 신용을 운영합니다. 공개 네트워크에서 LUSD 한도를 제공합니다. 은행이 아니며 예금을 받지 않습니다. 이 방침은 정보 보호 방식만 설명합니다.',
       ],
       [
         '앱이 일하는 방식',
-        '계정을 열고 복구 구문을 이 휴대폰에 두며 등급에 따라 신용을 신청합니다. 4 USDT 입장은 한 번입니다. 이메일과 전화는 계정, 알림, 회선 확인에 씁니다. 신분증 사진은 이 기기에서 찍으며 당사 파일로 보내지 않습니다.',
+        '계정을 열고 복구 구문을 이 휴대폰에 두며 등급에 따라 신용을 신청합니다. 4 LUSD 입장은 한 번입니다. 이메일과 전화는 계정, 알림, 회선 확인에 씁니다. 신분증 사진은 이 기기에서 찍으며 당사 파일로 보내지 않습니다.',
       ],
       [
         '다루는 정보',
@@ -548,7 +548,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
       ],
       [
         '납부가 늦을 때',
-        '정리할 기간이 있습니다. 연락처나 위협으로 추심하지 않습니다. 정산 전까지 네트워크 평판이 영향을 받습니다. USDT 가치는 변할 수 있고 높은 등급에 자금이 없을 수 있습니다.\n\n지원: soporte@quatriviumcredit.app',
+        '정리할 기간이 있습니다. 연락처나 위협으로 추심하지 않습니다. 정산 전까지 네트워크 평판이 영향을 받습니다. LUSD 가치는 변할 수 있고 높은 등급에 자금이 없을 수 있습니다.\n\n지원: soporte@quatriviumcredit.app',
       ]
     ),
   },
@@ -556,11 +556,11 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     privacy: sections(
       [
         'Kimiz',
-        'Quatrivium Finance dijital kredi hizmeti sunar. Kamuya açık ağda USDT hattı sunarız. Banka değiliz, mevduat almayız. Bu politika yalnızca bilgilerinizi nasıl koruduğumuzu anlatır.',
+        'Quatrivium Finance dijital kredi hizmeti sunar. Kamuya açık ağda LUSD hattı sunarız. Banka değiliz, mevduat almayız. Bu politika yalnızca bilgilerinizi nasıl koruduğumuzu anlatır.',
       ],
       [
         'Uygulama nasıl çalışır',
-        'Hesabınızı açar, kurtarma cümlesini bu telefonda tutar ve düzeyinize göre kredi istersiniz. 4 USDT erişim bir kez ödenir. E-posta ve telefon hesap, bildirim ve hattın size ait olduğunu doğrulamak içindir. Kimlik fotoğrafı bu cihazda çekilir; dosyalarımıza gönderilmez.',
+        'Hesabınızı açar, kurtarma cümlesini bu telefonda tutar ve düzeyinize göre kredi istersiniz. 4 LUSD erişim bir kez ödenir. E-posta ve telefon hesap, bildirim ve hattın size ait olduğunu doğrulamak içindir. Kimlik fotoğrafı bu cihazda çekilir; dosyalarımıza gönderilmez.',
       ],
       [
         'İşlediğimiz bilgi',
@@ -586,7 +586,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
       ],
       [
         'Ödeme gecikirse',
-        'Düzeltmek için bir süre vardır. Rehberden veya tehditle tahsilat yapmayız. Güncel olana dek ağ itibarı etkilenir. USDT değeri değişebilir ve yüksek düzeyde fon olmayabilir.\n\nDestek: soporte@quatriviumcredit.app',
+        'Düzeltmek için bir süre vardır. Rehberden veya tehditle tahsilat yapmayız. Güncel olana dek ağ itibarı etkilenir. LUSD değeri değişebilir ve yüksek düzeyde fon olmayabilir.\n\nDestek: soporte@quatriviumcredit.app',
       ]
     ),
   },
@@ -594,11 +594,11 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     privacy: sections(
       [
         'Chúng tôi là ai',
-        'Quatrivium Finance vận hành tín dụng số. Chúng tôi cung cấp hạn mức USDT trên mạng công khai. Chúng tôi không phải ngân hàng và không nhận tiền gửi. Chính sách này chỉ giải thích cách chúng tôi bảo vệ thông tin của bạn.',
+        'Quatrivium Finance vận hành tín dụng số. Chúng tôi cung cấp hạn mức LUSD trên mạng công khai. Chúng tôi không phải ngân hàng và không nhận tiền gửi. Chính sách này chỉ giải thích cách chúng tôi bảo vệ thông tin của bạn.',
       ],
       [
         'Ứng dụng làm việc thế nào',
-        'Bạn mở tài khoản, giữ cụm khôi phục trên điện thoại này và xin tín dụng theo cấp. Phí vào 4 USDT trả một lần. Email và điện thoại phục vụ tài khoản, thông báo và xác nhận đường dây là của bạn. Ảnh giấy tờ chụp trên máy này, không gửi vào hồ sơ của chúng tôi.',
+        'Bạn mở tài khoản, giữ cụm khôi phục trên điện thoại này và xin tín dụng theo cấp. Phí vào 4 LUSD trả một lần. Email và điện thoại phục vụ tài khoản, thông báo và xác nhận đường dây là của bạn. Ảnh giấy tờ chụp trên máy này, không gửi vào hồ sơ của chúng tôi.',
       ],
       [
         'Thông tin chúng tôi xử lý',
@@ -624,7 +624,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
       ],
       [
         'Nếu thanh toán chậm',
-        'Có thời gian để hoàn tất. Chúng tôi không đòi qua danh bạ hay đe dọa. Khi chưa xong, uy tín trên mạng bị ảnh hưởng. Giá USDT có thể đổi và cấp cao có thể không có quỹ.\n\nHỗ trợ: soporte@quatriviumcredit.app',
+        'Có thời gian để hoàn tất. Chúng tôi không đòi qua danh bạ hay đe dọa. Khi chưa xong, uy tín trên mạng bị ảnh hưởng. Giá LUSD có thể đổi và cấp cao có thể không có quỹ.\n\nHỗ trợ: soporte@quatriviumcredit.app',
       ]
     ),
   },
@@ -632,11 +632,11 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     privacy: sections(
       [
         'Chi siamo',
-        'Quatrivium Finance opera credito digitale. Offriamo una linea in USDT su una rete pubblica. Non siamo una banca e non raccogliamo depositi. Questa informativa spiega soltanto come custodiamo le sue informazioni.',
+        'Quatrivium Finance opera credito digitale. Offriamo una linea in LUSD su una rete pubblica. Non siamo una banca e non raccogliamo depositi. Questa informativa spiega soltanto come custodiamo le sue informazioni.',
       ],
       [
         'Come lavora l’applicazione',
-        'Apre il conto, conserva la frase di ripristino su questo telefono e chiede credito secondo il livello. L’accesso di 4 USDT si paga una volta. Posta e telefono servono il conto, gli avvisi e a confermare che la linea è sua. La foto del documento resta su questo dispositivo; non va nei nostri fascicoli.',
+        'Apre il conto, conserva la frase di ripristino su questo telefono e chiede credito secondo il livello. L’accesso di 4 LUSD si paga una volta. Posta e telefono servono il conto, gli avvisi e a confermare che la linea è sua. La foto del documento resta su questo dispositivo; non va nei nostri fascicoli.',
       ],
       [
         'Informazioni che trattiamo',
@@ -662,7 +662,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
       ],
       [
         'Se il pagamento ritarda',
-        'C’è un periodo per regolarizzare. Non riscuotiamo tramite i contatti né con minacce. Finché non è in regola, la reputazione in rete ne risente. Il valore di USDT può variare e un livello alto può restare senza fondi.\n\nAssistenza: soporte@quatriviumcredit.app',
+        'C’è un periodo per regolarizzare. Non riscuotiamo tramite i contatti né con minacce. Finché non è in regola, la reputazione in rete ne risente. Il valore di LUSD può variare e un livello alto può restare senza fondi.\n\nAssistenza: soporte@quatriviumcredit.app',
       ]
     ),
   },

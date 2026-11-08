@@ -25,7 +25,7 @@ describe('brand splash and institutional copy', function () {
 
   it('keeps user-facing Spanish in usted and without padrino', function () {
     const es = JSON.parse(fs.readFileSync(path.join(root, 'i18n', 'locales', 'es.json'), 'utf8'));
-    expect(es.splashTagline).to.match(/BNB Smart Chain/);
+    expect(es.splashTagline).to.match(/Arbitrum One/);
     expect(es.sectionPoolLead).to.match(/su saldo/);
     expect(es.sectionPoolLead).to.not.match(/\btu saldo\b/i);
     expect(es.poolPublicLead).to.match(/no se (puede )?retirar/i);

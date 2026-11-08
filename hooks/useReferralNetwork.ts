@@ -8,11 +8,11 @@ import {
 const EMPTY: ReferralNetworkSnapshot = {
   directs: [],
   totalEarnedWei: '0',
-  totalEarnedLabel: '0.00 USDT',
+  totalEarnedLabel: '0.00 LUSD',
   commissionTotalWei: '0',
-  commissionTotalLabel: '0.00 USDT',
+  commissionTotalLabel: '0.00 LUSD',
   bonusTotalWei: '0',
-  bonusTotalLabel: '0.00 USDT',
+  bonusTotalLabel: '0.00 LUSD',
   activity: [],
   partial: false,
 };

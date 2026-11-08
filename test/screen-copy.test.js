@@ -47,13 +47,13 @@ describe('copy de pantallas clave', function () {
     expect(splash).to.include('FINANCE');
     const es = locale('es');
     const en = locale('en');
-    expect(es.splashTagline).to.match(/BNB Smart Chain/);
-    expect(en.splashTagline).to.match(/BNB Smart Chain/);
+    expect(es.splashTagline).to.match(/Arbitrum One/);
+    expect(en.splashTagline).to.match(/Arbitrum One/);
     expect(es.splashTagline).to.not.match(OBSOLETE);
     expect(en.splashTagline).to.not.match(OBSOLETE);
   });
 
-  it('el alta en pantalla dice 4 USDT y usa esas claves', function () {
+  it('el alta en pantalla dice 4 LUSD y usa esas claves', function () {
     const gate = read('components/CreditAccessGate.tsx');
     const banner = read('components/CreditAccessBanner.tsx');
     const home = read('app/index.tsx');
@@ -73,8 +73,8 @@ describe('copy de pantallas clave', function () {
         'creditAccessAlreadyInWallet',
         'identityNeedAccess',
       ]) {
-        expect(copy[key], `${lang}.${key}`).to.match(/4\s*-?\s*USDT/);
-        expect(copy[key], `${lang}.${key}`).to.not.match(/\b[12]\s*-?\s*USDT\b/);
+        expect(copy[key], `${lang}.${key}`).to.match(/4\s*-?\s*LUSD/);
+        expect(copy[key], `${lang}.${key}`).to.not.match(/\b[12]\s*-?\s*LUSD\b/);
       }
     }
   });

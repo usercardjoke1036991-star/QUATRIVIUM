@@ -1,21 +1,18 @@
 /**
- * Rellena lo que se puede sin VPS y sin deploy de mainnet.
- * No pone CHAIN_ID=56 ni CONFIRM_MAINNET=yes en el .env del teléfono.
+ * Prepara la configuración local soberana sin servidores Web2 y sin desplegar en mainnet.
+ * No pone CHAIN_ID=42161 ni CONFIRM_MAINNET=yes en el .env de desarrollo.
  */
-import { randomBytes } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { Wallet } from 'ethers';
 
 const root = resolve(process.cwd());
 const envPath = resolve(root, '.env');
-const workerPath = resolve(root, '.env.worker');
 const STALE_MAINNET = '0xa6aac9ce4923789a4095fbc0504db9a697f8a46d';
 const STALE_TESTNET = '0x1E5118B378c7BCB3F3c5de7ec046B93E60f417a3';
 const ZERO = '0x0000000000000000000000000000000000000000';
 const TESTNET_CONTRACT = '0xD318f39834A5e798a11D2535c6c9D1E1270e6778';
 const INVITE = 'https://quatriviumcredit.app';
-const PLAY = 'https://play.google.com/store/apps/details?id=com.quatrivium.credit';
 
 function addressFromPrivateKey(raw) {
   const hex = String(raw || '')
@@ -76,15 +73,21 @@ function upsert(filePath, key, value) {
 const env = loadMap(envPath);
 const done = [];
 
-if (env.EXPO_PUBLIC_CHAIN_ID && env.EXPO_PUBLIC_CHAIN_ID !== '97') {
-  console.error('Abortado: EXPO_PUBLIC_CHAIN_ID local no es 97. No se toca el .env.');
+if (
+  env.EXPO_PUBLIC_CHAIN_ID &&
+  env.EXPO_PUBLIC_CHAIN_ID !== '421614' &&
+  env.EXPO_PUBLIC_CHAIN_ID !== '97'
+) {
+  console.error(
+    'Abortado: EXPO_PUBLIC_CHAIN_ID local no es de testnet (421614 / 97). No se toca el .env.'
+  );
   process.exit(1);
 }
 
 const mainnet = (env.EXPO_PUBLIC_CONTRACT_ADDRESS_MAINNET || '').toLowerCase();
 if (!mainnet || mainnet === STALE_MAINNET) {
   upsert(envPath, 'EXPO_PUBLIC_CONTRACT_ADDRESS_MAINNET', ZERO);
-  done.push('Contrato mainnet viejo anulado (0x000… hasta el deploy nuevo)');
+  done.push('Contrato mainnet viejo anulado (0x000… hasta el deploy nuevo en Arbitrum One)');
 }
 
 const testnetNow = (env.EXPO_PUBLIC_CONTRACT_ADDRESS_TESTNET || '').toLowerCase();
@@ -123,65 +126,7 @@ if (!env.FEE_COLLECTOR && env.EXPO_PUBLIC_FEE_COLLECTOR) {
 
 if (!env.EXPO_PUBLIC_INVITE_WEB_BASE) {
   upsert(envPath, 'EXPO_PUBLIC_INVITE_WEB_BASE', INVITE);
-  done.push('Dominio de invitaciones');
-}
-
-if (!env.EXPO_PUBLIC_PLAY_STORE_URL) {
-  upsert(envPath, 'EXPO_PUBLIC_PLAY_STORE_URL', PLAY);
-  done.push('URL de Play Store');
-}
-
-let dataKey = env.NOTIFY_DATA_KEY || '';
-if (dataKey.length < 16) {
-  dataKey = randomBytes(24).toString('hex');
-  upsert(envPath, 'NOTIFY_DATA_KEY', dataKey);
-  done.push('NOTIFY_DATA_KEY generado (no se imprime)');
-}
-
-const workerLines = [
-  '# Generado por npm run production:prepare. No subir a git.',
-  '# Arranque: npm run notify:prod',
-  '',
-  'EXPO_PUBLIC_CHAIN_ID=56',
-  `EXPO_PUBLIC_CONTRACT_ADDRESS_MAINNET=${ZERO}`,
-  `BSC_MAINNET_RPC_URL=${env.BSC_MAINNET_RPC_URL || 'https://bsc-dataseed.binance.org/'}`,
-  '',
-  'NOTIFY_BIND=127.0.0.1',
-  'NOTIFY_PORT=8787',
-  'NOTIFY_CORS_ORIGIN=https://quatriviumcredit.app',
-  `NOTIFY_DATA_KEY=${dataKey}`,
-  '',
-  '# Ponga aquí la URL HTTPS pública cuando tenga el VPS o el túnel.',
-  'EXPO_PUBLIC_NOTIFY_API=',
-  '',
-  'TEXTBELT_API_KEY=',
-  'TEXTBELT_SENDER=Quatrivium',
-  'TWILIO_ACCOUNT_SID=',
-  'TWILIO_AUTH_TOKEN=',
-  'TWILIO_FROM=',
-  'WHATSAPP_TOKEN=',
-  'WHATSAPP_PHONE_NUMBER_ID=',
-  '',
-  'ATTESTER_PRIVATE_KEY=',
-  '',
-];
-
-if (!existsSync(workerPath)) {
-  writeFileSync(workerPath, workerLines.join('\n'), 'utf8');
-  done.push('Creado .env.worker (mainnet, gitignored)');
-} else {
-  const worker = loadMap(workerPath);
-  if ((worker.NOTIFY_DATA_KEY || '').length < 16) {
-    upsert(workerPath, 'NOTIFY_DATA_KEY', dataKey);
-    done.push('NOTIFY_DATA_KEY copiado a .env.worker');
-  }
-  if ((worker.NOTIFY_CORS_ORIGIN || '') === '*' || !worker.NOTIFY_CORS_ORIGIN) {
-    upsert(workerPath, 'NOTIFY_CORS_ORIGIN', 'https://quatriviumcredit.app');
-    done.push('CORS de worker limitado al dominio');
-  }
-  if (!worker.EXPO_PUBLIC_CHAIN_ID) {
-    upsert(workerPath, 'EXPO_PUBLIC_CHAIN_ID', '56');
-  }
+  done.push('Dominio del portal web de invitaciones y descarga directa de APK');
 }
 
 const wc = env.EXPO_PUBLIC_WALLETCONNECT_PROJECT_ID || '';
@@ -202,7 +147,7 @@ if (wc && wc.length >= 16 && !/^your_/i.test(wc)) {
   }
 }
 
-console.log('production:prepare');
+console.log('production:prepare (100% soberano — sin worker ni servidores Web2)');
 for (const line of done) console.log('- ' + line);
 if (!done.length) console.log('- Nada que cambiar');
 console.log('\nNo se desplegó mainnet. No se tocó EXPO_PUBLIC_CHAIN_ID local.');

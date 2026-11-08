@@ -2460,7 +2460,7 @@ describe('account entry — password, email and session', () => {
     expect(es.reservaCommissionLead).to.match(/generacional/);
     expect(es.reservaBoostComision).to.include('10%');
     expect(es.reservaBoostComision).to.include('20%');
-    expect(es.reservaMonto).to.include('1 USDT');
+    expect(es.reservaMonto).to.include('1 LUSD');
     expect(es.hubReservaLeadLocked).to.equal('Operativa a partir del nivel 10.');
     expect(es.hubReservaLeadLocked.toLowerCase()).to.not.include('visible');
     expect(es.supportDonateBenefit).to.include('{points}');
@@ -2600,7 +2600,7 @@ describe('account entry — password, email and session', () => {
     const read = (...parts) => fs.readFileSync(path.join(__dirname, '..', ...parts), 'utf8');
     const es = JSON.parse(read('i18n', 'locales', 'es.json'));
     const en = JSON.parse(read('i18n', 'locales', 'en.json'));
-    expect(es.referralRepLead).to.include('1 USDT');
+    expect(es.referralRepLead).to.include('1 LUSD');
     expect(es.referralRepLead).to.not.include('generación 2');
     expect(es.rachaLead).to.include('invitado directo');
     expect(es.rachaLead).to.not.include('registrarse, pedir');

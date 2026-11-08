@@ -87,9 +87,9 @@ export const WalletSection: React.FC<WalletSectionProps> = ({
             {t('bnbBalance')}
           </AppText>
           <View style={styles.bnbRow}>
-            <TokenLogo symbol="BNB" size={16} />
+            <TokenLogo symbol="ETH" size={16} />
             <AppText style={[styles.balanceValue, { color: colors.connect }]}>
-              {bnbBalance} BNB
+              {bnbBalance} ETH
             </AppText>
           </View>
         </View>
