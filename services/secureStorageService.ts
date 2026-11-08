@@ -407,7 +407,7 @@ export class SecureStorageService {
         try {
           const backupData = JSON.parse(backupJson);
           lastBackupTimestamp = backupData.timestamp;
-        } catch (error) {
+        } catch {
           // Ignorar error de parsing
         }
       }

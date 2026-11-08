@@ -1243,5 +1243,15 @@
   "telegramConfirmBody": "{name} möchte die Hinweise dieses Kontos. Bestätigen Sie nur, wenn es Ihres ist.",
   "telegramConfirmAccept": "Das ist meins",
   "telegramConfirmReject": "Nicht verknüpfen",
-  "telegramOfferPending": "Aktivieren Sie die Systembenachrichtigungen auf Ihrem Gerät und kehren Sie zurück."
+  "telegramOfferPending": "Aktivieren Sie die Systembenachrichtigungen auf Ihrem Gerät und kehren Sie zurück.",
+  "altaSplitNote": "Von 4 LUSD gehen 1 LUSD an den Gründer und der Rest in den Pool.",
+  "loanFounderShare": "15 % der Zinsen jeder Zahlung gehen an den Gründer.",
+  "loanInsuranceShare": "5 % dessen, was in den Pool kommt, geht in den Sicherungsfonds und niemand hebt es ab.",
+  "loanSequencerGrace": "Die Liquidation wartet 48 Stunden. Fällt Arbitrum aus, wird niemand liquidiert.",
+  "reservaPotDepends": "Der Ertrag hängt vom Topf ab und bleibt bei höchstens 12 % im Jahr. Das Kapital kommt immer zurück.",
+  "apkHashMismatch": "Diese Fassung stimmt nicht mit dem Hash im Netz überein.",
+  "adminStatusLead": "Pause, 72 Stunden Wartezeit und die drei Geldbörsen werden aus dem Netz gelesen.",
+  "adminPauseOn": "Die Pause für neue Kredite ist aktiv.",
+  "adminPauseOff": "Neue Kredite sind nicht pausiert.",
+  "adminTimelockHours": "Admin-Änderungen warten {hours} Stunden."
 }

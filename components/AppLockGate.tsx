@@ -191,7 +191,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
   const [recoverEmail, setRecoverEmail] = useState('');
   const [recoverCode, setRecoverCode] = useState('');
   const [recoverSent, setRecoverSent] = useState(false);
-  const [recoverDayLocked, _setRecoverDayLocked] = useState(false);
+  const [recoverDayLocked] = useState(false);
   const recoverWait = 0;
   const [sessionReady, setSessionReady] = useState(false);
   const [askingSignIn, setAskingSignIn] = useState(false);
@@ -458,6 +458,8 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
     }
     setReady(true);
     setLockMs(await getPinLockRemaining());
+    // startMethodQueue se crea en cada render; incluirlo reabriría el desbloqueo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const beginPasswordSetup = async (pinValue: string) => {
@@ -622,6 +624,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
     };
     const sub = AppState.addEventListener('change', onChange);
     return () => sub.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

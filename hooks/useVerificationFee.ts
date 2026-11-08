@@ -18,7 +18,7 @@ export function useVerificationFee(kind: VerificationFeeKind) {
   const { t } = useI18n();
   const { mode } = useAppMode();
   const { address } = useAppWallet();
-  const token = useMemo(() => getSupportedTokens()[0], [mode]);
+  const token = useMemo(() => getSupportedTokens(mode === 'demo')[0], [mode]);
   const { userInfo, balances, refetch } = useWeb3Balances(address, token);
   const { address: adminAddress, isConnected: adminConnected } = useAccount();
   const { provider: adminProvider } = useProvider();

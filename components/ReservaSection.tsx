@@ -166,6 +166,7 @@ export function ReservaSection({
     <View style={styles.stack}>
       <AppSubsection title={t('reservaTitle')} defaultOpen icon="lock">
         <AppText style={[styles.lead, { color: colors.text }]}>{t('reservaLead')}</AppText>
+        <AppText style={[styles.lead, { color: colors.text }]}>{t('reservaPotDepends')}</AppText>
         <AppText style={[styles.meta, { color: colors.textMuted }]}>{t('reservaLockOnce')}</AppText>
         <AppText style={[styles.lead, { color: colors.text }]}>
           {t('reservaCommissionLead')}

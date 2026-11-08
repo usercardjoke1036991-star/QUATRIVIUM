@@ -36,7 +36,7 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       'Common fund and donations',
-      'LUSD placed in the common fund stays there to lend. A contribution is not a product you can withdraw. Donations are voluntary, go to the project wallet and do not enter the fund. There are no purchases inside Google Play: value moves on the public network.',
+      'LUSD placed in the common fund stays there to lend. A contribution is not a product you can withdraw. Donations are voluntary, go to the project wallet and do not enter the fund. There are no purchases inside app: value moves on the public network.',
     ],
     [
       'Risks and the law where you live',
@@ -70,7 +70,7 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       'Fondo común y donaciones',
-      'El LUSD que entra al fondo común permanece ahí para prestar. Aportar no es un producto que se pueda retirar. Donar es voluntario, va a la billetera del proyecto y no entra al fondo. No hay compras dentro de Google Play: el valor se mueve en la red pública.',
+      'El LUSD que entra al fondo común permanece ahí para prestar. Aportar no es un producto que se pueda retirar. Donar es voluntario, va a la billetera del proyecto y no entra al fondo. No hay compras dentro de app: el valor se mueve en la red pública.',
     ],
     [
       'Riesgos y la ley de su país',
@@ -104,7 +104,7 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       '共同基金与捐赠',
-      '进入共同基金的 LUSD 留作放贷。出资不是可赎回产品。捐赠出于自愿，进入项目钱包，不进入基金。没有 Google Play 内购：价值在公开网络上流动。',
+      '进入共同基金的 LUSD 留作放贷。出资不是可赎回产品。捐赠出于自愿，进入项目钱包，不进入基金。没有 app 内购：价值在公开网络上流动。',
     ],
     [
       '风险与所在地法律',
@@ -138,7 +138,7 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       'साझा कोष और दान',
-      'साझा कोष में गया LUSD उधार देने रहता है। अंशदान निकाला नहीं जाता। दान स्वैच्छिक है, परियोजना बटुए में जाता है, कोष में नहीं। Google Play में खरीदारी नहीं: मूल्य सार्वजनिक नेटवर्क पर चलता है।',
+      'साझा कोष में गया LUSD उधार देने रहता है। अंशदान निकाला नहीं जाता। दान स्वैच्छिक है, परियोजना बटुए में जाता है, कोष में नहीं। app में खरीदारी नहीं: मूल्य सार्वजनिक नेटवर्क पर चलता है।',
     ],
     [
       'जोखिम और आपके देश का कानून',
@@ -172,7 +172,7 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       'الصندوق المشترك والتبرعات',
-      'يبقى LUSD الذي يدخل الصندوق المشترك للإقراض. المساهمة ليست منتج سحب. التبرع اختياري ويذهب إلى محفظة المشروع ولا يدخل الصندوق. لا مشتريات داخل Google Play: القيمة تتحرك على الشبكة العامة.',
+      'يبقى LUSD الذي يدخل الصندوق المشترك للإقراض. المساهمة ليست منتج سحب. التبرع اختياري ويذهب إلى محفظة المشروع ولا يدخل الصندوق. لا مشتريات داخل app: القيمة تتحرك على الشبكة العامة.',
     ],
     [
       'المخاطر وقانون بلدك',
@@ -206,7 +206,7 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       'সাধারণ তহবিল ও দান',
-      'সাধারণ তহবিলে যাওয়া LUSD ধার দিতে থাকে। অবদান তোলা যায় না। দান স্বেচ্ছায়, প্রকল্প ওয়ালেটে যায়, তহবিলে নয়। Google Play কেনা নেই: মূল্য পাবলিক নেটওয়ার্কে চলে।',
+      'সাধারণ তহবিলে যাওয়া LUSD ধার দিতে থাকে। অবদান তোলা যায় না। দান স্বেচ্ছায়, প্রকল্প ওয়ালেটে যায়, তহবিলে নয়। app কেনা নেই: মূল্য পাবলিক নেটওয়ার্কে চলে।',
     ],
     [
       'ঝুঁকি ও আপনার দেশের আইন',
@@ -240,7 +240,7 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       'Fundo comum e donativos',
-      'O LUSD que entra no fundo comum permanece para emprestar. Aportar não é um produto de levantamento. Doar é voluntário, vai para a carteira do projeto e não entra no fundo. Não há compras na Google Play: o valor move-se na rede pública.',
+      'O LUSD que entra no fundo comum permanece para emprestar. Aportar não é um produto de levantamento. Doar é voluntário, vai para a carteira do projeto e não entra no fundo. Não há compras na app: o valor move-se na rede pública.',
     ],
     [
       'Riscos e a lei do seu país',
@@ -274,7 +274,7 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       'Общий фонд и пожертвования',
-      'LUSD, поступивший в общий фонд, остаётся там для выдачи. Взнос нельзя вывести. Пожертвование добровольно, идёт на кошелёк проекта и в фонд не входит. Покупок в Google Play нет: стоимость движется в открытой сети.',
+      'LUSD, поступивший в общий фонд, остаётся там для выдачи. Взнос нельзя вывести. Пожертвование добровольно, идёт на кошелёк проекта и в фонд не входит. Покупок в app нет: стоимость движется в открытой сети.',
     ],
     [
       'Риски и закон вашей страны',
@@ -308,7 +308,7 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       'مشترکہ فنڈ اور عطیات',
-      'مشترکہ فنڈ میں گیا LUSD قرض دینے رہتا ہے۔ حصہ نہیں نکالا جاتا۔ عطیہ رضاکارانہ ہے، منصوبے کے والیٹ میں جاتا ہے، فنڈ میں نہیں۔ Google Play خرید نہیں: قدر عوامی نیٹ ورک پر چلتی ہے۔',
+      'مشترکہ فنڈ میں گیا LUSD قرض دینے رہتا ہے۔ حصہ نہیں نکالا جاتا۔ عطیہ رضاکارانہ ہے، منصوبے کے والیٹ میں جاتا ہے، فنڈ میں نہیں۔ app خرید نہیں: قدر عوامی نیٹ ورک پر چلتی ہے۔',
     ],
     [
       'خطرات اور آپ کے ملک کا قانون',
@@ -342,7 +342,7 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       'Dana bersama dan donasi',
-      'LUSD yang masuk dana bersama tetap untuk dipinjamkan. Kontribusi bukan produk yang dapat ditarik. Donasi sukarela, ke dompet proyek, dan tidak masuk dana. Tidak ada pembelian di Google Play: nilai bergerak di jaringan publik.',
+      'LUSD yang masuk dana bersama tetap untuk dipinjamkan. Kontribusi bukan produk yang dapat ditarik. Donasi sukarela, ke dompet proyek, dan tidak masuk dana. Tidak ada pembelian di app: nilai bergerak di jaringan publik.',
     ],
     [
       'Risiko dan hukum negara Anda',
@@ -376,7 +376,7 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       'Fonds commun et dons',
-      'Les LUSD versés au fonds commun y restent pour prêter. Un apport n’est pas un produit de retrait. Le don est volontaire, va au portefeuille du projet et n’entre pas dans le fonds. Pas d’achats Google Play : la valeur circule sur le réseau public.',
+      'Les LUSD versés au fonds commun y restent pour prêter. Un apport n’est pas un produit de retrait. Le don est volontaire, va au portefeuille du projet et n’entre pas dans le fonds. Pas d’achats app : la valeur circule sur le réseau public.',
     ],
     [
       'Risques et le droit de votre pays',
@@ -410,7 +410,7 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       '共同基金と寄付',
-      '共同基金に入った LUSD は貸付け用に残ります。拠出は引出商品ではありません。寄付は任意でプロジェクトウォレットへ行き、基金には入りません。Google Play 内課金はありません。価値は公開ネットワーク上で動きます。',
+      '共同基金に入った LUSD は貸付け用に残ります。拠出は引出商品ではありません。寄付は任意でプロジェクトウォレットへ行き、基金には入りません。app 内課金はありません。価値は公開ネットワーク上で動きます。',
     ],
     [
       'リスクとお住まいの国の法令',
@@ -444,7 +444,7 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       'Gemeinsamer Fonds und Zuwendungen',
-      'LUSD im gemeinsamen Fonds bleibt dort zum Verleihen. Ein Beitrag ist kein Auszahlungsprodukt. Zuwendungen sind freiwillig, gehen an die Projekt-Wallet und fließen nicht in den Fonds. Keine Käufe über Google Play: der Wert bewegt sich im öffentlichen Netz.',
+      'LUSD im gemeinsamen Fonds bleibt dort zum Verleihen. Ein Beitrag ist kein Auszahlungsprodukt. Zuwendungen sind freiwillig, gehen an die Projekt-Wallet und fließen nicht in den Fonds. Keine Käufe über app: der Wert bewegt sich im öffentlichen Netz.',
     ],
     [
       'Risiken und das Recht Ihres Landes',
@@ -478,7 +478,7 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       '공동 기금과 기부',
-      '공동 기금에 들어간 LUSD는 대출용으로 남습니다. 출자는 인출 상품이 아닙니다. 기부는 자발적이며 프로젝트 지갑으로 가고 기금에 들어가지 않습니다. Google Play 인앱 구매는 없습니다. 가치는 공개 네트워크에서 움직입니다.',
+      '공동 기금에 들어간 LUSD는 대출용으로 남습니다. 출자는 인출 상품이 아닙니다. 기부는 자발적이며 프로젝트 지갑으로 가고 기금에 들어가지 않습니다. app 인앱 구매는 없습니다. 가치는 공개 네트워크에서 움직입니다.',
     ],
     [
       '위험과 거주 국가의 법',
@@ -512,7 +512,7 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       'Ortak fon ve bağışlar',
-      'Ortak fona giren LUSD ödünç vermek için kalır. Katkı çekilebilir bir ürün değildir. Bağış isteğe bağlıdır, proje cüzdanına gider ve fona girmez. Google Play içi satın alma yoktur: değer kamuya açık ağda hareket eder.',
+      'Ortak fona giren LUSD ödünç vermek için kalır. Katkı çekilebilir bir ürün değildir. Bağış isteğe bağlıdır, proje cüzdanına gider ve fona girmez. app içi satın alma yoktur: değer kamuya açık ağda hareket eder.',
     ],
     [
       'Riskler ve yaşadığınız ülkenin hukuku',
@@ -546,7 +546,7 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       'Quỹ chung và quyên góp',
-      'LUSD vào quỹ chung ở lại để cho vay. Góp không phải sản phẩm rút. Quyên góp tự nguyện, vào ví dự án, không vào quỹ. Không mua trong Google Play: giá trị chuyển trên mạng công khai.',
+      'LUSD vào quỹ chung ở lại để cho vay. Góp không phải sản phẩm rút. Quyên góp tự nguyện, vào ví dự án, không vào quỹ. Không mua trong app: giá trị chuyển trên mạng công khai.',
     ],
     [
       'Rủi ro và luật nơi bạn sống',
@@ -580,7 +580,7 @@ const docs: Record<Lang, ExtraDoc> = {
     ],
     [
       'Fondo comune e donazioni',
-      'Gli LUSD che entrano nel fondo comune restano destinati a prestare. Un versamento non è un prodotto di prelievo. Donare è volontario, va al portafoglio del progetto e non entra nel fondo. Non ci sono acquisti su Google Play: il valore si muove sulla rete pubblica.',
+      'Gli LUSD che entrano nel fondo comune restano destinati a prestare. Un versamento non è un prodotto di prelievo. Donare è volontario, va al portafoglio del progetto e non entra nel fondo. Non ci sono acquisti su app: il valore si muove sulla rete pubblica.',
     ],
     [
       'Rischi e la legge del suo Paese',

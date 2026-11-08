@@ -31,7 +31,6 @@ async function deployHarness() {
   const owner = signers[0];
   const user = signers[1];
   const Token = await ethers.getContractFactory('ERC20Mock');
-  const Aggregator = await ethers.getContractFactory('MockV3Aggregator');
   const { getLinkedCreditFactory } = require('../scripts/linkCredit.cjs');
   const { deployFamaAndCredit } = require('./helpers.cjs');
   const Harness = await getLinkedCreditFactory(ethers, 'QuatriviumCreditHarness');

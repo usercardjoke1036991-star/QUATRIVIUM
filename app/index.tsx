@@ -23,6 +23,8 @@ import { FameLeaderboard } from '../components/FameLeaderboard';
 import { LoanTierCard } from '../components/LoanTierCard';
 import { LockedLoanCatalog } from '../components/LockedLoanCatalog';
 import { AdminPanel } from '../components/AdminPanel';
+import { AdminStatusReadout } from '../components/AdminStatusReadout';
+import { ApkIntegrityNote } from '../components/ApkIntegrityNote';
 import { ActivateCreditSection } from '../components/ActivateCreditSection';
 import { AccountWorldCard } from '../components/AccountWorldCard';
 import { AccountOnboarding } from '../components/AccountOnboarding';
@@ -100,8 +102,8 @@ function HomeScreenWithHooks() {
 
   const { mode } = useAppMode();
   const { confirmFunds } = useFundsConfirm();
-  const tokens = useMemo(() => getSupportedTokens(), [mode]);
-  const extraStables = useMemo(() => getConfigurableStables(), [mode]);
+  const tokens = useMemo(() => getSupportedTokens(mode === 'demo'), [mode]);
+  const extraStables = useMemo(() => getConfigurableStables(mode === 'demo'), [mode]);
   const [selectedToken, setSelectedToken] = useState(tokens[0]);
   const [room, setRoom] = useState<HomeRoom | null>(null);
   const [phraseBackedUp, setPhraseBackedUp] = useState(false);
@@ -1037,6 +1039,8 @@ function HomeScreenWithHooks() {
               onSelectToken={setSelectedToken}
             />
           ) : null}
+          <ApkIntegrityNote />
+          <AdminStatusReadout paused={creditPaused} admins={userInfo.adminRoster || []} />
           {showAdminControls ? (
             <AdminPanel
               isOwner={externalReady ? adminInfo.isOwner : Boolean(userInfo.isOwner || founderHere)}

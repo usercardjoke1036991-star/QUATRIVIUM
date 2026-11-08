@@ -1,12 +1,6 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const {
-  deployProtocol,
-  seedPool,
-  registerAndFund,
-  attestIdentity,
-  proposeAndExecute,
-} = require('./helpers.cjs');
+const { deployProtocol, seedPool, registerAndFund } = require('./helpers.cjs');
 
 describe('Quatrivium Finance - uncollateralized credit and admin locks', function () {
   it('lets a user register and borrow without locking collateral', async () => {

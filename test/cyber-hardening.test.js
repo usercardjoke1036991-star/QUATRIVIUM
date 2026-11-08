@@ -817,11 +817,6 @@ describe('demo credit gates', function () {
       !liveNeedsDeviceMatch(demo, flags.deviceMatches, Boolean(flags.phoneActive))
     );
   }
-  function identityHashBound(value) {
-    const hash = String(value || '');
-    return Boolean(hash) && !/^0x0+$/i.test(hash);
-  }
-
   it('requires a one-time access fee in Real before any loan', function () {
     function hasCreditAccess(paidUsd) {
       const paid = Number(paidUsd);
@@ -2360,7 +2355,7 @@ describe('account entry — password, email and session', () => {
     const appJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'app.json'), 'utf8'));
     expect(JSON.stringify(appJson.expo.plugins)).to.not.include('expo-screen-capture');
     const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
-    expect(pkg.dependencies['expo-screen-capture']).to.be.ok;
+    expect(typeof pkg.dependencies['expo-screen-capture']).to.equal('string');
     const security = fs.readFileSync(
       path.join(__dirname, '..', 'components', 'SecuritySettings.tsx'),
       'utf8'

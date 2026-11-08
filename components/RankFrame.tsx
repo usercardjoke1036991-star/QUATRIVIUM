@@ -42,7 +42,7 @@ function jewelCount(rank: RankStyle): number {
   return 4 + rank.division * 4;
 }
 
-function inlaySeats(box: number, pad: number, count: number): Array<{ x: number; y: number }> {
+function inlaySeats(box: number, pad: number, count: number): { x: number; y: number }[] {
   const outer = pad * 0.48;
   const seats = [
     { x: outer, y: outer },
@@ -98,7 +98,7 @@ function LogoWeave({
 }) {
   const corner = Math.round(pad * (1.02 + rank.division * 0.12));
   const edge = rank.division >= 1 ? Math.round(pad * (0.34 + rank.division * 0.16)) : 0;
-  const clips: Array<{ key: string; wrap: object; img: object }> = [
+  const clips: { key: string; wrap: object; img: object }[] = [
     {
       key: 'tl',
       wrap: { top: 0, left: 0, width: corner, height: corner },

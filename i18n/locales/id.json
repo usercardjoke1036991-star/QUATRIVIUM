@@ -1243,5 +1243,15 @@
   "telegramConfirmBody": "{name} meminta pemberitahuan akun ini. Konfirmasi hanya jika itu milik Anda.",
   "telegramConfirmAccept": "Ini milik saya",
   "telegramConfirmReject": "Jangan tautkan",
-  "telegramOfferPending": "Aktifkan notifikasi sistem di perangkat Anda lalu kembali ke layar ini."
+  "telegramOfferPending": "Aktifkan notifikasi sistem di perangkat Anda lalu kembali ke layar ini.",
+  "altaSplitNote": "Dari 4 LUSD, 1 LUSD untuk pendiri dan sisanya masuk pool.",
+  "loanFounderShare": "15% bunga setiap pembayaran pergi ke pendiri.",
+  "loanInsuranceShare": "5% dari yang masuk pool pergi ke dana asuransi dan tidak ada yang menariknya.",
+  "loanSequencerGrace": "Likuidasi menunggu 48 jam. Jika Arbitrum berhenti, tidak ada yang dilikuidasi.",
+  "reservaPotDepends": "Imbal hasil bergantung pada pot dan tidak lewat 12% setahun. Modal selalu kembali.",
+  "apkHashMismatch": "Versi ini tidak cocok dengan hash yang terbit di jaringan.",
+  "adminStatusLead": "Jeda, tunggu 72 jam dan tiga dompet dibaca dari jaringan.",
+  "adminPauseOn": "Jeda pinjaman baru sedang aktif.",
+  "adminPauseOff": "Pinjaman baru tidak dijeda.",
+  "adminTimelockHours": "Perubahan admin menunggu {hours} jam."
 }

@@ -1,10 +1,10 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const { deployProtocol, seedPool, registerAndFund, proposeAndExecute } = require('./helpers.cjs');
+const { deployProtocol, seedPool, registerAndFund } = require('./helpers.cjs');
 
 describe('QuatriviumCredit - security hardening', function () {
   it('sends fee withdrawals through the 72h timelock', async () => {
-    const { contract, owner, extra } = await deployProtocol();
+    const { contract, extra } = await deployProtocol();
     expect(contract.interface.hasFunction('retirarComisiones')).to.equal(false);
     expect(contract.interface.hasFunction('retirarComisionesToken')).to.equal(false);
     expect(extra.address).to.be.a('string');

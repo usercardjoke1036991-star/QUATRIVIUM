@@ -228,7 +228,7 @@ describe('QuatriviumReserva', function () {
   });
 
   it('rejects a commission boost from the owner and delays owner or credit changes 72h', async () => {
-    const { reserva, credit, user, owner, extra, founder } = await deployReserva();
+    const { reserva, credit, user, owner, founder } = await deployReserva();
     await reserva.connect(founder).aportarBote(ethers.parseUnits('20', 18));
     await reserva.connect(user).bloquear(ethers.parseUnits('100', 18));
     const id = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(['uint256'], [9n]));

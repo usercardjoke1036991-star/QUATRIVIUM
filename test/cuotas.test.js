@@ -4,7 +4,6 @@ const {
   deployProtocol,
   seedPool,
   registerAndFund,
-  proposeAndExecute,
   assertNavInvariant,
   expectAmt,
 } = require('./helpers.cjs');

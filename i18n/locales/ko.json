@@ -1243,5 +1243,15 @@
   "telegramConfirmBody": "{name} 이(가) 이 계정의 알림을 요청합니다. 본인일 때만 확인하세요.",
   "telegramConfirmAccept": "내 계정입니다",
   "telegramConfirmReject": "연결하지 않음",
-  "telegramOfferPending": "기기에서 시스템 알림을 켠 다음 이 화면으로 돌아오세요."
+  "telegramOfferPending": "기기에서 시스템 알림을 켠 다음 이 화면으로 돌아오세요.",
+  "altaSplitNote": "4 LUSD 중 1 LUSD 는 창립자에게, 나머지는 풀로 들어갑니다.",
+  "loanFounderShare": "각 이자의 15% 는 창립자에게 갑니다.",
+  "loanInsuranceShare": "풀에 들어오는 금액의 5% 는 보험 기금으로 가며 아무도 빼지 못합니다.",
+  "loanSequencerGrace": "청산은 48시간을 기다립니다. Arbitrum 이 멈추면 아무도 청산되지 않습니다.",
+  "reservaPotDepends": "수익은 팟에 달리고 연 12% 를 넘지 않습니다. 원금은 항상 돌아옵니다.",
+  "apkHashMismatch": "이 버전은 네트워크에 공개된 해시와 다릅니다.",
+  "adminStatusLead": "일시정지, 72시간 대기와 세 지갑은 네트워크에서 읽습니다.",
+  "adminPauseOn": "신규 대출 일시정지가 켜져 있습니다.",
+  "adminPauseOff": "신규 대출 일시정지는 없습니다.",
+  "adminTimelockHours": "관리 변경은 {hours} 시간을 기다립니다."
 }

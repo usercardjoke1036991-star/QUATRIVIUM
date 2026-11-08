@@ -1243,5 +1243,15 @@
   "telegramConfirmBody": "{name} bu hesabın bildirimlerini istiyor. Yalnızca sizseniz onaylayın.",
   "telegramConfirmAccept": "Bu benim",
   "telegramConfirmReject": "Bağlama",
-  "telegramOfferPending": "Cihazınızda sistem bildirimlerini açıp bu ekrana dönün."
+  "telegramOfferPending": "Cihazınızda sistem bildirimlerini açıp bu ekrana dönün.",
+  "altaSplitNote": "4 LUSD içinden 1 LUSD kurucuya gider, kalanı havuza girer.",
+  "loanFounderShare": "Her ödemenin faizinin %15'i kurucuya gider.",
+  "loanInsuranceShare": "Havuza giren tutarın %5'i sigorta fonuna gider ve kimse çekemez.",
+  "loanSequencerGrace": "Tasfiye 48 saat bekler. Arbitrum durursa kimse tasfiye edilmez.",
+  "reservaPotDepends": "Getiri potaya bağlıdır ve yılda %12'yi geçmez. Anapara her zaman döner.",
+  "apkHashMismatch": "Bu sürüm ağda yayımlanan hash ile uyuşmuyor.",
+  "adminStatusLead": "Duraklatma, 72 saatlik bekleme ve üç cüzdan ağdan okunur.",
+  "adminPauseOn": "Yeni kredilerin duraklatması açık.",
+  "adminPauseOff": "Yeni krediler duraklatılmadı.",
+  "adminTimelockHours": "Yönetici değişiklikleri {hours} saat bekler."
 }

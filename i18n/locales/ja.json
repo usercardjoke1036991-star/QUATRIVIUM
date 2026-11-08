@@ -1243,5 +1243,15 @@
   "telegramConfirmBody": "{name} がこの口座の通知を求めています。ご本人のときだけ確認してください。",
   "telegramConfirmAccept": "自分のものです",
   "telegramConfirmReject": "連携しない",
-  "telegramOfferPending": "端末のシステム通知を有効にしてから、この画面に戻ってください。"
+  "telegramOfferPending": "端末のシステム通知を有効にしてから、この画面に戻ってください。",
+  "altaSplitNote": "4 LUSD のうち 1 LUSD は創設者へ、残りはプールに入ります。",
+  "loanFounderShare": "各支払いの利息の 15% は創設者に渡ります。",
+  "loanInsuranceShare": "プールに入る額の 5% は保険基金へ入り、誰も引き出せません。",
+  "loanSequencerGrace": "清算は 48 時間待ちます。Arbitrum が止まると誰も清算されません。",
+  "reservaPotDepends": "利回りはポット次第で年 12% を超えません。元本は必ず戻ります。",
+  "apkHashMismatch": "この版はネットワーク上のハッシュと一致しません。",
+  "adminStatusLead": "停止、72 時間の待ちと 3 つの財布はネットワークから読みます。",
+  "adminPauseOn": "新規貸付の停止が有効です。",
+  "adminPauseOff": "新規貸付は停止していません。",
+  "adminTimelockHours": "管理の変更は {hours} 時間待ちます。"
 }

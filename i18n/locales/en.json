@@ -1243,5 +1243,15 @@
   "telegramConfirmBody": "{name} is asking for this account’s alerts. Confirm only if it is yours.",
   "telegramConfirmAccept": "It is mine",
   "telegramConfirmReject": "Do not link",
-  "telegramOfferPending": "Enable system notifications on your device and return to this screen."
+  "telegramOfferPending": "Enable system notifications on your device and return to this screen.",
+  "altaSplitNote": "Of the 4 LUSD, 1 LUSD goes to the founder and the rest enters the pool.",
+  "loanFounderShare": "15% of the interest on each payment goes to the founder.",
+  "loanInsuranceShare": "5% of what enters the pool goes to the insurance fund and nobody can withdraw it.",
+  "loanSequencerGrace": "Liquidation waits 48 hours. If Arbitrum is down, nobody is liquidated.",
+  "reservaPotDepends": "Yield depends on the pot and stays at or below 12% a year. Principal always comes back.",
+  "apkHashMismatch": "This build does not match the hash published on the network.",
+  "adminStatusLead": "Pause, the 72-hour wait and the three wallets are read from the chain.",
+  "adminPauseOn": "The pause on new loans is active.",
+  "adminPauseOff": "New loans are not paused.",
+  "adminTimelockHours": "Admin changes wait {hours} hours."
 }

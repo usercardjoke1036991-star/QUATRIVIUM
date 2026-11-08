@@ -5,7 +5,6 @@ const {
   seedPool,
   registerAndFund,
   qualifyCollector,
-  proposeAndExecute,
   assertNavInvariant,
   expectAmt,
   drainToken,

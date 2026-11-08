@@ -5,9 +5,7 @@ const {
   seedPool,
   registerAndFund,
   qualifyCollector,
-  proposeAndExecute,
   assertNavInvariant,
-  attestIdentity,
   drainToken,
   expectAmt,
 } = require('./helpers.cjs');
@@ -268,7 +266,7 @@ describe('QuatriviumCredit - Unilevel MLM', function () {
   });
 
   it('rejects setFundador for a wallet that is not an admin', async () => {
-    const { contract, owner, user } = await deployProtocol();
+    const { contract, user } = await deployProtocol();
     await expect(contract.connect(user).proponerFundador(user.address)).to.be.reverted;
   });
 

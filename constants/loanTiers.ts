@@ -113,7 +113,7 @@ export interface LoanTier {
 }
 
 /** Niveles 1–100: tablas fijas. 101–1000 se generan con la misma fórmula que LoanLadder.sol. */
-export const CORE_LOAN_TIER_ROWS: ReadonlyArray<Omit<LoanTier, 'name' | 'term'>> = [
+export const CORE_LOAN_TIER_ROWS: readonly Omit<LoanTier, 'name' | 'term'>[] = [
   { id: 1, usdAmount: 1, termDays: 7, requiredCount: 3, interestBps: 10000, installments: 1 },
   { id: 2, usdAmount: 2, termDays: 10, requiredCount: 5, interestBps: 9500, installments: 1 },
   { id: 3, usdAmount: 5, termDays: 15, requiredCount: 5, interestBps: 8000, installments: 1 },
@@ -216,8 +216,8 @@ export const CORE_LOAN_TIER_ROWS: ReadonlyArray<Omit<LoanTier, 'name' | 'term'>>
   { id: 100, usdAmount: 10000, termDays: 90, requiredCount: 5, interestBps: 800, installments: 3 },
 ];
 
-function buildLadderRows(): Array<Omit<LoanTier, 'name' | 'term'>> {
-  const rows: Array<Omit<LoanTier, 'name' | 'term'>> = [];
+function buildLadderRows(): Omit<LoanTier, 'name' | 'term'>[] {
+  const rows: Omit<LoanTier, 'name' | 'term'>[] = [];
   for (let id = CORE_LOAN_LEVEL + 1; id <= MAX_LOAN_LEVEL; id += 1) {
     const usdAmount = ladderUsdAmount(id);
     rows.push({
@@ -232,7 +232,7 @@ function buildLadderRows(): Array<Omit<LoanTier, 'name' | 'term'>> {
   return rows;
 }
 
-export const LOAN_TIER_ROWS: ReadonlyArray<Omit<LoanTier, 'name' | 'term'>> = [
+export const LOAN_TIER_ROWS: readonly Omit<LoanTier, 'name' | 'term'>[] = [
   ...CORE_LOAN_TIER_ROWS,
   ...buildLadderRows(),
 ];

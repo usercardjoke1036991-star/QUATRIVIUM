@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { FORCE, PACK, langs, dir, root, writeLang } from './patch-i18n-leftovers.mjs';
 import { PACK_EAST } from './patch-i18n-leftovers-east.mjs';
 import { PACK_ASIA } from './patch-i18n-leftovers-asia.mjs';

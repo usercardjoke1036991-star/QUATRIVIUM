@@ -152,7 +152,7 @@ const FAMILY_STYLE: Record<RankFamily, Omit<RankStyle, 'level' | 'division'>> = 
   },
 };
 
-export const FAMILY_BANDS: Array<{ family: RankFamily; from: number; to: number }> = [
+export const FAMILY_BANDS: { family: RankFamily; from: number; to: number }[] = [
   { family: 'bronze', from: 1, to: 83 },
   { family: 'silver', from: 84, to: 166 },
   { family: 'gold', from: 167, to: 249 },
@@ -210,11 +210,11 @@ export function saturateHex(hex: string, factor = 1.4): string {
 }
 
 /** Pinta el emblema con el mineral y conserva el relieve (luma, no suma 3x). */
-export function colorizeTextureFilters(hex: string): Array<{
+export function colorizeTextureFilters(hex: string): {
   name: 'feColorMatrix';
   type: 'matrix';
   values: string;
-}> {
+}[] {
   const rgb = parseRgb(saturateHex(hex, 1.72));
   if (!rgb) return [];
   const r = rgb.r / 255;

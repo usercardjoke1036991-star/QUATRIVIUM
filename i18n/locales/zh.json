@@ -1243,5 +1243,15 @@
   "telegramConfirmBody": "{name} 请求接收此账户的通知。仅在这是您本人时确认。",
   "telegramConfirmAccept": "是我的",
   "telegramConfirmReject": "不绑定",
-  "telegramOfferPending": "请在设备中开启系统通知后返回此页面。"
+  "telegramOfferPending": "请在设备中开启系统通知后返回此页面。",
+  "altaSplitNote": "4 LUSD 中，1 LUSD 给创始人，其余进入资金池。",
+  "loanFounderShare": "每笔利息的 15% 付给创始人。",
+  "loanInsuranceShare": "进入资金池的 5% 进入保险金，无人可提取。",
+  "loanSequencerGrace": "清算等待 48 小时。若 Arbitrum 中断，不清算任何人。",
+  "reservaPotDepends": "收益取决于奖池，年化不超过 12%。本金始终退回。",
+  "apkHashMismatch": "此版本与链上公布的哈希不一致。",
+  "adminStatusLead": "暂停、72 小时等待和三把钥匙都从链上读取。",
+  "adminPauseOn": "新贷款暂停已开启。",
+  "adminPauseOff": "新贷款没有暂停。",
+  "adminTimelockHours": "管理变更等待 {hours} 小时。"
 }

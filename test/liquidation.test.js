@@ -1,6 +1,6 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const { deployProtocol, seedPool, registerAndFund, proposeAndExecute } = require('./helpers.cjs');
+const { deployProtocol, seedPool, registerAndFund } = require('./helpers.cjs');
 
 describe('QuatriviumCredit - Liquidation', function () {
   async function advanceCooldown() {
@@ -110,7 +110,7 @@ describe('QuatriviumCredit - Liquidation', function () {
   });
 
   it('rejects disabling a token while loans are outstanding', async () => {
-    const { token, contract, owner, user, tokenAddr, feedAddr } = await deployProtocol();
+    const { token, contract, owner, user, tokenAddr } = await deployProtocol();
     await seedPool(token, contract, owner, '500');
     await registerAndFund(token, contract, user);
     await contract.connect(user).solicitarPrestamo(tokenAddr, 0);

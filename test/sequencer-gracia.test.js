@@ -10,16 +10,7 @@ async function warp(seconds) {
 describe('Sequencer de Arbitrum y liquidaciones', function () {
   async function prestar() {
     const ctx = await deployProtocol();
-    const {
-      token,
-      contract,
-      owner,
-      user,
-      extra: liquidator,
-      tokenAddr,
-      contractAddr,
-      sequencer,
-    } = ctx;
+    const { token, contract, owner, user, extra: liquidator, tokenAddr, contractAddr } = ctx;
     await seedPool(token, contract, owner, '50');
     await registerAndFund(token, contract, user);
     await contract.connect(user).solicitarPrestamo(tokenAddr, 0);

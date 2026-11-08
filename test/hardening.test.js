@@ -1,12 +1,6 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const {
-  deployProtocol,
-  seedPool,
-  registerAndFund,
-  proposeAndExecute,
-  assertNavInvariant,
-} = require('./helpers.cjs');
+const { deployProtocol, seedPool, registerAndFund, assertNavInvariant } = require('./helpers.cjs');
 
 function montoCuota(total, pagado, totales, pagadas) {
   const restante = total - pagado;

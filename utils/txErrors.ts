@@ -24,7 +24,7 @@ function extractRawError(error: unknown): string {
   );
 }
 
-const REVERT_KEYS: Array<[string, TranslationKey]> = [
+const REVERT_KEYS: [string, TranslationKey][] = [
   ['kyc required', 'errKycRequired'],
   ['identity required', 'errIdentityRequired'],
   ['email-required', 'errEmailRequired'],

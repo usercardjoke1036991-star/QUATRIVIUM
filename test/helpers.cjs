@@ -219,7 +219,6 @@ async function drainToken(token, from, to) {
 }
 
 async function assertNavInvariant(token, contract, tokenAddr, contractAddr) {
-  const { expect } = require('chai');
   const cash = await token.balanceOf(contractAddr);
   const outstanding = await contract.outstandingLoans(tokenAddr);
   const liquidity = await contract.totalLiquidity(tokenAddr);

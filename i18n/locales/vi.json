@@ -1243,5 +1243,15 @@
   "telegramConfirmBody": "{name} xin thông báo của tài khoản này. Chỉ xác nhận nếu đó là của quý khách.",
   "telegramConfirmAccept": "Đó là của tôi",
   "telegramConfirmReject": "Không liên kết",
-  "telegramOfferPending": "Hãy bật thông báo hệ thống trên thiết bị rồi quay lại màn hình này."
+  "telegramOfferPending": "Hãy bật thông báo hệ thống trên thiết bị rồi quay lại màn hình này.",
+  "altaSplitNote": "Trong 4 LUSD, 1 LUSD về người sáng lập và phần còn lại vào quỹ.",
+  "loanFounderShare": "15% lãi của mỗi lần trả về người sáng lập.",
+  "loanInsuranceShare": "5% số vào quỹ đi vào quỹ bảo hiểm và không ai rút được.",
+  "loanSequencerGrace": "Thanh lý chờ 48 giờ. Nếu Arbitrum ngừng, không thanh lý ai.",
+  "reservaPotDepends": "Lợi suất phụ thuộc nồi và không quá 12% mỗi năm. Vốn luôn được trả lại.",
+  "apkHashMismatch": "Bản này không khớp mã băm đã công bố trên mạng.",
+  "adminStatusLead": "Tạm dừng, thời gian chờ 72 giờ và ba ví được đọc từ mạng.",
+  "adminPauseOn": "Tạm dừng khoản vay mới đang bật.",
+  "adminPauseOff": "Không tạm dừng khoản vay mới.",
+  "adminTimelockHours": "Thay đổi quản trị chờ {hours} giờ."
 }

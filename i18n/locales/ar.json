@@ -1243,5 +1243,15 @@
   "telegramConfirmBody": "{name} يطلب تنبيهات هذه المحفظة. أكّدوا فقط إذا كان لكم.",
   "telegramConfirmAccept": "هذا حسابي",
   "telegramConfirmReject": "عدم الربط",
-  "telegramOfferPending": "فعّل إشعارات النظام على جهازك ثم عد إلى هذه الشاشة."
+  "telegramOfferPending": "فعّل إشعارات النظام على جهازك ثم عد إلى هذه الشاشة.",
+  "altaSplitNote": "من 4 LUSD يذهب 1 LUSD إلى المؤسس والباقي يدخل الصندوق.",
+  "loanFounderShare": "15٪ من فائدة كل دفعة تذهب إلى المؤسس.",
+  "loanInsuranceShare": "5٪ مما يدخل الصندوق يذهب إلى صندوق التأمين ولا يسحبه أحد.",
+  "loanSequencerGrace": "التصفية تنتظر 48 ساعة. إذا توقف Arbitrum لا يُصفّى أحد.",
+  "reservaPotDepends": "العائد يعتمد على الوعاء ولا يتجاوز 12٪ سنوياً. رأس المال يعود دائماً.",
+  "apkHashMismatch": "هذا الإصدار لا يطابق التجزئة المنشورة على الشبكة.",
+  "adminStatusLead": "الإيقاف وانتظار 72 ساعة والمحافظ الثلاث تُقرأ من الشبكة.",
+  "adminPauseOn": "إيقاف القروض الجديدة مفعّل.",
+  "adminPauseOff": "لا يوجد إيقاف للقروض الجديدة.",
+  "adminTimelockHours": "تغييرات الإدارة تنتظر {hours} ساعة."
 }

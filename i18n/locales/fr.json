@@ -1243,5 +1243,15 @@
   "telegramConfirmBody": "{name} demande les alertes de ce compte. Confirmez seulement si c’est le vôtre.",
   "telegramConfirmAccept": "C’est le mien",
   "telegramConfirmReject": "Ne pas lier",
-  "telegramOfferPending": "Activez les notifications système sur votre appareil puis revenez sur cet écran."
+  "telegramOfferPending": "Activez les notifications système sur votre appareil puis revenez sur cet écran.",
+  "altaSplitNote": "Sur 4 LUSD, 1 LUSD va au fondateur et le reste entre dans le pool.",
+  "loanFounderShare": "15 % des intérêts de chaque paiement vont au fondateur.",
+  "loanInsuranceShare": "5 % de ce qui entre dans le pool va au fonds d'assurance et personne ne peut le retirer.",
+  "loanSequencerGrace": "La liquidation attend 48 heures. Si Arbitrum tombe, personne n'est liquidé.",
+  "reservaPotDepends": "Le rendement dépend du pot et ne dépasse pas 12 % par an. Le capital revient toujours.",
+  "apkHashMismatch": "Cette version ne correspond pas au hash publié sur le réseau.",
+  "adminStatusLead": "La pause, l'attente de 72 heures et les trois portefeuilles se lisent sur le réseau.",
+  "adminPauseOn": "La pause des nouveaux prêts est active.",
+  "adminPauseOff": "Les nouveaux prêts ne sont pas en pause.",
+  "adminTimelockHours": "Les changements admin attendent {hours} heures."
 }

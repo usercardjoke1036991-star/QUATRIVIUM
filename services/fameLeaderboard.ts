@@ -90,7 +90,7 @@ async function queryFilterChunked(
   deadline = 0
 ): Promise<{ events: Awaited<ReturnType<Contract['queryFilter']>>; failed: number; cut: boolean }> {
   if (!filter) return { events: [], failed: 0, cut: false };
-  const ranges: Array<[number, number]> = [];
+  const ranges: [number, number][] = [];
   for (let start = fromBlock; start <= toBlock; start += CHUNK) {
     ranges.push([start, Math.min(start + CHUNK - 1, toBlock)]);
   }

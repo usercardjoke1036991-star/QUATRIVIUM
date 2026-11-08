@@ -13,7 +13,7 @@ async function deployAltaStack() {
 
 describe('Alta 4 USDT', function () {
   it('parte 1 fundador, 1 Reserva, 1 sello y aparta 1 al padrino', async () => {
-    const { token, contract, reserva, alta, owner, user, tokenAddr } = await deployAltaStack();
+    const { token, contract, reserva, alta, owner, user } = await deployAltaStack();
     await contract.connect(user).registrarHumanoConPadre(ethers.ZeroAddress);
     const founderBefore = await token.balanceOf(owner.address);
     const boteBefore = await reserva.bote();
@@ -69,7 +69,7 @@ describe('Alta 4 USDT', function () {
   });
 
   it('al vencer, el USDT del padrino se anota al deudor', async () => {
-    const { token, contract, alta, owner, user, extra, tokenAddr } = await deployAltaStack();
+    const { token, contract, alta, owner, user, extra } = await deployAltaStack();
     await seedPool(token, contract, owner, '500');
     await registerAndFund(token, contract, extra, '20');
     await registerAndFund(token, contract, user, '20', extra.address);

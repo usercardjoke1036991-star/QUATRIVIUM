@@ -1,5 +1,4 @@
 const { expect } = require('chai');
-const { ethers } = require('hardhat');
 const { deployProtocol, seedPool, registerAndFund } = require('./helpers.cjs');
 
 describe('QuatriviumCredit - no destroy account and sovereign wallet access', function () {

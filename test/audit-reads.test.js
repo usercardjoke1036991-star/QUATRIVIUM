@@ -58,7 +58,8 @@ describe('failed reads keep the last figure', function () {
       'zh',
     ]) {
       const pack = JSON.parse(read(`i18n/locales/${loc}.json`));
-      expect(pack.reservaPreviewFailed, loc).to.be.a('string').and.not.empty;
+      expect(typeof pack.reservaPreviewFailed, loc).to.equal('string');
+      expect(String(pack.reservaPreviewFailed).length, loc).to.be.greaterThan(0);
     }
   });
 });

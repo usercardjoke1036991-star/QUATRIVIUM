@@ -5,7 +5,6 @@ const {
   seedPool,
   registerAndFund,
   drainToken,
-  attestIdentity,
   expectAmt,
 } = require('./helpers.cjs');
 

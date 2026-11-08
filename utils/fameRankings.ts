@@ -114,11 +114,11 @@ export function podiumPlace(rank: number): PodiumPlace | 0 {
 export function rankedFameRows(
   players: FamePlayer[],
   kind: FameBoardKind
-): Array<{
+): {
   player: FamePlayer;
   rank: number;
   place: PodiumPlace | 0;
-}> {
+}[] {
   return sortFameBoard(players, kind).map((player, index) => {
     const rank = index + 1;
     return { player, rank, place: podiumPlace(rank) };
