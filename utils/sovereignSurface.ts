@@ -76,6 +76,21 @@ export function apkCheck(input: {
   return 'match';
 }
 
+/** Huella del certificado de firma: vacío o sin lectura = no verificada. */
+export function apkCertCheck(input: {
+  registryEmpty?: boolean;
+  readFailed?: boolean;
+  localCert?: string;
+  publishedCert?: string;
+}): ApkCheck {
+  return apkCheck({
+    registryEmpty: input.registryEmpty,
+    readFailed: input.readFailed,
+    localHash: input.localCert,
+    publishedHash: input.publishedCert,
+  });
+}
+
 export function apkIntegrity(
   localHash: string,
   publishedHash: string
@@ -94,11 +109,15 @@ export function nostrMayPublish(topic: string): boolean {
 export function prepareNostrPayload(
   topic: string,
   body: string
-): { nip: 'NIP-17' | 'NIP-44'; body: string } | null {
+): { nip: 'NIP-17' | 'NIP-44'; body: string; encrypted: false } | null {
   if (!nostrMayPublish(topic)) return null;
   const text = body.trim();
   if (!text) return null;
-  return { nip: topic.trim().toLowerCase() === 'message' ? 'NIP-17' : 'NIP-44', body: text };
+  return {
+    nip: topic.trim().toLowerCase() === 'message' ? 'NIP-17' : 'NIP-44',
+    body: text,
+    encrypted: false,
+  };
 }
 
 function normalizeSha256(value: string): string {

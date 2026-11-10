@@ -8,15 +8,20 @@ contract MockV3Aggregator {
     uint256 public startedAt;
     uint256 public updatedAt;
     uint80 public answeredInRound;
+    bool public rawTimestamps;
 
     constructor(uint8 _decimals, int256 _initialAnswer) {
         decimals = _decimals;
         answer = _initialAnswer;
     }
 
+    function setRawTimestamps(bool value) external {
+        rawTimestamps = value;
+    }
+
     function latestRoundData() external view returns (uint80, int256, uint256, uint256, uint80) {
-        uint256 t = updatedAt == 0 ? block.timestamp : updatedAt;
-        uint256 s = startedAt == 0 ? t : startedAt;
+        uint256 t = !rawTimestamps && updatedAt == 0 ? block.timestamp : updatedAt;
+        uint256 s = !rawTimestamps && startedAt == 0 ? t : startedAt;
         uint80 answered = answeredInRound == 0 ? roundId : answeredInRound;
         return (roundId, answer, s, t, answered);
     }

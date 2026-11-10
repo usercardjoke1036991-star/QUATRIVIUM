@@ -77,4 +77,36 @@ describe('Sequencer de Arbitrum y liquidaciones', function () {
     await warp(48 * 60 * 60);
     await expect(contract.connect(user).solicitarPrestamo(tokenAddr, 0)).to.not.be.reverted;
   });
+
+  it('pospone la liquidación si el feed dice arriba pero la ronda tiene más de 24 h', async () => {
+    const { contract, user, liquidator, tokenAddr, sequencer, info } = await prestar();
+    const ahora = (await ethers.provider.getBlock('latest')).timestamp;
+    const viejo = ahora - 25 * 60 * 60;
+    await sequencer.setRound(8, 0, viejo - 2 * 60 * 60, viejo, 8);
+    await ethers.provider.send('evm_setNextBlockTimestamp', [
+      Number(info.vencimiento) + 48 * 60 * 60 + 10,
+    ]);
+    await ethers.provider.send('evm_mine');
+    await expect(contract.connect(liquidator).liquidate(user.address, tokenAddr)).to.be.reverted;
+    const debt = await contract.obtenerDeuda(user.address);
+    await expect(contract.connect(user).pagarPrestamo(tokenAddr, debt.total)).to.not.be.reverted;
+  });
+
+  it('un feed recién vuelto sigue sumando la hora de margen y uno vacío pospone', async () => {
+    const { contract, user, liquidator, tokenAddr, sequencer, info } = await prestar();
+    await ethers.provider.send('evm_setNextBlockTimestamp', [
+      Number(info.vencimiento) + 48 * 60 * 60 + 10,
+    ]);
+    await ethers.provider.send('evm_mine');
+    const ahora = (await ethers.provider.getBlock('latest')).timestamp;
+    await sequencer.setRawTimestamps(true);
+    await sequencer.setRound(9, 0, 0, 0, 9);
+    await expect(contract.connect(liquidator).liquidate(user.address, tokenAddr)).to.be.reverted;
+    await sequencer.setRawTimestamps(false);
+    await sequencer.setRound(10, 0, ahora - 30 * 60, ahora, 10);
+    await expect(contract.connect(liquidator).liquidate(user.address, tokenAddr)).to.be.reverted;
+    await sequencer.setRound(11, 0, ahora - 2 * 60 * 60, ahora, 11);
+    await expect(contract.connect(liquidator).liquidate(user.address, tokenAddr)).to.not.be
+      .reverted;
+  });
 });

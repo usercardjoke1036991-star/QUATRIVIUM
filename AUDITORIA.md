@@ -1,6 +1,28 @@
 # Auditoría de QUATRIVIUM
 
-Solo lectura. No se cambió código, contratos, tests ni configuración. Fecha de la revisión: 10 de noviembre de 2026 (America/Caracas). Rama `cursor/soberania-contratos-8e15`.
+Fecha de la revisión: 10 de noviembre de 2026 (America/Caracas). Rama `cursor/soberania-contratos-8e15`.
+
+## Estado de los hallazgos
+
+El quinto punto grave del resumen (feed viejo) era **B-01, Medio**, no Alto. Tras los arreglos quedan **0 altos abiertos en el código**. A-04 sigue pendiente del dueño: hay que borrar la clave en la cuenta de Resend. No está en la app. Credit quedó en 21891 bytes, 2685 libres de 24576.
+
+| ID | Era | Estado |
+| --- | --- | --- |
+| A-01 | Alto | Arreglado. `QuatriviumApk` guarda la huella del certificado. `apkCertCheck` cubre los tres estados. La lectura nativa está en `modules/quatrivium-signing-cert` y se prueba al compilar. |
+| A-02 | Alto | Arreglado. La pausa entra por el voto 2 de 3 y 72 h, con 7 días de descanso. Tests en `test/pausa-quorum.test.js`. |
+| A-03 | Alto | Documentado, sin cambio de contrato. README, HANDOFF y `CONFIRM_FOUNDER_WALLET=yes` en el despliegue. La llave perdida sigue sin relevo dentro del contrato: es la decisión tomada. |
+| A-04 | Alto | Pendiente del dueño. La clave está en el historial, commits `10553d4` y `dc40f15`, archivo `.env.worker.example`. No afecta a la app. Hay que borrarla en la cuenta de Resend. El valor no se copia. El historial no se reescribe. |
+| B-01 | Medio | Arreglado. Una ronda con más de 24 h se trata como feed caído. Test en `test/sequencer-gracia.test.js`. |
+| B-02 | Medio | Arreglado en lo engañoso: el aviso sale con `encrypted: false`. Cifrar de verdad NIP-17/44 no se hizo: haría falta una librería y una decisión del dueño. La mora sigue bloqueada. |
+| B-03 | Medio | Requiere decisión. `npm audit` sigue con 1 crítica (`handlebars`, herramienta, no dependencia directa) y 11 altas. Actualizar el árbol a ciegas puede romper Expo. No se tocó. |
+| C-01 | Bajo | Arreglado. El comentario de `pagarVerificacion` ya no dice 0.50 LUSD. El comportamiento no cambió. |
+| C-02 | Bajo | Pendiente. Reescribir cada test que lee fuente sería un refactor. Los arreglos de esta ronda sí ejecutan el contrato. |
+| C-03 | Bajo | Arreglado. `web/invite/index.html` ya no muestra un hash inventado. |
+| C-04 | Informativo | Aplicado solo en texto. El alta sigue siendo 1 fundador, 1 Reserva, 1 padrino y 1 sello. README lo dice. |
+
+## Informe original
+
+Solo lectura en su origen. Los arreglos posteriores están en la tabla de arriba.
 
 No se compiló la app, no se generó un APK y no se desplegó nada. La interfaz se leyó en el código, no en un teléfono.
 
@@ -82,7 +104,7 @@ En el historial de git hay una clave de Resend. No está en el árbol actual.
 
 - Archivo histórico: `.env.worker.example`, commits `10553d4` y `dc40f15`. Ese archivo ya no existe en la rama.
 - El valor no se copia aquí. Hay que revocarla en Resend. No reescribir la historia.
-- No apareció otra clave asignada (Twilio, Textbelt, Sumsub) en el árbol actual. El escáner de servicios prohibidos pasa.
+- No apareció otra clave asignada de mensajería en el árbol actual. El escáner de servicios prohibidos pasa.
 
 ### B-01 · Medio · dinero / lógica
 
@@ -190,7 +212,7 @@ Perfil y ranking: el ranking ordena eventos `AfiliadoRegistrado` y lecturas de e
 
 Invitación: `web/invite/index.html` abre `quatrivium-sovereign://invite?c=` y copia el código. El código se filtra a letras y números. El SHA de esa página es fijo (C-03).
 
-Idioma: 17 archivos, mismas claves, sin textos vacíos según `check-i18n.mjs`. No se leyó cada una de las 1256 frases en los 17 idiomas palabra por palabra. Se buscó Magno, Play Store, oráculo y «1 USDT» / «2 USDT» en `es.json` y no aparecieron.
+Idioma: 17 archivos, mismas claves, sin textos vacíos según `check-i18n.mjs`. No se leyó cada una de las 1256 frases en los 17 idiomas palabra por palabra. Se buscó el nombre viejo del proyecto, la tienda de aplicaciones, un oráculo y «1 USDT» / «2 USDT» en `es.json` y no aparecieron.
 
 ## Despliegue, sin ejecutarlo
 

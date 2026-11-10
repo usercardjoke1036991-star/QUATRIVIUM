@@ -14,15 +14,17 @@ No reabrirlas. Si un texto del repo viejo las contradice, manda esta lista.
 
 - Red: Arbitrum One, chainId `42161`. LUSD `0x93b346b6BC2548dA6A1E7d98E9a421B42541425b`, 18 decimales, paridad 1:1. No hay oráculo de precio. BOLD no se usa.
 - Sin Rust. El análisis previo no halló beneficio. El producto es Solidity + la app.
-- Tres admins. La votación es fija: 2 de 3. Espera de 72 h (`TIMELOCK_DELAY`). La propuesta no caduca. Solo pueden votar `addAdmin` y `removeAdmin` (`allowedAdminSelector` en el constructor de Credit). Su único poder operativo es `pausarPrestamosNuevos()`: pausa préstamos nuevos y se levanta sola a los 7 días (`PAUSA_PRESTAMOS`). Pagos y liquidaciones siguen.
+- Tres admins. La votación es fija: 2 de 3. Espera de 72 h (`TIMELOCK_DELAY`). La propuesta no caduca. Votan `addAdmin`, `removeAdmin` y `pausarPrestamosNuevos`. Nadie pausa solo. La pausa dura 7 días y se levanta sola. Después hay 7 días de descanso (`pausaReposoHasta`) antes de votar otra. Pagos, liquidaciones y Reserva siguen.
 - El pool está cerrado para siempre. `retirarLiquidez` revierte con `"pool locked"`. Ni un admin lo retira.
 - Alta: 4 LUSD de una vez en `QuatriviumAlta.pagarRegistro`: 1 al fundador, 1 al bote de Reserva, 1 apartado para el padrino, 1 de sello al pool. El fundador cobra ese 1 LUSD en la misma transacción, más el 15 % del interés (`FUNDADOR_BP = 1500`) dentro del reparto. Solo el fundador rota su billetera (`proponerFundador` / espera 72 h). No necesita alta ni L1 pagado: el constructor lo marca verificado y el cobro no pasa por `cobradorListo`.
 - Fondo de seguro: 5 % de lo que entra al pool (`SEGURO_BP = 500` en `QuatriviumFamaLib`). Solo cubre el premio del impago. Nadie lo retira. `collectedFees` no crece: el fee de liquidación se queda en el pool en la misma transacción.
 - Reserva: nivel 10 o más (`NIVEL_MINIMO`), bloqueo 30 días (`LOCK`), tope 12 % anual (`MAX_APY_BP = 1200`) pagado del bote, principal siempre devuelto. Sin owner ni guardianes y sin retiro del bote. Los 3 admins (quórum 2, 72 h) solo votan su propia entrada o salida.
-- Liquidación: 48 h de gracia (`LIQUIDACION_GRACIA`) más el tiempo caído del sequencer, más 1 h después de que vuelve (`SEQUENCER_GRACIA`). Si el feed falla, las liquidaciones se posponen. El premio del liquidador es el menor entre el 5 % del principal restante y el interés que queda tras el fee. Feed obligatorio en chainId 42161: `0xFdB631F5EE196F0ed6FAa767959853A9F217697D`. `address(0)` solo vale fuera de 42161 (Hardhat 31337 y Sepolia 421614). El constructor revierte `SequencerFeedRequerido` si en 42161 el feed es cero.
+- Liquidación: 48 h de gracia (`LIQUIDACION_GRACIA`) más el tiempo caído del sequencer, más 1 h después de que vuelve (`SEQUENCER_GRACIA`). Si el feed falla, viene vacío o su `updatedAt` tiene más de 24 h (`SEQUENCER_FEED_MAX_EDAD`, el latido del feed de uptime), las liquidaciones se posponen. Préstamos y pagos no. El premio del liquidador es el menor entre el 5 % del principal restante y el interés que queda tras el fee. Feed obligatorio en chainId 42161: `0xFdB631F5EE196F0ed6FAa767959853A9F217697D`. `address(0)` solo vale fuera de 42161 (Hardhat 31337 y Sepolia 421614) y entonces solo aplica la gracia de 48 h. El constructor revierte `SequencerFeedRequerido` si en 42161 el feed es cero.
 - Para cobrar unilevel, padrino, fama o racha hay que tener alta y L1 pagados (`cobradorListo`). Si no, esa parte entra al pool. La racha solo cuenta préstamos de nivel 2 o más pagados a tiempo (`QuatriviumFamaCaja`).
 - Avisos: notificaciones locales del teléfono (`expo-notifications`). Nostr es opcional (NIP-17 / NIP-44). La mora nunca se publica. Perfiles, usernames y leaderboard salen de la cadena o de Nostr, no de un servidor.
-- Se distribuye solo el APK firmado. Su SHA-256 se publica en `QuatriviumApk` (contrato aparte, solo el fundador, historial que no se borra). Prohibido en código, config, CI y textos: Play Store, Expo OTA, Render, Fly, Hetzner, Telegram, Binance, Resend, Namecheap, Textbelt, Twilio, WhatsApp y Sumsub. El escáner es `scripts/check-external-services.mjs`.
+- Se distribuye solo el APK firmado. `QuatriviumApk` guarda versionCode, el hash del archivo, la fecha y la huella SHA-256 del certificado de firma. Esa huella es la misma en todas las versiones. Solo el fundador publica. No se borra. La app lee la huella del certificado con el módulo nativo `modules/quatrivium-signing-cert` (no se compila en los tests). Vacío o sin lectura: «versión no verificada». Igual: coincide. Distinta: aviso fuerte. La prueba en un teléfono se hace al compilar. Cualquier persona puede comparar a mano el hash del archivo con el registro.
+- La dirección de fundador debe ser una billetera de varias firmas o una billetera física con respaldo. Si se pierde, nadie publica hashes ni cobra su parte. `scripts/deploy-arbitrum-sovereign.cjs` lo avisa y exige `CONFIRM_FOUNDER_WALLET=yes`.
+- Prohibido en código, config, CI y textos: Play Store, Expo OTA, Render, Fly, Hetzner, Telegram, Binance, Resend, Namecheap, Textbelt, Twilio, WhatsApp y Sumsub. El escáner es `scripts/check-external-services.mjs`.
 
 La escalera de 1000 niveles, las tasas, el reparto del alta de 4 LUSD y los porcentajes de fundador, unilevel, fama y Reserva no se cambian salvo que Jose lo pida por escrito.
 
@@ -68,7 +70,7 @@ Todas en `cursor/soberania-contratos-8e15`. PR: https://github.com/usercardjoke1
 
 ## 5. Números
 
-La fase 6 no toca contratos. Credit sigue en 21769 bytes (2807 libres de 24576). Corrida única de esta fase: Hardhat 294/294, Foundry 51/51, `typecheck` verde, `eslint . --max-warnings 0` sin avisos, `format:check` verde.
+Tras la pausa con quórum y el tope de 24 h del feed, Credit mide 21891 bytes (2685 libres de 24576).
 
 ## 6. Simulación de impago
 
@@ -101,15 +103,15 @@ Orden de prioridad:
 3. **Incompleto a propósito en el código actual:**
    - Nostr no abre un websocket. Hay lista de 6 relés y `nextNostrRelay`. La mora sigue bloqueada en `prepareNostrPayload`.
    - El hash del APK instalado no se calcula en el teléfono. Sin registro, la UI dice «versión no verificada».
-   - Credit tiene 2807 bytes libres. Cualquier lógica nueva en ese contrato puede no caber. Preferir un contrato hermano, como ya se hizo con Apk, Leveling y LoanLadder.
+   - Credit tiene 2685 bytes libres. Cualquier lógica nueva en ese contrato puede no caber. Preferir un contrato hermano, como ya se hizo con Apk, Leveling y LoanLadder.
 4. Revisión humana de textos que aún digan alta de 1 o 2 USDT, o el nombre del proyecto anterior, dentro de la app y de los tests. Las docs sueltas que lo decían ya no están. `sonar-project.properties` conserva el id viejo porque `test/cyber-hardening.test.js` lo exige.
 5. Auditoría externa de los contratos antes de dinero real. El informe viejo de agosto de 2026 se borró: hablaba de otro contrato y de Solidity 0.8.17. No lo reemplaza este archivo.
 6. Revocar en Resend la clave que quedó en el historial de git, commits `10553d4` y `dc40f15`. No reescribir historia. No copiar el valor de la clave en ningún documento. Twilio, Textbelt y Sumsub aparecen como nombres de variable, no como secretos asignados. El token con forma de bot de Telegram que hay en la historia es un fixture de tests.
 
 ## 8. Riesgos
 
-- 2807 bytes libres en Credit. No añadir funciones ahí sin medir `deployedBytecode`.
-- Hardhat tiene `allowUnlimitedContractSize: true`. Un test verde no prueba el límite. El tamaño real es el del artifact (21769).
+- 2685 bytes libres en Credit. No añadir funciones ahí sin medir `deployedBytecode`.
+- Hardhat tiene `allowUnlimitedContractSize: true`. Un test verde no prueba el límite. El tamaño real es el del artifact (21891).
 - Los `require` de texto se borran del bytecode (`revertStrings: strip`). Los tests no pueden usar `revertedWith("mensaje")` para esos revert. Los errores con nombre (`SequencerFeedRequerido`, `SoloFundador`) sí se distinguen.
 - `pausarPrestamosNuevos` lo llama un solo admin, sin el quórum de 2. La votación 2 de 3 es solo para entrar o salir de admin. La pausa dura como máximo 7 días y no frena pagos ni liquidaciones.
 - El pool y el fondo de seguro no tienen retiro. Un error en el reparto no se «arregla» sacando el dinero.

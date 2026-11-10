@@ -75,7 +75,14 @@ describe('Quatrivium Finance - uncollateralized credit and admin locks', functio
     await seedPool(token, contract, owner, '50');
     await registerAndFund(token, contract, user);
     await contract.connect(user).solicitarPrestamo(tokenAddr, 0);
-    await contract.connect(owner).pausarPrestamosNuevos();
+    const data = contract.interface.encodeFunctionData('pausarPrestamosNuevos', []);
+    const proposed = await contract.connect(owner).proposeAdminAction(data);
+    await proposed.wait();
+    const id = await contract.proposalCount();
+    await contract.connect(user).confirmAdminAction(id);
+    await ethers.provider.send('evm_increaseTime', [72 * 60 * 60]);
+    await ethers.provider.send('evm_mine');
+    await contract.connect(owner).executeAdminAction(id);
     const debt = await contract.obtenerDeuda(user.address);
     await expect(contract.connect(user).pagarPrestamo(tokenAddr, debt.total)).to.not.be.reverted;
     await ethers.provider.send('evm_increaseTime', [48 * 60 * 60]);

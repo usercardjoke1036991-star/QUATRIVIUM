@@ -75,6 +75,11 @@ contract QuatriviumCredit is ReentrancyGuard {
     address public fundadorPendiente;
     uint256 public fundadorEta;
     uint256 public pausaPrestamosHasta;
+    /// @notice Hasta esta marca no se puede votar otra pausa: 7 días de pausa y 7 de descanso.
+    uint256 public pausaReposoHasta;
+    /// @dev El feed de uptime del sequencer en Arbitrum late como mucho cada 24 h.
+    ///      Una ronda más vieja no es una lectura viva: se posponen solo las liquidaciones.
+    uint256 internal constant SEQUENCER_FEED_MAX_EDAD = 24 hours;
     /// @notice Feed de uptime del sequencer. En Arbitrum One (42161) no puede ser cero.
     AggregatorV3Interface public immutable sequencerFeed;
     /// @notice Tiempo que el sequencer estuvo caído y que se suma a la gracia de liquidación.
@@ -222,6 +227,7 @@ contract QuatriviumCredit is ReentrancyGuard {
     event FundadorCancelado();
 
     error SequencerFeedRequerido();
+    error PausaEnReposo();
     event PrestamosPausados(uint256 hasta);
     event SecurityParamsUpdated(uint256 maxOriginations, uint256 maxUtilizationBps);
     event FeeCollectorUpdated(address indexed newCollector);
@@ -305,6 +311,7 @@ contract QuatriviumCredit is ReentrancyGuard {
 
         allowedAdminSelector[this.addAdmin.selector] = true;
         allowedAdminSelector[this.removeAdmin.selector] = true;
+        allowedAdminSelector[this.pausarPrestamosNuevos.selector] = true;
         famaHermano = _famaHermano;
         sequencerFeed = AggregatorV3Interface(_sequencerFeed);
     }
@@ -321,6 +328,9 @@ contract QuatriviumCredit is ReentrancyGuard {
         require(data.length >= 4, "bad data");
         bytes4 sel = bytes4(data);
         require(allowedAdminSelector[sel], "selector not allowed");
+        if (sel == this.pausarPrestamosNuevos.selector && block.timestamp < pausaReposoHasta) {
+            revert PausaEnReposo();
+        }
         id = ++proposalCount;
         proposals[id] = AdminProposal({
             proposer: msg.sender,
@@ -370,9 +380,12 @@ contract QuatriviumCredit is ReentrancyGuard {
         require(interes > extracto, "L1 interest must exceed referral extract");
     }
 
-    /// @notice Pausa solo préstamos nuevos. Se levanta sola a los 7 días. Pagos y liquidaciones siguen.
-    function pausarPrestamosNuevos() external onlyAdmin {
+    /// @notice Pausa solo préstamos nuevos. Solo el propio contrato, tras el voto 2 de 3 y 72 h.
+    ///         Se levanta sola a los 7 días. Otra votación espera otros 7 días de descanso.
+    function pausarPrestamosNuevos() external onlySelf {
+        if (block.timestamp < pausaReposoHasta) revert PausaEnReposo();
         pausaPrestamosHasta = block.timestamp + PAUSA_PRESTAMOS;
+        pausaReposoHasta = pausaPrestamosHasta + PAUSA_PRESTAMOS;
         emit PrestamosPausados(pausaPrestamosHasta);
     }
 
@@ -877,6 +890,7 @@ contract QuatriviumCredit is ReentrancyGuard {
                 if (sequencerCaidoDesde == 0) sequencerCaidoDesde = startedAt;
                 return (extra, true);
             }
+            if (block.timestamp - updatedAt > SEQUENCER_FEED_MAX_EDAD) return (extra, true);
             if (sequencerCaidoDesde != 0) {
                 uint256 fin = startedAt > sequencerCaidoDesde ? startedAt : block.timestamp;
                 if (fin > sequencerCaidoDesde) {
@@ -1050,7 +1064,7 @@ contract QuatriviumCredit is ReentrancyGuard {
         emit ReputationUpdated(msg.sender, reputacion[msg.sender]);
     }
 
-    /// @notice Sello: 0.50 o 1 LUSD al pool. Sin fama ni participaciones LP.
+    /// @notice Sello de 1 LUSD al pool. Solo lo llama Alta. Sin fama ni participaciones LP.
     function pagarVerificacion(address token, uint256 amount) external nonReentrant onlySupportedToken(token) {
         address user = QuatriviumFamaLib.usuarioVerificacion(famaHermano, msg.sender, tx.origin);
         QuatriviumFamaLib.alimentarPool(totalLiquidity, stableTokens[token], token, amount);

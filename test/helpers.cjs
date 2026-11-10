@@ -16,7 +16,8 @@ async function deployFamaAndCredit(
     const Aggregator = await ethers.getContractFactory('MockV3Aggregator');
     sequencer = await Aggregator.deploy(0, 0);
     const block = await ethers.provider.getBlock('latest');
-    await sequencer.setRound(1, 0, block.timestamp - 7200, block.timestamp, 1);
+    // updatedAt en cero: el mock lo lee como "ahora", así un salto de días no deja el feed viejo.
+    await sequencer.setRound(1, 0, block.timestamp - 7200, 0, 1);
     sequencerAddress = await sequencer.getAddress();
   }
   const nonce = await ethers.provider.getTransactionCount(owner.address);

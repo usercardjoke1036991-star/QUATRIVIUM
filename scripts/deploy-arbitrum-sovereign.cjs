@@ -5,8 +5,7 @@
  * Flujo automatizado en orden:
  *  a) Desplegar QuatriviumFamaLib.
  *  b) Enlazar y desplegar QuatriviumCredit apuntando a LUSD
- *     (0x93b346b6BC2548dA6A1E7d98E9a421B42541425b) y al oráculo Chainlink LUSD/USD
- *     (0x0411D28c94d85A36bC72Cb0f875dfA8371D8fFfF).
+ *     (0x93b346b6BC2548dA6A1E7d98E9a421B42541425b). No hay oráculo de precio.
  *  c) Desplegar QuatriviumAlta, QuatriviumFamaCaja y QuatriviumReserva.
  *  d) Ejecutar las transacciones de enlace cruzado entre los contratos hermanos y QuatriviumCredit:
  *     - fama.setAlta(altaAddr)
@@ -25,6 +24,7 @@ const hre = require('hardhat');
 const { ethers } = hre;
 const { ARBITRUM_MAINNET, isHexAddress, isZero } = require('./bscNetworks.cjs');
 const { getLinkedCreditFactory } = require('./linkCredit.cjs');
+const { founderWalletAck } = require('./founderAck.cjs');
 
 const FOUNDER = '0x5023bf46dB7458B9bb9152a7ffE64f195CD1a047';
 const ARBITRUM_ONE_CHAIN_ID = 42161;
@@ -256,6 +256,11 @@ async function main() {
   }
   if (!isMainnet && process.env.CONFIRM_MAINNET === 'yes') {
     throw new Error('Arbitrum Sepolia es testnet. No ejecute con CONFIRM_MAINNET=yes.');
+  }
+  const founderAck = founderWalletAck(process.env);
+  console.warn(founderAck.warning);
+  if (!founderAck.ok) {
+    throw new Error(`${founderAck.warning} Defina CONFIRM_FOUNDER_WALLET=yes para continuar.`);
   }
 
   const feeCollector = process.env.FEE_COLLECTOR || (isMainnet ? '' : deployer.address);

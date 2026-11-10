@@ -6,6 +6,7 @@ const { ARBITRUM_MAINNET } = require('../constants/bsc.ts');
 const { DEPLOYED_MAINNET } = require('../constants/deployedAddresses.ts');
 const {
   altaBreakdown,
+  apkCertCheck,
   apkCheck,
   apkIntegrity,
   interestToFounder,
@@ -120,8 +121,13 @@ describe('Fase 4 — app soberana', function () {
     expect(prepareNostrPayload('message', 'aviso')).to.deep.equal({
       nip: 'NIP-17',
       body: 'aviso',
+      encrypted: false,
     });
-    expect(prepareNostrPayload('notice', 'pago')).to.deep.equal({ nip: 'NIP-44', body: 'pago' });
+    expect(prepareNostrPayload('notice', 'pago')).to.deep.equal({
+      nip: 'NIP-44',
+      body: 'pago',
+      encrypted: false,
+    });
   });
 
   it('avisa versión no verificada o hash distinto del APK', function () {
@@ -136,6 +142,15 @@ describe('Fase 4 — app soberana', function () {
     expect(apkCheck({ publishedHash: '' })).to.equal('unverified');
     expect(apkCheck({ localHash: hash, publishedHash: other })).to.equal('mismatch');
     expect(apkCheck({ localHash: hash, publishedHash: hash })).to.equal('match');
+    expect(apkCertCheck({ registryEmpty: true, localCert: hash, publishedCert: hash })).to.equal(
+      'unverified'
+    );
+    expect(apkCertCheck({ readFailed: true, localCert: hash, publishedCert: hash })).to.equal(
+      'unverified'
+    );
+    expect(apkCertCheck({ publishedCert: '' })).to.equal('unverified');
+    expect(apkCertCheck({ localCert: hash, publishedCert: other })).to.equal('mismatch');
+    expect(apkCertCheck({ localCert: hash, publishedCert: hash })).to.equal('match');
     expect(apkIntegrity('', '')).to.equal('unpublished');
     const note = read('components/ApkIntegrityNote.tsx');
     expect(note).to.include("t('apkUnverified')");
