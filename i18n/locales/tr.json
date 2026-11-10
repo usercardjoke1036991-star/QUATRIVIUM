@@ -1227,7 +1227,7 @@
   "otpPayFailed": "Tahsilat olmadı. Kod hâlâ geçerli.",
   "emailRemoveFailed": "Yerel ayar güncellenemedi.",
   "fundsConfirmMovement": "Bu işlemi onaylayın.",
-  "altaSplitNote": "4 LUSD içinden 1 LUSD kurucuya gider, kalanı havuza girer.",
+  "altaSplitNote": "4 LUSD paylaşımı: 1 LUSD kurucuya, 1 LUSD yedek kabına, 1 LUSD davet eden için ayrılır ve 1 LUSD mühür olarak havuza girer. O mührün yüzde beşi sigorta fonunda kalır.",
   "loanFounderShare": "Her ödemenin faizinin %15'i kurucuya gider.",
   "loanInsuranceShare": "Havuza giren tutarın %5'i sigorta fonuna gider ve kimse çekemez.",
   "loanSequencerGrace": "Tasfiye 48 saat bekler. Arbitrum durursa kimse tasfiye edilmez.",

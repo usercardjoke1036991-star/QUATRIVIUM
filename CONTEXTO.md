@@ -10,12 +10,12 @@ No hay servidor de la empresa. La billetera nace en el teléfono (`services/appW
 
 - Tres admins, votación fija 2 de 3, espera 72 h, sin caducidad. Solo votan su entrada o salida. `pausarPrestamosNuevos` lo llama un admin, dura 7 días y no frena pagos ni liquidaciones.
 - `retirarLiquidez` revierte. Nadie saca el pool.
-- Alta de 4 LUSD en `QuatriviumAlta`. El fundador recibe 1 LUSD y el 15 % del interés en la misma transacción. Solo él rota su billetera, con 72 h. No necesita alta ni L1.
+- Alta de 4 LUSD en `QuatriviumAlta.pagarRegistro`: 1 al fundador, 1 al bote de Reserva, 1 apartado para quien invitó y 1 de sello a Credit. De ese sello, el 5 % queda en el fondo de seguro y el resto en la liquidez. El fundador cobra además el 15 % del interés en la misma transacción. Solo él rota su billetera, con 72 h. No necesita alta ni L1.
 - Fondo de seguro: 5 % de las entradas al pool. Solo paga el premio del impago.
 - Reserva: nivel ≥ 10, 30 días, tope 12 % anual del bote, principal siempre devuelto. Sin owner ni retiro del bote.
 - Liquidación: 48 h más el tiempo caído del sequencer y 1 h tras volver. Feed `0xFdB631F5EE196F0ed6FAa767959853A9F217697D`, obligatorio si chainId es 42161. Premio = el menor entre 5 % del principal restante y el interés que queda.
 - Unilevel, padrino, fama y racha exigen alta y L1 (`cobradorListo`). Si no, esa parte entra al pool. La racha solo cuenta nivel ≥ 2 pagado a tiempo.
-- Avisos locales. Nostr opcional y sin publicar la mora. Ranking leído de eventos de la cadena.
+- Avisos locales. No hay mensaje privado por Nostr mientras no exista cifrado. La mora no se publica. Ranking leído de eventos de la cadena.
 - Distribución: APK firmado y hash en `QuatriviumApk`. Eso, el despliegue, IPFS y ENS están pendientes.
 
 La escalera de 1000 niveles y los porcentajes de arriba no se tocan sin una orden nueva.

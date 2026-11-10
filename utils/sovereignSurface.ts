@@ -2,7 +2,9 @@
 
 export const ALTA_LUSD = 4;
 export const ALTA_FOUNDER_LUSD = 1;
-export const ALTA_POOL_LUSD = 3;
+export const ALTA_RESERVA_LUSD = 1;
+export const ALTA_PADRINO_LUSD = 1;
+export const ALTA_SEAL_LUSD = 1;
 export const FOUNDER_INTEREST_BP = 1500;
 export const INSURANCE_INFLOW_BP = 500;
 export const LIQUIDATION_GRACE_HOURS = 48;
@@ -12,8 +14,21 @@ export const RESERVA_MAX_APY_BP = 1200;
 export const ADMIN_TIMELOCK_HOURS = 72;
 export const ADMIN_SEATS = 3;
 
-export function altaBreakdown(): { total: number; founder: number; pool: number } {
-  return { total: ALTA_LUSD, founder: ALTA_FOUNDER_LUSD, pool: ALTA_POOL_LUSD };
+/** Lo que hace pagarRegistro: cuatro destinos de 1 LUSD. El sello pasa por Credit y deja el 5 % en el seguro. */
+export function altaBreakdown(): {
+  total: number;
+  founder: number;
+  reserva: number;
+  padrino: number;
+  seal: number;
+} {
+  return {
+    total: ALTA_LUSD,
+    founder: ALTA_FOUNDER_LUSD,
+    reserva: ALTA_RESERVA_LUSD,
+    padrino: ALTA_PADRINO_LUSD,
+    seal: ALTA_SEAL_LUSD,
+  };
 }
 
 export function interestToFounder(interest: number): number {
@@ -99,25 +114,19 @@ export function apkIntegrity(
   return status === 'unverified' ? 'unpublished' : status;
 }
 
-/** La mora no sale de la cadena. Nostr solo admite avisos y mensajes cifrados. */
-export function nostrMayPublish(topic: string): boolean {
-  const key = topic.trim().toLowerCase();
-  if (key === 'mora' || key === 'moroso' || key === 'delinquency') return false;
-  return key === 'notice' || key === 'message';
+/** Mensaje privado apagado: aún no hay cifrado NIP-17 ni NIP-44. La mora tampoco sale. */
+export function nostrPrivateReady(): boolean {
+  return false;
 }
 
-export function prepareNostrPayload(
-  topic: string,
-  body: string
-): { nip: 'NIP-17' | 'NIP-44'; body: string; encrypted: false } | null {
-  if (!nostrMayPublish(topic)) return null;
-  const text = body.trim();
-  if (!text) return null;
-  return {
-    nip: topic.trim().toLowerCase() === 'message' ? 'NIP-17' : 'NIP-44',
-    body: text,
-    encrypted: false,
-  };
+export function nostrMayPublish(topic: string): boolean {
+  if (!nostrPrivateReady()) return false;
+  const key = topic.trim().toLowerCase();
+  return key !== 'mora' && key !== 'moroso' && key !== 'delinquency';
+}
+
+export function prepareNostrPayload(_topic: string, _body: string): null {
+  return null;
 }
 
 function normalizeSha256(value: string): string {

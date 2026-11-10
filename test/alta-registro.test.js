@@ -19,10 +19,17 @@ describe('Alta 4 USDT', function () {
     const boteBefore = await reserva.bote();
     await alta.connect(user).pagarRegistro();
     expect(await alta.registroHecho(user.address)).to.equal(true);
-    expectAmt((await token.balanceOf(owner.address)) - founderBefore, ethers.parseUnits('1', 18));
-    expectAmt((await reserva.bote()) - boteBefore, ethers.parseUnits('1', 18));
-    expectAmt(await alta.padrinoApartado(user.address), ethers.parseUnits('1', 18));
-    expectAmt(await contract.reservaPrimera(user.address), ethers.parseUnits('1', 18));
+    const uno = ethers.parseUnits('1', 18);
+    const seguro = uno / 20n;
+    expectAmt((await token.balanceOf(owner.address)) - founderBefore, uno);
+    expectAmt((await reserva.bote()) - boteBefore, uno);
+    expectAmt(await token.balanceOf(await reserva.getAddress()), uno);
+    expectAmt(await alta.padrinoApartado(user.address), uno);
+    expectAmt(await token.balanceOf(await alta.getAddress()), uno);
+    expectAmt(await contract.fondoSeguro(await token.getAddress()), seguro);
+    expectAmt(await contract.totalLiquidity(await token.getAddress()), uno - seguro);
+    expectAmt(await token.balanceOf(await contract.getAddress()), uno);
+    expectAmt(await contract.reservaPrimera(user.address), uno);
   });
 
   it('al pagar el primer L1 suelta el 1 del padrino y no saca otro de la caja', async () => {

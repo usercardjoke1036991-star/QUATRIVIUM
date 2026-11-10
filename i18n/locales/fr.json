@@ -1227,7 +1227,7 @@
   "otpPayFailed": "Le prélèvement n’a pas abouti. Le code reste valable.",
   "emailRemoveFailed": "Impossible de mettre à jour le réglage local.",
   "fundsConfirmMovement": "Confirmez cette opération.",
-  "altaSplitNote": "Sur 4 LUSD, 1 LUSD va au fondateur et le reste entre dans le pool.",
+  "altaSplitNote": "Sur 4 LUSD : 1 LUSD au fondateur, 1 LUSD au pot de la Réserve, 1 LUSD mis de côté pour l’invitant et 1 LUSD de sceau vers le pool. Cinq pour cent de ce sceau restent au fonds de garantie.",
   "loanFounderShare": "15 % des intérêts de chaque paiement vont au fondateur.",
   "loanInsuranceShare": "5 % de ce qui entre dans le pool va au fonds d'assurance et personne ne peut le retirer.",
   "loanSequencerGrace": "La liquidation attend 48 heures. Si Arbitrum tombe, personne n'est liquidé.",

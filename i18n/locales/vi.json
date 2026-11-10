@@ -1227,7 +1227,7 @@
   "otpPayFailed": "Không thu được tiền. Mã vẫn còn hiệu lực.",
   "emailRemoveFailed": "Không thể cập nhật thiết lập cục bộ.",
   "fundsConfirmMovement": "Xác nhận thao tác này.",
-  "altaSplitNote": "Trong 4 LUSD, 1 LUSD về người sáng lập và phần còn lại vào quỹ.",
+  "altaSplitNote": "Chia 4 LUSD: 1 LUSD cho người sáng lập, 1 LUSD vào hũ dự trữ, 1 LUSD giữ cho người mời, và 1 LUSD niêm phong vào quỹ. Năm phần trăm của niêm phong đó ở lại quỹ bảo hiểm.",
   "loanFounderShare": "15% lãi của mỗi lần trả về người sáng lập.",
   "loanInsuranceShare": "5% số vào quỹ đi vào quỹ bảo hiểm và không ai rút được.",
   "loanSequencerGrace": "Thanh lý chờ 48 giờ. Nếu Arbitrum ngừng, không thanh lý ai.",

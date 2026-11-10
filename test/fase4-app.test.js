@@ -15,6 +15,7 @@ const {
   nextPublicRpc,
   nostrRelays,
   nostrMayPublish,
+  nostrPrivateReady,
   prepareNostrPayload,
   RESERVA_LOCK_DAYS,
   RESERVA_MAX_APY_BP,
@@ -52,16 +53,34 @@ describe('Fase 4 — app soberana', function () {
     expect(read('constants/bsc.ts')).to.not.include('AggregatorV3');
   });
 
-  it('parte el alta en 1 LUSD al fundador y el resto al pool', function () {
-    expect(altaBreakdown()).to.deep.equal({ total: 4, founder: 1, pool: 3 });
-    const gate = read('components/CreditAccessGate.tsx');
-    expect(gate).to.include("t('altaSplitNote')");
+  it('parte el alta en fundador, Reserva, padrino y sello', async function () {
+    expect(altaBreakdown()).to.deep.equal({
+      total: 4,
+      founder: 1,
+      reserva: 1,
+      padrino: 1,
+      seal: 1,
+    });
+    const { deployProtocol } = require('./helpers.cjs');
+    const { ethers } = require('hardhat');
+    const ctx = await deployProtocol();
+    const { token, contract, reserva, alta, owner, user } = ctx;
+    await token.mint(user.address, ethers.parseUnits('8', 18));
+    await token.connect(user).approve(await alta.getAddress(), ethers.MaxUint256);
+    await contract.connect(user).registrarHumanoConPadre(ethers.ZeroAddress);
+    const founderBefore = await token.balanceOf(owner.address);
+    await alta.connect(user).pagarRegistro();
+    const uno = ethers.parseUnits('1', 18);
+    expect((await token.balanceOf(owner.address)) - founderBefore).to.equal(uno);
+    expect(await reserva.bote()).to.equal(uno);
+    expect(await alta.padrinoApartado(user.address)).to.equal(uno);
+    expect(await contract.fondoSeguro(await token.getAddress())).to.equal(uno / 20n);
+    expect(await contract.totalLiquidity(await token.getAddress())).to.equal(uno - uno / 20n);
     const es = JSON.parse(read('i18n/locales/es.json'));
     expect(es.altaSplitNote).to.match(/4 LUSD/);
-    expect(es.altaSplitNote).to.match(/1 LUSD/);
+    expect(es.altaSplitNote).to.match(/Reserva/);
     expect(es.altaSplitNote).to.match(/pool/);
-    expect(read('services/quatriviumCreditService.ts')).to.include('asegurarAprobacionToken');
-    expect(read('services/quatriviumCreditService.ts')).to.include('pagarRegistro');
+    expect(es.altaSplitNote).to.not.match(/resto entra al pool/);
   });
 
   it('muestra el 15 % del fundador, el 5 % del seguro y la gracia de 48 h', function () {
@@ -114,20 +133,13 @@ describe('Fase 4 — app soberana', function () {
     expect(nextNostrRelay(relays[relays.length - 1])).to.equal(null);
     const custom = relays.map((url, index) => `wss://alt${index}.example`);
     expect(nostrRelays(custom)[0]).to.equal(custom[0]);
+    expect(nostrPrivateReady()).to.equal(false);
     expect(nostrMayPublish('mora')).to.equal(false);
-    expect(nostrMayPublish('moroso')).to.equal(false);
-    expect(nostrMayPublish('delinquency')).to.equal(false);
+    expect(nostrMayPublish('message')).to.equal(false);
+    expect(nostrMayPublish('notice')).to.equal(false);
     expect(prepareNostrPayload('mora', 'deuda vencida')).to.equal(null);
-    expect(prepareNostrPayload('message', 'aviso')).to.deep.equal({
-      nip: 'NIP-17',
-      body: 'aviso',
-      encrypted: false,
-    });
-    expect(prepareNostrPayload('notice', 'pago')).to.deep.equal({
-      nip: 'NIP-44',
-      body: 'pago',
-      encrypted: false,
-    });
+    expect(prepareNostrPayload('message', 'aviso privado')).to.equal(null);
+    expect(prepareNostrPayload('notice', 'pago')).to.equal(null);
   });
 
   it('avisa versión no verificada o hash distinto del APK', function () {

@@ -1227,7 +1227,7 @@
   "otpPayFailed": "未能完成扣款。验证码仍然有效。",
   "emailRemoveFailed": "无法更新本地设置。",
   "fundsConfirmMovement": "请确认此操作。",
-  "altaSplitNote": "4 LUSD 中，1 LUSD 给创始人，其余进入资金池。",
+  "altaSplitNote": "4 LUSD 的分配：1 LUSD 给创始人，1 LUSD 进入储备金库，1 LUSD 暂留给邀请人，1 LUSD 作为封印进入资金池。该封印的 5% 留在保险基金。",
   "loanFounderShare": "每笔利息的 15% 付给创始人。",
   "loanInsuranceShare": "进入资金池的 5% 进入保险金，无人可提取。",
   "loanSequencerGrace": "清算等待 48 小时。若 Arbitrum 中断，不清算任何人。",

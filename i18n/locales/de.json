@@ -1227,7 +1227,7 @@
   "otpPayFailed": "Die Abbuchung ist nicht erfolgt. Der Code gilt noch.",
   "emailRemoveFailed": "Lokale Einstellung konnte nicht aktualisiert werden.",
   "fundsConfirmMovement": "Bestätigen Sie diesen Vorgang.",
-  "altaSplitNote": "Von 4 LUSD gehen 1 LUSD an den Gründer und der Rest in den Pool.",
+  "altaSplitNote": "Von 4 LUSD: 1 LUSD an den Gründer, 1 LUSD in den Reserve-Topf, 1 LUSD für den Einladenden zurückgelegt und 1 LUSD als Siegel in den Pool. Fünf Prozent dieses Siegels bleiben im Sicherungsfonds.",
   "loanFounderShare": "15 % der Zinsen jeder Zahlung gehen an den Gründer.",
   "loanInsuranceShare": "5 % dessen, was in den Pool kommt, geht in den Sicherungsfonds und niemand hebt es ab.",
   "loanSequencerGrace": "Die Liquidation wartet 48 Stunden. Fällt Arbitrum aus, wird niemand liquidiert.",
