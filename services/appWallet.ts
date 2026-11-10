@@ -10,7 +10,6 @@ import {
 } from 'ethers';
 import * as SecureStore from 'expo-secure-store';
 import { ERC20_ABI } from '../constants/contractConfig';
-import { estimateNetworkGasWei, resolveFeeCollector } from '../constants/feeConfig';
 import { getProductMode, NETWORK_CONFIG, RPC_URLS } from '../constants/rpcConfig';
 import { isAllowedWei, isHexAddress } from '../utils/sanitize';
 import { isSealedBlob, openSecret, sealSecret, sealedBlobVersion } from '../utils/secretBox';
@@ -310,29 +309,13 @@ export async function markPhraseBackedUp(): Promise<void> {
 }
 
 async function cobrarGasPlataforma(
-  signer: Signer,
-  tokenTransfer: boolean,
-  extraWei = 0n,
-  followUp = false
+  _signer: Signer,
+  _tokenTransfer: boolean,
+  _extraWei = 0n,
+  _followUp = false
 ): Promise<bigint> {
-  const collector = await resolveFeeCollector(signer);
-  const from = (await signer.getAddress()).toLowerCase();
-  if (!collector || collector === from) return 0n;
-  const feeWei =
-    (await estimateNetworkGasWei(signer, tokenTransfer)) +
-    (await estimateNetworkGasWei(signer, false));
-  if (feeWei <= 0n) return 0n;
-  const provider = signer.provider;
-  if (!provider) throw new Error('provider');
-  const balance = await provider.getBalance(from);
-  const feeTxGas = await estimateNetworkGasWei(signer, false);
-  const followGas = followUp ? await estimateNetworkGasWei(signer, tokenTransfer) : 0n;
-  if (balance < feeWei + feeTxGas + followGas + extraWei) {
-    throw new Error('platform-fee-bnb');
-  }
-  const tx = await signer.sendTransaction({ to: collector, value: feeWei });
-  await tx.wait();
-  return feeWei;
+  // El protocolo no cobra gas en ETH. El fundador cobra LUSD dentro del contrato.
+  return 0n;
 }
 
 export async function cobrarComisionIntermediario(signer: Signer, tokenTransfer = true) {

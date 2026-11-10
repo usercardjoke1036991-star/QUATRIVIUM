@@ -26,7 +26,7 @@ La escalera de 1000 niveles y los porcentajes de arriba no se tocan sin una orde
 
 | Archivo | Rol |
 | --- | --- |
-| `contracts/QuatriviumCredit.sol` | Préstamos, pool, interés, liquidación, admins, sequencer, fondo. 22003 bytes. Libres: 2573 de 24576. |
+| `contracts/QuatriviumCredit.sol` | Préstamos, pool, interés, liquidación, admins, sequencer, fondo. 24064 bytes. Libres: 512 de 24576. |
 | `contracts/QuatriviumAlta.sol` | Alta de 4 LUSD. |
 | `contracts/QuatriviumReserva.sol` | Bloqueos y bote. |
 | `contracts/QuatriviumFamaCaja.sol` | Fama, canje y racha. |

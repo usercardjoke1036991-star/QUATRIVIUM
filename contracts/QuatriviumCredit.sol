@@ -225,6 +225,7 @@ contract QuatriviumCredit is ReentrancyGuard {
     error GraciaLiquidacion();
     error PerdidaPool();
     error VotosInsuficientes();
+    error TasaSubio();
     error PausaEnReposo();
     event PrestamosPausados(uint256 hasta);
     event SecurityParamsUpdated(uint256 maxOriginations, uint256 maxUtilizationBps);
@@ -502,6 +503,19 @@ contract QuatriviumCredit is ReentrancyGuard {
     }
 
     function solicitarPrestamo(address token, uint256 nivel) external nonReentrant onlySupportedToken(token) {
+        _pedir(token, nivel, type(uint256).max);
+    }
+
+    /// @notice Revierte si la tasa del momento supera la que el usuario aceptó.
+    function solicitarPrestamoConTope(address token, uint256 nivel, uint256 tasaMaximaBP)
+        external
+        nonReentrant
+        onlySupportedToken(token)
+    {
+        _pedir(token, nivel, tasaMaximaBP);
+    }
+
+    function _pedir(address token, uint256 nivel, uint256 tasaMaximaBP) internal {
         require(block.timestamp >= pausaPrestamosHasta, "prestamos pausados");
         require(tx.origin == msg.sender, "no contracts");
         QuatriviumFamaLib.requireAltaPagada(famaHermano, msg.sender);
@@ -572,6 +586,7 @@ contract QuatriviumCredit is ReentrancyGuard {
         uint256 tasaCurva = obtenerTasaInteresActual(token);
         uint256 tasaPiso = L.tasaInteresBP;
         usuarios[msg.sender].tasaAplicadaBP = tasaCurva > tasaPiso ? tasaCurva : tasaPiso;
+        if (usuarios[msg.sender].tasaAplicadaBP > tasaMaximaBP) revert TasaSubio();
 
         outstandingLoans[token] += L.montoPrestamo;
         uint256 m = L.montoPrestamo;

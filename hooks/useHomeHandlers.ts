@@ -6,7 +6,6 @@
 import { useRef, useState } from 'react';
 import {
   Contract,
-  formatUnits,
   parseEther,
   parseUnits,
   type Eip1193Provider,
@@ -614,17 +613,20 @@ export const useHomeHandlers = ({
       if (isDemoAccount() || !walletAddress) return true;
       const meta = getTokenMeta(loanToken) || selectedToken;
       const raw = await tokenBalanceOf(loanToken, walletAddress);
-      let available: number;
-      if (raw !== null) {
-        available = Number(formatUnits(raw, meta.decimals));
-      } else if (loanToken.toLowerCase() === selectedToken.address.toLowerCase()) {
-        available = Number(balances.tokenBalance);
-      } else {
+      let available: bigint | null = raw;
+      if (available === null && loanToken.toLowerCase() === selectedToken.address.toLowerCase()) {
+        try {
+          available = parseUnits(balances.tokenBalance || '0', meta.decimals);
+        } catch {
+          available = null;
+        }
+      }
+      if (available === null) {
         Alert.alert(t('error'), t('errRpcNoContract'));
         return false;
       }
-      const needed = Number(formatUnits(amountWei, meta.decimals));
-      if (needed > available + 1e-8) {
+      const needed = BigInt(amountWei);
+      if (needed > available) {
         Alert.alert(t('amount'), t('amountExceedsBalance'));
         return false;
       }
