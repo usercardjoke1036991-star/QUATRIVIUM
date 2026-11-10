@@ -26,7 +26,7 @@ El quinto punto grave del resumen (feed viejo) era **B-01, Medio**, no Alto. Tra
 | A-04 | Alto | Cerrado por el dueño. La clave estaba en el historial, commits `10553d4` y `dc40f15`, archivo `.env.worker.example`. Ya fue revocada. No está en la app. El valor no se copia. El historial no se reescribe. |
 | B-01 | Medio | El tope de 24 h se quitó. Ese feed no late cada día: con `answer == 0` se liquida aunque la ronda tenga meses. La caída se lee de la ronda anterior. |
 | B-02 | Medio | Arreglado en la superficie: `prepareNostrPayload` devuelve null en todos los caminos. No hay pantalla de mensaje privado. Cifrar NIP-17/44 sigue sin hacerse. La mora no se publica. |
-| B-03 | Medio | Requiere decisión. `npm audit` sigue con 1 crítica (`handlebars`, herramienta, no dependencia directa) y 11 altas. Actualizar el árbol a ciegas puede romper Expo. No se tocó. |
+| B-03 | Medio | Abierto en parte. `npm audit --omit=dev` el 10 de noviembre de 2026: 0 críticas, 1 alta, 11 medias, 9 bajas. El árbol completo: 1 crítica, 2 altas, 21 medias, 15 bajas. Sin subir Expo 54 se fijaron `decode-uri-component` 0.5.1, `node-forge` 1.4.3, `undici` 6.29.1, `source-map-js` 1.2.2, `axios` 1.21.1 y `fast-uri` 3.1.9. `handlebars` 4.7.9 queda solo en desarrollo (`solidity-coverage` → `sc-istanbul`) y no se tocó. La alta de producción que queda es `image-size` 1.2.1, que Metro de este SDK usa; el parche es 2.1.0. |
 | C-01 | Bajo | Arreglado. El comentario de `pagarVerificacion` ya no dice 0.50 LUSD. El comportamiento no cambió. |
 | C-02 | Bajo | Pendiente. Reescribir cada test que lee fuente sería un refactor. Los arreglos de esta ronda sí ejecutan el contrato. |
 | C-03 | Bajo | Arreglado. `web/invite/index.html` ya no muestra un hash inventado. |
@@ -86,7 +86,7 @@ Nada de lo leído permite que un extraño vacíe el pool, el bote de Reserva o e
 - Foundry: 51 pruebas, todas en verde, con `--fuzz-runs 32`. Los invariantes corrieron 256 veces, sin reverts.
 - `node scripts/check-external-services.mjs`: sin nombres prohibidos en el árbol actual.
 - `node scripts/check-i18n.mjs`: 17 idiomas, 1256 claves cada uno, sin copias largas del inglés.
-- `npm audit`: 1 crítica, 11 altas, 24 medias, 15 bajas. La crítica es `handlebars` (inyección en plantillas precompiladas). No está en las dependencias directas de `package.json`; entra por herramientas de desarrollo.
+- `npm audit --omit=dev` (10 nov 2026): 0 críticas, 1 alta, 11 medias, 9 bajas. Árbol completo: 1 crítica, 2 altas, 21 medias, 15 bajas. La crítica sigue siendo `handlebars` 4.7.9, solo en desarrollo, y no se tocó. La alta de producción es `image-size` 1.2.1.
 - Slither: el repo tiene `scripts/run-slither.mjs` y `slither.config.json`. El programa `slither` no está instalado en esta máquina. No se ejecutó. No se inventan hallazgos de Slither.
 
 Tamaños de bytecode desplegado (artifact de Hardhat, límite EIP-170 = 24576):
@@ -173,7 +173,7 @@ Nostr no cifra y no se conecta. La mora sí está bloqueada.
 
 ### B-03 · Medio · dependencia
 
-`npm audit` marca 1 vulnerabilidad crítica y 11 altas. La crítica es `handlebars` 3.0.0–4.7.9 (inyección en plantillas). No es dependencia directa. Las altas incluyen, entre otras, `axios`, `node-forge`, `undici`, `expo-router` y `@react-navigation/core`, casi todas por el árbol de herramientas o de Expo. No se actualizó nada en esta auditoría.
+`npm audit --omit=dev` el 10 de noviembre de 2026 marca 0 críticas, 1 alta, 11 medias y 9 bajas. El árbol completo marca 1 crítica, 2 altas, 21 medias y 15 bajas. La crítica sigue siendo `handlebars` 4.7.9 (inyección en plantillas), solo por `solidity-coverage` → `sc-istanbul`, y no se tocó. La alta de producción que queda es `image-size` 1.2.1 (`expo` → `@expo/metro` → `metro`); el arreglo publicado es 2.1.0 y este SDK no lo usa. Se fijaron dentro de Expo 54: `decode-uri-component` 0.5.1, `node-forge` 1.4.3, `undici` 6.29.1, `source-map-js` 1.2.2, `axios` 1.21.1 y `fast-uri` 3.1.9. Con eso salieron de la lista `axios`, `node-forge`, `undici`, `expo-router` y `@react-navigation/core`.
 
 ### C-01 · Bajo · texto
 

@@ -397,7 +397,7 @@ describe('cyber hardening — PIN and secret box', function () {
     expect(trivyIgnore).to.include('CVE-2026-44705');
     expect(trivyIgnore).to.include('Metro 0.83');
     expect(pkg.scripts['security:trivy']).to.include('trivy-lock.sh');
-    expect(pkg.overrides.undici).to.equal('6.28.1');
+    expect(pkg.overrides.undici).to.equal('6.29.1');
     expect(pkg.overrides['adm-zip']).to.equal('0.6.1');
     const trivyYaml = fs.readFileSync(path.join(root, 'trivy.yaml'), 'utf8');
     expect(trivyYaml).to.include('store-assets');
