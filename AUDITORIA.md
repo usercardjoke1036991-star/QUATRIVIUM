@@ -1,6 +1,6 @@
 # Auditoría de QUATRIVIUM
 
-Fecha de la revisión: 10 de noviembre de 2026 (America/Caracas). Rama `cursor/soberania-contratos-8e15`. Último commit de producto: `708fc24`. Hardhat 305, Foundry 51. Credit: 21891 bytes, 2685 libres de 24576.
+Fecha de la revisión: 10 de noviembre de 2026 (America/Caracas). Rama `cursor/soberania-contratos-8e15`. Tras quitar el tope de 24 h del feed: Hardhat 306, Foundry 51. Credit: 21882 bytes, 2694 libres de 24576.
 
 La clave del historial (commits `10553d4` y `dc40f15`, archivo `.env.worker.example`) ya fue revocada. No está en el árbol. El valor no se copia y la historia no se reescribe.
 
@@ -18,7 +18,7 @@ El quinto punto grave del resumen (feed viejo) era **B-01, Medio**, no Alto. Tra
 | A-02 | Alto | Arreglado. La pausa entra por el voto 2 de 3 y 72 h, con 7 días de descanso. Tests en `test/pausa-quorum.test.js`. |
 | A-03 | Alto | Documentado, sin cambio de contrato. README, HANDOFF y `CONFIRM_FOUNDER_WALLET=yes` en el despliegue. La llave perdida sigue sin relevo dentro del contrato: es la decisión tomada. |
 | A-04 | Alto | Cerrado por el dueño. La clave estaba en el historial, commits `10553d4` y `dc40f15`, archivo `.env.worker.example`. Ya fue revocada. No está en la app. El valor no se copia. El historial no se reescribe. |
-| B-01 | Medio | Arreglado. Una ronda con más de 24 h se trata como feed caído. Test en `test/sequencer-gracia.test.js`. |
+| B-01 | Medio | El tope de 24 h se quitó. Ese feed no late cada día: con `answer == 0` se liquida aunque la ronda tenga meses. La caída se lee de la ronda anterior. |
 | B-02 | Medio | Arreglado en la superficie: `prepareNostrPayload` devuelve null en todos los caminos. No hay pantalla de mensaje privado. Cifrar NIP-17/44 sigue sin hacerse. La mora no se publica. |
 | B-03 | Medio | Requiere decisión. `npm audit` sigue con 1 crítica (`handlebars`, herramienta, no dependencia directa) y 11 altas. Actualizar el árbol a ciegas puede romper Expo. No se tocó. |
 | C-01 | Bajo | Arreglado. El comentario de `pagarVerificacion` ya no dice 0.50 LUSD. El comportamiento no cambió. |
@@ -43,7 +43,7 @@ Revisión de `60a9654` y `960f446`, más el comportamiento real del alta. No se 
 
 - Pausa: solo el contrato, tras 2 de 3 y `block.timestamp >= eta` (72 h justas sí valen, Credit líneas 364-372 y 385-389). A los 7 días justos el préstamo nuevo vuelve (`>= pausaPrestamosHasta`). El descanso usa `< pausaReposoHasta`, así que el instante exacto ya permite votar otra. `p.executed = true` va antes de la llamada interna; si esa llamada falla, toda la transacción revierte. No hay reentrada hacia fuera.
 - APK: solo el fundador publica. La huella del certificado queda fija en la primera versión. No hay borrado ni llamada externa.
-- Feed: más de 24 h con respuesta «arriba» pospone la liquidación (línea 893, `>`). A las 24 h justas todavía se acepta. La hora de margen usa `< startedAt + 1 h`, así que a la hora justa ya se puede liquidar. Préstamos y pagos no leen ese feed.
+- Feed: no hay tope por antigüedad. `answer == 0` permite liquidar si ya pasó más de 1 h desde `startedAt` y la gracia del préstamo. Una ronda vacía (`startedAt == 0`) o un feed que revierte pospone solo la liquidación.
 - Nostr: `prepareNostrPayload` devuelve null siempre (`utils/sovereignSurface.ts`, línea 128). Ningún componente ni idioma ofrece mensaje privado. `nostrMayPublish` también es falso, incluida la mora.
 - Residuos: `scripts/check-external-services.mjs` pasa. Los nombres prohibidos viven en esa lista y en `scripts/run-full-cyber-audit.sh`, que sigue citando `Groth16Verifier` y `zk-contracts` como carpetas a excluir. Esas carpetas ya no existen. No se tocó el script porque los tests leen el resto del archivo.
 - Credit: 21891 bytes, 2685 libres de 24576.
@@ -155,7 +155,7 @@ Si el feed del sequencer responde «arriba» pero el dato es viejo, la liquidaci
 - En chainId 42161 el constructor rechaza el feed `address(0)` (línea 253). En otras redes, feed cero no pospone liquidaciones (línea 865). Eso coincide con Hardhat y Sepolia.
 - El margen de 1 hora tras volver está en las líneas 888-889 (`SEQUENCER_GRACIA`).
 - Cómo reproducirlo: un mock con `answer = 0` y `updatedAt` de hace varios días. `liquidate` no revierte por sequencer.
-- Arreglo: si `block.timestamp - updatedAt` pasa un límite (por ejemplo 24 horas), tratarlo como feed caído. Medir el bytecode: es un `require` corto.
+- Ese arreglo propuesto (tope de 24 horas) no vale: el feed real de uptime no late cada día. Una ronda vieja con `answer == 0` significa que el sequencer sigue arriba.
 
 ### B-02 · Medio · seguridad
 

@@ -14,7 +14,7 @@ export const ARBITRUM_MAINNET = {
   chainName: 'arbitrumOne',
   /** LUSD en Arbitrum One (18 decimales). Moneda única del protocolo. */
   lusd: '0x93b346b6BC2548dA6A1E7d98E9a421B42541425b',
-  /** Chainlink LUSD/USD en Arbitrum One (heartbeat 24 h; el contrato acepta hasta 25 h). */
+  /** Feed de precio que el protocolo no consulta. La paridad de LUSD es 1:1. */
   lusdUsdFeed: '0x0411D28c94d85A36bC72Cb0f875dfA8371D8fFfF',
   /** Alias de compatibilidad: el token único del protocolo es LUSD. */
   usdt: '0x93b346b6BC2548dA6A1E7d98E9a421B42541425b',

@@ -19,7 +19,7 @@ No reabrirlas. Si un texto del repo viejo las contradice, manda esta lista.
 - Alta: 4 LUSD de una vez en `QuatriviumAlta.pagarRegistro`: 1 al fundador, 1 al bote de Reserva, 1 apartado para el padrino, 1 de sello a Credit. `pagarVerificacion` deja el 5 % de ese sello en `fondoSeguro` y el 95 % en la liquidez. Sin invitación, `registrarHumanoConPadre(address(0))` cuelga del fundador. El 1 apartado se suelta al pagar el primer L1: a quien invitó si `cobradorListo`, si no al pool. A los 7 días sin ese pago, `vencerPadrinoAlPool` lo manda al pool. Una cuenta no puede nombrarse a sí misma. Una segunda cuenta sí puede nombrar a la primera; el 1 que cobra sale de los 4 que la segunda pagó. El fundador cobra ese 1 LUSD del alta en la misma transacción, más el 15 % del interés (`FUNDADOR_BP = 1500`). Solo el fundador rota su billetera (`proponerFundador` / espera 72 h). No necesita alta ni L1 pagado: el constructor lo marca verificado y el cobro del 15 % no pasa por `cobradorListo`.
 - Fondo de seguro: 5 % de lo que entra al pool (`SEGURO_BP = 500` en `QuatriviumFamaLib`). Solo cubre el premio del impago. Nadie lo retira. `collectedFees` no crece: el fee de liquidación se queda en el pool en la misma transacción.
 - Reserva: nivel 10 o más (`NIVEL_MINIMO`), bloqueo 30 días (`LOCK`), tope 12 % anual (`MAX_APY_BP = 1200`) pagado del bote, principal siempre devuelto. Sin owner ni guardianes y sin retiro del bote. Los 3 admins (quórum 2, 72 h) solo votan su propia entrada o salida.
-- Liquidación: 48 h de gracia (`LIQUIDACION_GRACIA`) más el tiempo caído del sequencer, más 1 h después de que vuelve (`SEQUENCER_GRACIA`). Si el feed falla, viene vacío o su `updatedAt` tiene más de 24 h (`SEQUENCER_FEED_MAX_EDAD`, el latido del feed de uptime), las liquidaciones se posponen. Préstamos y pagos no. El premio del liquidador es el menor entre el 5 % del principal restante y el interés que queda tras el fee. Feed obligatorio en chainId 42161: `0xFdB631F5EE196F0ed6FAa767959853A9F217697D`. `address(0)` solo vale fuera de 42161 (Hardhat 31337 y Sepolia 421614) y entonces solo aplica la gracia de 48 h. El constructor revierte `SequencerFeedRequerido` si en 42161 el feed es cero.
+- Liquidación: 48 h de gracia (`LIQUIDACION_GRACIA`) más la caída leída de la ronda anterior del feed, más 1 h después de que vuelve (`SEQUENCER_GRACIA`). El feed de uptime solo publica cuando el sequencer cambia de estado: `answer == 0` es arriba aunque `updatedAt` tenga meses. No hay tope de 24 h. Si el feed falla, `startedAt` es cero o la llamada revierte, se posponen las liquidaciones. Préstamos y pagos no. Sin feed (Hardhat y Sepolia) solo aplican las 48 h. El premio del liquidador es el menor entre el 5 % del principal restante y el interés que queda tras el fee. Feed obligatorio en chainId 42161: `0xFdB631F5EE196F0ed6FAa767959853A9F217697D`. El constructor revierte `SequencerFeedRequerido` si en 42161 el feed es cero.
 - Para cobrar unilevel, padrino, fama o racha hay que tener alta y L1 pagados (`cobradorListo`). Si no, esa parte entra al pool. La racha solo cuenta préstamos de nivel 2 o más pagados a tiempo (`QuatriviumFamaCaja`).
 - Avisos: notificaciones locales del teléfono (`expo-notifications`). El mensaje privado por Nostr está oculto hasta que exista cifrado. La mora no se publica. Perfiles, usernames y leaderboard salen de la cadena, no de un servidor.
 - Se distribuye solo el APK firmado. `QuatriviumApk` guarda versionCode, el hash del archivo, la fecha y la huella SHA-256 del certificado de firma. Esa huella es la misma en todas las versiones. Solo el fundador publica. No se borra. La app lee la huella del certificado con el módulo nativo `modules/quatrivium-signing-cert` (no se compila en los tests). Vacío o sin lectura: «versión no verificada». Igual: coincide. Distinta: aviso fuerte. La prueba en un teléfono se hace al compilar. Cualquier persona puede comparar a mano el hash del archivo con el registro.
@@ -69,12 +69,12 @@ Todas en `cursor/soberania-contratos-8e15`. PR: https://github.com/usercardjoke1
 | 6 | `facc8a9` | Fuera el meta-tooling de README, conectores y `.cursor/`. Docs viejas que hablaban de otra app o de un oráculo de precio, borradas. | La misma suite. |
 | docs | `cf2575b`, `c13e694` | `HANDOFF.md` y la primera `AUDITORIA.md`. | No cambian contratos. |
 | limpieza | `15e45af`, `3661ba8` | Fuera `zk-contracts/`, `Groth16Verifier.sol` y `services/zkService.ts`. Sin ZKP. El id de Sonar es `usercardjoke1036991-star_QUATRIVIUM`. | `test/fase4-app.test.js` |
-| arreglos | `60a9654` | Pausa 2 de 3 y 72 h, descanso de 7 días, huella del certificado en `QuatriviumApk`, feed de más de 24 h pospone la liquidación. | `test/pausa-quorum.test.js`, `test/sequencer-gracia.test.js`, `test/fase3-seguro-apk.test.js` |
+| arreglos | `60a9654` | Pausa 2 de 3 y 72 h, descanso de 7 días, huella del certificado en `QuatriviumApk`. El tope de 24 h del feed quedó descartado: ese feed no late cada día. | `test/pausa-quorum.test.js`, `test/fase3-seguro-apk.test.js` |
 | alta | `960f446`, `708fc24` | Los textos dicen el reparto real. Tests del alta con invitación, sin invitación, invitador inválido y segunda cuenta. Nostr privado sigue oculto. | `test/alta-invitacion.test.js`, `test/alta-registro.test.js` |
 
 ## 5. Números
 
-Medidos en `708fc24`, sin cambio de contratos desde entonces: Hardhat 305 pasando, Foundry 51 pasando. `QuatriviumCredit`: 21891 bytes, 2685 libres de 24576.
+Tras quitar el tope de antigüedad del feed: Hardhat 306 pasando, Foundry 51 pasando. `QuatriviumCredit`: 21882 bytes, 2694 libres de 24576.
 
 ## 6. Simulación de impago
 
@@ -123,7 +123,7 @@ Orden de prioridad:
 ## 8. Riesgos
 
 - 2685 bytes libres en Credit. No añadir funciones ahí sin medir `deployedBytecode`.
-- Hardhat tiene `allowUnlimitedContractSize: true`. Un test verde no prueba el límite. El tamaño real es el del artifact (21891).
+- Hardhat tiene `allowUnlimitedContractSize: true`. Un test verde no prueba el límite. El tamaño real es el del artifact (21882).
 - Los `require` de texto se borran del bytecode (`revertStrings: strip`). Los tests no pueden usar `revertedWith("mensaje")` para esos revert. Los errores con nombre (`SequencerFeedRequerido`, `SoloFundador`) sí se distinguen.
 - La pausa de préstamos nuevos exige 2 de 3 y 72 h. Se levanta sola a los 7 días y luego hay 7 de descanso. No frena pagos ni liquidaciones.
 - El pool y el fondo de seguro no tienen retiro. Un error en el reparto no se «arregla» sacando el dinero.

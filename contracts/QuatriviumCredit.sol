@@ -77,14 +77,10 @@ contract QuatriviumCredit is ReentrancyGuard {
     uint256 public pausaPrestamosHasta;
     /// @notice Hasta esta marca no se puede votar otra pausa: 7 días de pausa y 7 de descanso.
     uint256 public pausaReposoHasta;
-    /// @dev El feed de uptime del sequencer en Arbitrum late como mucho cada 24 h.
-    ///      Una ronda más vieja no es una lectura viva: se posponen solo las liquidaciones.
-    uint256 internal constant SEQUENCER_FEED_MAX_EDAD = 24 hours;
     /// @notice Feed de uptime del sequencer. En Arbitrum One (42161) no puede ser cero.
+    /// @dev Ese feed solo publica cuando el sequencer cambia de estado. Una ronda vieja con
+    ///      answer 0 significa que sigue arriba, no que el dato esté muerto.
     AggregatorV3Interface public immutable sequencerFeed;
-    /// @notice Tiempo que el sequencer estuvo caído y que se suma a la gracia de liquidación.
-    uint256 public graciaSequencer;
-    uint256 public sequencerCaidoDesde;
     uint256 public feeBasisPoints;
 
     mapping(address => bool) public admins;
@@ -227,6 +223,8 @@ contract QuatriviumCredit is ReentrancyGuard {
     event FundadorCancelado();
 
     error SequencerFeedRequerido();
+    error SequencerNoListo();
+    error GraciaLiquidacion();
     error PausaEnReposo();
     event PrestamosPausados(uint256 hasta);
     event SecurityParamsUpdated(uint256 maxOriginations, uint256 maxUtilizationBps);
@@ -867,43 +865,40 @@ contract QuatriviumCredit is ReentrancyGuard {
         _aplicarMoraSiVencido(usuario);
     }
 
-    /// @notice Deja escrito el tiempo caído. Una liquidación que revierte no puede guardarlo.
-    function anotarSequencer() external {
-        _syncSequencer();
-    }
-
-    /// @dev answer 0 = sequencer arriba. Otro valor, o un feed que revierte, pospone solo la liquidación.
-    function _syncSequencer() internal returns (uint256 extra, bool posponer) {
-        extra = graciaSequencer;
-        if (address(sequencerFeed) == address(0)) return (extra, false);
+    /// @dev answer 0 = sequencer arriba. La caída sale de la ronda anterior, no de un contador.
+    ///      Sin feed solo cuenta la gracia de 48 h. Un feed que revierte o trae startedAt en cero pospone.
+    function _syncSequencer(uint256 vencimiento) internal view returns (uint256 extra, bool posponer) {
+        if (address(sequencerFeed) == address(0)) return (0, false);
         try sequencerFeed.latestRoundData() returns (
-            uint80,
+            uint80 roundId,
             int256 answer,
             uint256 startedAt,
-            uint256 updatedAt,
+            uint256,
             uint80
         ) {
-            if (updatedAt == 0 || startedAt == 0 || updatedAt > block.timestamp || startedAt > block.timestamp) {
-                return (extra, true);
+            if (startedAt == 0 || startedAt > block.timestamp || answer != 0) return (0, true);
+            if (block.timestamp <= startedAt + SEQUENCER_GRACIA) return (0, true);
+            if (startedAt > vencimiento && roundId > 0) {
+                extra = _caidaPrevia(roundId, startedAt);
             }
-            if (answer != 0) {
-                if (sequencerCaidoDesde == 0) sequencerCaidoDesde = startedAt;
-                return (extra, true);
-            }
-            if (block.timestamp - updatedAt > SEQUENCER_FEED_MAX_EDAD) return (extra, true);
-            if (sequencerCaidoDesde != 0) {
-                uint256 fin = startedAt > sequencerCaidoDesde ? startedAt : block.timestamp;
-                if (fin > sequencerCaidoDesde) {
-                    graciaSequencer += fin - sequencerCaidoDesde;
-                    extra = graciaSequencer;
-                }
-                sequencerCaidoDesde = 0;
-            }
-            if (block.timestamp < startedAt + SEQUENCER_GRACIA) return (extra, true);
             return (extra, false);
         } catch {
-            return (extra, true);
+            return (0, true);
         }
+    }
+
+    function _caidaPrevia(uint80 roundId, uint256 vuelta) internal view returns (uint256 caida) {
+        try sequencerFeed.getRoundData(roundId - 1) returns (
+            uint80,
+            int256 prevAnswer,
+            uint256 prevStarted,
+            uint256,
+            uint80
+        ) {
+            if (prevAnswer != 0 && prevStarted != 0 && prevStarted < vuelta) {
+                caida = vuelta - prevStarted;
+            }
+        } catch {}
     }
 
     function liquidate(address deudor, address tokenAddress) external nonReentrant onlySupportedToken(tokenAddress) {
@@ -912,12 +907,11 @@ contract QuatriviumCredit is ReentrancyGuard {
         require(usuarios[deudor].montoActivo > 0, "no active loan");
         require(usuarios[deudor].monedaActivo == tokenAddress, "token mismatch");
         require(_estaVencido(deudor), "not defaulted");
-        (uint256 extra, bool posponer) = _syncSequencer();
-        if (posponer) revert("sequencer");
-        require(
-            block.timestamp > usuarios[deudor].vencimiento + LIQUIDACION_GRACIA + extra,
-            "grace"
-        );
+        (uint256 extra, bool posponer) = _syncSequencer(usuarios[deudor].vencimiento);
+        if (posponer) revert SequencerNoListo();
+        if (block.timestamp <= usuarios[deudor].vencimiento + LIQUIDACION_GRACIA + extra) {
+            revert GraciaLiquidacion();
+        }
 
         uint256 principal = usuarios[deudor].montoActivo;
         (, uint256 interest, uint256 totalDue, ) = _deudaActual(deudor);
