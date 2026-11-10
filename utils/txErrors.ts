@@ -77,6 +77,8 @@ const REVERT_KEYS: [string, TranslationKey][] = [
   ['RPC chain mismatch', 'errRpcMismatch'],
   ['El RPC no ve el contrato', 'errRpcNoContract'],
   ['rpc-money-mismatch', 'rpcMoneyUnconfirmed'],
+  ['pending-nonce', 'rpcSendPending'],
+  ['nonce-unconfirmed', 'rpcNonceUnconfirmed'],
   ['wrong-network-demo', 'linkWalletNetworkDemo'],
   ['wrong-network', 'errWrongNetwork'],
   ['La billetera está en otra red', 'errWrongNetwork'],

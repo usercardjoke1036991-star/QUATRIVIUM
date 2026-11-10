@@ -201,6 +201,8 @@
   "subsectionBalances": "Saldo akun",
   "walletVsPoolHint": "Ini hanya saldo akun Anda. Pool likuiditas milik protokol dan terbuka di jendelanya sendiri.",
   "rpcMoneyUnconfirmed": "Sumber jaringan tidak sama. Jumlah disembunyikan.",
+  "rpcSendPending": "Pengiriman dengan nomor ini masih terbuka. Yang lain ditahan.",
+  "rpcNonceUnconfirmed": "Dua sumber tidak memberi nomor kirim. Tidak ada tanda tangan.",
   "hubChoose": "Pilih jendela",
   "hubWalletLead": "Saldo, tambah dan tarik dana.",
   "hubCreditLead": "Aktifkan, peringkat, dan pekerjaannya: pinjam, bayar, naik level.",

@@ -201,6 +201,8 @@
   "subsectionBalances": "口座残高",
   "walletVsPoolHint": "これは口座残高だけです。流動性プールはプロトコルのもので、専用ウィンドウで開きます。",
   "rpcMoneyUnconfirmed": "通信先の数値が一致しません。金額は表示しません。",
+  "rpcSendPending": "この番号の送信がまだ残っています。次は出しません。",
+  "rpcNonceUnconfirmed": "送信番号が二つの通信先で揃いません。署名しません。",
   "hubChoose": "ウィンドウを選ぶ",
   "hubWalletLead": "残高、入金、出金。",
   "hubCreditLead": "有効化、ランク、この仕事：借りて、返して、レベルアップ。",

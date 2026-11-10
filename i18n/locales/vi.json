@@ -201,6 +201,8 @@
   "subsectionBalances": "Số dư tài khoản",
   "walletVsPoolHint": "Đây chỉ là số dư tài khoản của bạn. Quỹ thanh khoản thuộc giao thức và mở trong cửa sổ riêng.",
   "rpcMoneyUnconfirmed": "Các nguồn mạng không khớp. Số tiền được giấu.",
+  "rpcSendPending": "Một lần gửi với số này còn mở. Lần khác không đi.",
+  "rpcNonceUnconfirmed": "Hai nguồn không đưa số gửi. Không có chữ ký.",
   "hubChoose": "Chọn một cửa sổ",
   "hubWalletLead": "Số dư, nạp và rút tiền.",
   "hubCreditLead": "Kích hoạt, hạng và nghề: vay, trả, lên cấp.",

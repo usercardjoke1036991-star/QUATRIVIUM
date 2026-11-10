@@ -9,19 +9,27 @@ const RAW = '0xsigned';
 
 function world(spec) {
   const sent = [];
+  let emitted = false;
   const call = async (url, method, params) => {
     const node = spec[url];
     if (!node) throw new Error('missing');
     if (method === 'eth_sendRawTransaction') {
       sent.push({ url, raw: params[0] });
       if (node.delay) await new Promise((resolve) => setTimeout(resolve, node.delay));
+      if (node.sendError) {
+        if (node.emit) emitted = true;
+        throw new Error(node.sendError);
+      }
       if (node.failSend) throw new Error('down');
+      emitted = true;
       return node.returnHash || HASH;
     }
     if (method === 'eth_getTransactionByHash') {
-      return node.see ? { hash: HASH } : null;
+      const visible = node.see === 'after' ? emitted : Boolean(node.see);
+      return visible ? { hash: HASH } : null;
     }
     if (method === 'eth_getTransactionCount') {
+      if (node.countError) throw new Error('down');
       return '0x' + (node.nonce ?? 5).toString(16);
     }
     throw new Error(method);
@@ -74,75 +82,164 @@ describe('rpc broadcast and money quorum', function () {
     expect(none.kind).to.equal('unavailable');
   });
 
-  it('does not send a second transaction when one node fails, lies or is slow', async function () {
+  const FROM = '0x5023bf46dB7458B9bb9152a7ffE64f195CD1a047';
+
+  it('does not sign a second transaction when a node fails, lies or answers late', async function () {
     const failThenSlow = world({
       'https://fail.example': { failSend: true, nonce: 5 },
       'https://slow.example': { delay: 40, see: true, nonce: 5 },
     });
-    const hash = await broadcast.broadcastRawAcrossRpcs({
+    const pending = await broadcast.broadcastRawAcrossRpcs({
       urls: ['https://fail.example', 'https://slow.example'],
       raw: RAW,
-      from: '0x5023bf46dB7458B9bb9152a7ffE64f195CD1a047',
+      from: FROM,
       nonce: 5,
       hash: HASH,
       call: failThenSlow.call,
     });
-    expect(hash).to.equal(HASH);
+    expect(pending).to.deep.equal({ kind: 'pending', hash: HASH });
     expect(new Set(failThenSlow.sent.map((row) => row.raw)).size).to.equal(1);
-    expect(failThenSlow.sent.map((row) => row.url)).to.deep.equal([
-      'https://fail.example',
-      'https://slow.example',
-    ]);
 
-    const liar = world({
+    const accepted = world({
       'https://liar.example': { nonce: 5, see: false },
-      'https://witness.example': { nonce: 6, see: false, failSend: true },
+      'https://witness.example': { nonce: 9, see: false, failSend: true },
     });
     const kept = await broadcast.broadcastRawAcrossRpcs({
       urls: ['https://liar.example', 'https://witness.example'],
       raw: RAW,
-      from: '0x5023bf46dB7458B9bb9152a7ffE64f195CD1a047',
+      from: FROM,
       nonce: 5,
       hash: HASH,
-      call: liar.call,
+      call: accepted.call,
     });
-    expect(kept).to.equal(HASH);
-    expect(liar.sent).to.deep.equal([{ url: 'https://liar.example', raw: RAW }]);
+    expect(kept.kind).to.equal('pending');
+    expect(accepted.sent).to.deep.equal([{ url: 'https://liar.example', raw: RAW }]);
 
-    const slowFirst = world({
-      'https://slow.example': { delay: 30, see: true, nonce: 5 },
+    const oneWitness = world({
+      'https://slow.example': { delay: 20, see: true, nonce: 5 },
       'https://liar.example': { nonce: 5, see: false },
     });
-    await broadcast.broadcastRawAcrossRpcs({
+    const hidden = await broadcast.broadcastRawAcrossRpcs({
       urls: ['https://slow.example', 'https://liar.example'],
       raw: RAW,
-      from: '0x5023bf46dB7458B9bb9152a7ffE64f195CD1a047',
+      from: FROM,
       nonce: 5,
       hash: HASH,
-      call: slowFirst.call,
+      call: oneWitness.call,
     });
-    expect(slowFirst.sent.map((row) => row.url)).to.deep.equal(['https://slow.example']);
-    expect(new Set(slowFirst.sent.map((row) => row.raw)).size).to.equal(1);
+    expect(hidden.kind).to.equal('pending');
+    expect(oneWitness.sent.map((row) => row.url)).to.deep.equal(['https://slow.example']);
+  });
 
-    let calls = 0;
+  it('treats a cut response and already-known as the same transaction', async function () {
+    const net = world({
+      'https://cut.example': { sendError: 'aborted', emit: true },
+      'https://known.example': { sendError: 'already known', see: 'after' },
+      'https://low.example': { sendError: 'nonce too low', see: 'after' },
+    });
+    const sent = await broadcast.broadcastRawAcrossRpcs({
+      urls: ['https://cut.example', 'https://known.example', 'https://low.example'],
+      raw: RAW,
+      from: FROM,
+      nonce: 5,
+      hash: HASH,
+      call: net.call,
+    });
+    expect(sent).to.deep.equal({ kind: 'sent', hash: HASH });
+    expect(new Set(net.sent.map((row) => row.raw)).size).to.equal(1);
+
+    const unseen = world({
+      'https://cut.example': { sendError: 'aborted', see: false },
+      'https://known.example': { sendError: 'already known', see: false },
+      'https://low.example': { sendError: 'nonce too low', see: false },
+    });
+    const waiting = await broadcast.broadcastRawAcrossRpcs({
+      urls: ['https://cut.example', 'https://known.example', 'https://low.example'],
+      raw: RAW,
+      from: FROM,
+      nonce: 5,
+      hash: HASH,
+      call: unseen.call,
+    });
+    expect(waiting).to.deep.equal({ kind: 'pending', hash: HASH });
+    expect(new Set(unseen.sent.map((row) => row.raw)).size).to.equal(1);
+  });
+
+  it('does not trust one rpc that claims to see the transaction', async function () {
+    const lie = world({
+      'https://liar.example': { see: true, nonce: 4 },
+      'https://a.example': { see: false, nonce: 4 },
+      'https://b.example': { see: false, nonce: 4 },
+    });
+    const outcome = await broadcast.broadcastRawAcrossRpcs({
+      urls: ['https://liar.example', 'https://a.example', 'https://b.example'],
+      raw: RAW,
+      from: FROM,
+      nonce: 4,
+      hash: HASH,
+      call: lie.call,
+    });
+    expect(outcome.kind).to.equal('pending');
+    expect(
+      await broadcast.hashSightings(
+        ['https://liar.example', 'https://a.example', 'https://b.example'],
+        HASH,
+        lie.call
+      )
+    ).to.equal(1);
+  });
+
+  it('takes the highest pending nonce when the first rpc is down or behind', async function () {
+    const down = world({
+      'https://down.example': { countError: true },
+      'https://ok.example': { nonce: 5 },
+      'https://ahead.example': { nonce: 8 },
+    });
+    expect(
+      await broadcast.highestPendingNonce(
+        ['https://down.example', 'https://ok.example', 'https://ahead.example'],
+        FROM,
+        down.call
+      )
+    ).to.equal(8);
+    const behind = world({
+      'https://old.example': { nonce: 3 },
+      'https://new.example': { nonce: 6 },
+    });
+    expect(
+      await broadcast.highestPendingNonce(
+        ['https://old.example', 'https://new.example'],
+        FROM,
+        behind.call
+      )
+    ).to.equal(6);
     try {
-      await broadcast.broadcastRawAcrossRpcs({
-        urls: ['https://liar.example', 'https://slow.example'],
-        raw: RAW,
-        from: '0x5023bf46dB7458B9bb9152a7ffE64f195CD1a047',
-        nonce: 5,
-        hash: HASH,
-        call: async (_url, method) => {
-          calls += 1;
-          if (method === 'eth_sendRawTransaction') return '0x' + 'cd'.repeat(32);
-          return null;
-        },
-      });
-      expect.fail('a different hash must stop the walk');
+      await broadcast.highestPendingNonce(
+        ['https://down.example', 'https://ok.example'],
+        FROM,
+        down.call
+      );
+      expect.fail('one source is not a nonce');
     } catch (error) {
-      expect(error.message).to.equal('hash-mismatch');
+      expect(error.message).to.equal('nonce-unconfirmed');
     }
-    expect(calls).to.equal(1);
+    expect(broadcast.nonceAfterHold(5, { nonce: 5, hash: HASH })).to.equal(6);
+    expect(broadcast.nonceAfterHold(8, { nonce: 5, hash: HASH })).to.equal(8);
+    try {
+      broadcast.rejectReusedNonce({ nonce: 5, hash: HASH }, 5, '0x' + 'cd'.repeat(32));
+      expect.fail('a pending nonce cannot be reused');
+    } catch (error) {
+      expect(error.message).to.equal('pending-nonce');
+    }
+    broadcast.rejectReusedNonce({ nonce: 5, hash: HASH }, 5, HASH);
+    const fee = await broadcast.highestFee([
+      async () => {
+        throw new Error('down');
+      },
+      async () => ({ maxFee: 10n, tip: 1n }),
+      async () => ({ maxFee: 30n, tip: 2n }),
+    ]);
+    expect(fee).to.deep.equal({ maxFee: 30n, tip: 2n });
   });
 
   it('text: the 17 languages have the money warning', function () {

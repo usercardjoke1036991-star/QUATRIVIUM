@@ -201,6 +201,8 @@
   "subsectionBalances": "Kontostand",
   "walletVsPoolHint": "Das ist nur Ihr Kontostand. Der Liquiditätspool gehört zum Protokoll und öffnet sich in einem eigenen Fenster.",
   "rpcMoneyUnconfirmed": "Die Netzquellen stimmen nicht überein. Der Betrag bleibt verborgen.",
+  "rpcSendPending": "Eine Sendung mit dieser Nummer ist noch offen. Eine weitere bleibt aus.",
+  "rpcNonceUnconfirmed": "Zwei Quellen nennen die Sendungsnummer nicht. Es wird nichts signiert.",
   "hubChoose": "Fenster wählen",
   "hubWalletLead": "Saldo, Mittel hinzufügen und abheben.",
   "hubCreditLead": "Aktivieren, Rang und das Handwerk: leihen, zurückzahlen, aufsteigen.",
