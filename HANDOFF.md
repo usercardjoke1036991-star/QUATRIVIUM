@@ -39,7 +39,6 @@ La escalera de 1000 niveles, las tasas, el reparto del alta de 4 LUSD y los porc
 | `contracts/QuatriviumLeveling.sol` | Hitos y asientos, fuera del bytecode de Credit. |
 | `contracts/LoanLadder.sol` | Niveles 101–1000, cuotas y `requiredCount`. |
 | `contracts/libraries/LoanTierSeed.sol` | Tabla de los niveles 1–100 (monto, tasa, días). |
-| `contracts/Groth16Verifier.sol` | Verificador ZK presente en el árbol. No es el camino de los préstamos. |
 | `app/`, `components/`, `hooks/`, `services/`, `constants/`, `utils/`, `i18n/` | App. Entrada: `app/index.tsx`. Billetera: `services/appWallet.ts`. Ranking: `services/fameLeaderboard.ts` y `utils/fameRoster.ts`. Superficie soberana (RPC, Nostr, APK, alta): `utils/sovereignSurface.ts`. |
 | `constants/deployedAddresses.ts` | Mainnet: LUSD y la billetera de donación `0x5023bf46dB7458B9bb9152a7ffE64f195CD1a047` ya escritos. `contract`, `reserva`, `fama` y `alta` están vacíos. No inventar direcciones. |
 | `constants/bsc.ts`, `constants/rpcConfig.ts` | A pesar del nombre, la red real es Arbitrum. RPC públicos con respaldo. |
@@ -48,8 +47,7 @@ La escalera de 1000 niveles, las tasas, el reparto del alta de 4 LUSD y los porc
 | `scripts/deploy-arbitrum-sovereign.cjs` | Despliegue cuando Jose lo autorice. |
 | `scripts/check-i18n.mjs`, `scripts/check-external-services.mjs`, `scripts/check-production.mjs` | Los usa `typecheck` y CI. No son meta-tooling de README. |
 | `.github/workflows/ci.yml` | En `main` y en pull requests: Hardhat, typecheck, lint, format, escáner, `production:check:ci`. Node 22. No compila APK. |
-| `web/` | Página de invitación. |
-| `zk-contracts/`, `zkService.ts` | Circuito ZK. No es el flujo de crédito. |
+| `web/` | Página estática de invitación y de descarga. Sin hosts de terceros. Los tests la leen. Sirve para IPFS cuando Jose lo pida. El SHA-256 escrito en `web/invite/index.html` es un valor fijo de la página, no el registro on-chain. |
 | `foundry.toml`, `hardhat.config.cjs` | Optimizer runs 1, viaIR, `bytecodeHash` none, revert strings strip. |
 
 Compilador Hardhat: `metadata.appendCBOR: false` y `bytecodeHash: "none"`. Por eso el tamaño que cuenta para EIP-170 es el `deployedBytecode` del artifact de Hardhat.
@@ -94,7 +92,7 @@ Eso es el interés que se queda en el sistema, en LUSD. El test lo exige con `as
 
 Orden de prioridad:
 
-1. **Fase 6: hecha en este árbol.** Se borraron los generadores de README, contexto, mapa, visión, memoria y QA, y la carpeta `.cursor/`. `README.md` y `CONTEXTO.md` describen este protocolo. Se dejó, porque un test lo lee y fallaría la suite, este arnés: `scripts/run-full-cyber-audit.sh`, `scripts/zap-health-wsl.sh`, `scripts/fetch-wallet-logos.py`, `scripts/run-slither.mjs`, `scripts/run-slither-wsl.sh`, `scripts/run-snyk.mjs`, `scripts/run-sonar.mjs`, `scripts/scan-mobile.mjs`, `scripts/trivy-lock.sh`, `trivy.yaml`, `.trivyignore`, `slither.config.json`, `sonar-project.properties` (la clave de Sonar sigue nombrando el proyecto viejo), `scripts/patch-i18n-leftovers*.mjs` (el test exige al menos cuatro) y `scripts/linkCredit.cjs`. También se dejaron el despliegue, `web/`, `zk-contracts/` y `contracts/Groth16Verifier.sol`.
+1. **Fase 6: hecha en este árbol.** Se borraron los generadores de README, contexto, mapa, visión, memoria y QA, y la carpeta `.cursor/`. `README.md` y `CONTEXTO.md` describen este protocolo. Se dejó, porque un test lo lee y fallaría la suite, este arnés: `scripts/run-full-cyber-audit.sh`, `scripts/zap-health-wsl.sh`, `scripts/fetch-wallet-logos.py`, `scripts/run-slither.mjs`, `scripts/run-slither-wsl.sh`, `scripts/run-snyk.mjs`, `scripts/run-sonar.mjs`, `scripts/scan-mobile.mjs`, `scripts/trivy-lock.sh`, `trivy.yaml`, `.trivyignore`, `slither.config.json`, `sonar-project.properties`, `scripts/patch-i18n-leftovers*.mjs` (el test exige al menos cuatro) y `scripts/linkCredit.cjs`. El id de Sonar pasó a `usercardjoke1036991-star_QUATRIVIUM` en `sonar-project.properties` y `.sonarcloud.properties`. Se borraron `zk-contracts/` y `contracts/Groth16Verifier.sol`: ningún contrato, test ni job de CI los importaba, y `QuatriviumCreditZK` traía pausa, owner y oráculo. `web/` se queda. `services/zkService.ts` se queda: la app lo usa para una identidad local y no llama a esos contratos.
 2. **Pendiente hasta que Jose lo diga, y no antes:**
    - Compilar el APK firmado y calcular su SHA-256.
    - Desplegar en Arbitrum One y rellenar `constants/deployedAddresses.ts` (`contract`, `reserva`, `fama`, `alta`). No inventar direcciones.

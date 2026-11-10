@@ -359,7 +359,8 @@ describe('cyber hardening — PIN and secret box', function () {
     const path = require('path');
     const root = path.join(__dirname, '..');
     const sonar = fs.readFileSync(path.join(root, 'sonar-project.properties'), 'utf8');
-    expect(sonar).to.include('sonar.projectKey=usercardjoke1036991-star_Magno');
+    expect(sonar).to.include('sonar.projectKey=usercardjoke1036991-star_QUATRIVIUM');
+    expect(sonar).to.not.include('Magno');
     expect(sonar).to.include('sonar.organization=usercardjoke1036991-star');
     expect(sonar).to.include('sonarcloud.io');
     expect(sonar).to.include('**/i18n/**/*.json');
@@ -368,7 +369,8 @@ describe('cyber hardening — PIN and secret box', function () {
     expect(sonar).to.not.match(/sonar\.login=/);
     expect(sonar).to.not.match(/sonar\.token=/);
     const auto = fs.readFileSync(path.join(root, '.sonarcloud.properties'), 'utf8');
-    expect(auto).to.include('usercardjoke1036991-star_Magno');
+    expect(auto).to.include('usercardjoke1036991-star_QUATRIVIUM');
+    expect(auto).to.not.include('Magno');
     expect(auto).to.include('**/i18n/**/*.json');
     expect(auto).to.include('tsconfig.sonar.json');
     expect(auto).to.not.match(/sonar\.login=/);
