@@ -61,54 +61,6 @@ export async function demoAportarBote(montoWei: bigint): Promise<void> {
   await saveDemoBote(bote + montoWei);
 }
 
-const RETIRO_KEY = storeSlot(['quatrivium', 'reserva', 'demoRetiro']);
-const RETIRO_ESPERA = 72 * 60 * 60;
-
-export type DemoRetiro = { to: string; amount: string; desde: number };
-
-export async function loadDemoRetiro(): Promise<DemoRetiro | null> {
-  try {
-    const raw = await SecureStore.getItemAsync(RETIRO_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as DemoRetiro;
-    if (
-      !parsed ||
-      typeof parsed.to !== 'string' ||
-      typeof parsed.amount !== 'string' ||
-      !parsed.desde
-    ) {
-      return null;
-    }
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-export async function demoProponerRetiro(destino: string, montoWei: bigint): Promise<void> {
-  if (montoWei <= 0n) throw new Error('reservaMonto');
-  const bote = await loadDemoBote();
-  if (montoWei > bote) throw new Error('reservaMonto');
-  const row: DemoRetiro = {
-    to: destino,
-    amount: montoWei.toString(),
-    desde: Math.floor(Date.now() / 1000),
-  };
-  await SecureStore.setItemAsync(RETIRO_KEY, JSON.stringify(row), OPTIONS);
-}
-
-export async function demoAplicarRetiro(): Promise<void> {
-  const pending = await loadDemoRetiro();
-  if (!pending) throw new Error('reservaNada');
-  const now = Math.floor(Date.now() / 1000);
-  if (now < pending.desde + RETIRO_ESPERA) throw new Error('reservaEspera');
-  const monto = BigInt(pending.amount);
-  const bote = await loadDemoBote();
-  if (monto <= 0n || monto > bote) throw new Error('reservaNada');
-  await saveDemoBote(bote - monto);
-  await SecureStore.deleteItemAsync(RETIRO_KEY);
-}
-
 function settle(
   pos: DemoPosicion,
   now: number,

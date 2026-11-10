@@ -10,12 +10,7 @@ import { getEthersSignerFromProvider } from '../web3Config';
 import { ERC20_ABI } from '../constants/contractConfig';
 import { getTokenMeta, isOfficialWorldToken } from '../constants/tokens';
 import { setWalletSigner, QuatriviumCreditService } from '../services/quatriviumCreditService';
-import {
-  aportarReservaBote,
-  aplicarRetiroReserva,
-  proponerRetiroReserva,
-  reservaErrorKey,
-} from '../services/reservaService';
+import { aportarReservaBote, reservaErrorKey } from '../services/reservaService';
 import { recordMovement } from '../services/movementHistory';
 import { useWeb3Transactions } from './useWeb3Transactions';
 import { lockSponsorOnce } from '../services/sponsorLock';
@@ -818,41 +813,6 @@ export const useHomeHandlers = ({
     }
   };
 
-  const handleProponerRetiroReserva = async (amountHuman: string, destino: string) => {
-    const parsed = parsePositiveDecimal(amountHuman);
-    if (!parsed) {
-      Alert.alert(t('amount'), t('amountGreaterZero'));
-      return;
-    }
-    if (!(await confirmFunds('movement', fundsTx(parsed, destino)))) return;
-    try {
-      await runAsAdmin(async () => {
-        const signer = await getEthersSignerFromProvider(adminProvider as Eip1193Provider);
-        if (!signer) throw new Error('admin');
-        await proponerRetiroReserva(signer, destino, parsed);
-        showNotice(t('ready'), t('reservaRetiroProposed'));
-        refetch();
-      });
-    } catch (error) {
-      Alert.alert(t('error'), t(reservaErrorKey(error)));
-    }
-  };
-
-  const handleAplicarRetiroReserva = async () => {
-    if (!(await confirmFunds('movement', fundsTx('0', getReservaAddress())))) return;
-    try {
-      await runAsAdmin(async () => {
-        const signer = await getEthersSignerFromProvider(adminProvider as Eip1193Provider);
-        if (!signer) throw new Error('admin');
-        await aplicarRetiroReserva(signer);
-        showNotice(t('ready'), t('reservaRetiroDone'));
-        refetch();
-      });
-    } catch (error) {
-      Alert.alert(t('error'), t(reservaErrorKey(error)));
-    }
-  };
-
   const handleDonar = async (amountHuman: string) => {
     if (!isDonationVisible()) {
       Alert.alert(t('donateTitle'), t('donateRealOnly'));
@@ -1036,8 +996,6 @@ export const useHomeHandlers = ({
     handlePagarAcceso: track(handlePagarAcceso),
     handleDonar: track(handleDonar),
     handleAportarReserva: track(handleAportarReserva),
-    handleProponerRetiroReserva: track(handleProponerRetiroReserva),
-    handleAplicarRetiroReserva: track(handleAplicarRetiroReserva),
     handleRetirarComisiones: track(handleRetirarComisiones),
     handleRetirarComisionesToken: track(handleRetirarComisionesToken),
     handleExecuteProposal,

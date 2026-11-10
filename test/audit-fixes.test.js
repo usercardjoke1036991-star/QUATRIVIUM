@@ -36,7 +36,7 @@ describe('audit fixes', function () {
     expect(purpose).to.include("'movement'");
     expect(host).to.include("purpose === 'movement'");
     expect(host).to.include("'fundsConfirmMovement'");
-    expect((home.match(/confirmFunds\('movement'/g) || []).length).to.be.at.least(7);
+    expect((home.match(/confirmFunds\('movement'/g) || []).length).to.equal(5);
     expect(charge.match(/confirmFunds\('movement'/g) || []).to.have.length(2);
     expect(home).to.include("confirmFunds('loanRequest'");
     expect(home).to.include("'loanPay'");

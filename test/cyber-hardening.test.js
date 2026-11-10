@@ -2626,13 +2626,11 @@ describe('account entry — password, email and session', () => {
     expect(salud).to.include('return null');
     expect(salud).to.include('reservaBote = null');
     expect(panel).to.include('row.reservaBote ?? prev?.reservaBote ?? null');
-    expect(panel).to.include('reservaRetiroConfirm');
-    expect(panel).to.include('reservaRetiroApplyConfirm');
-    expect(panel).to.include('reservaRetiroPropose');
-    expect(panel).to.include('onAplicarRetiroReserva');
+    expect(panel).to.not.include('onAplicarRetiroReserva');
+    expect(panel).to.not.include('reservaRetiroPropose');
     const abi = read('constants', 'reservaConfig.ts');
-    expect(abi).to.include('proponerRetiroBote');
-    expect(abi).to.include('applyRetiroBote');
+    expect(abi).to.not.include('proponerRetiroBote');
+    expect(abi).to.not.include('applyRetiroBote');
     const referral = read('components', 'ReferralSection.tsx');
     expect(referral).to.include('hasPadre && !isFundador');
     const appJson = JSON.parse(read('app.json'));

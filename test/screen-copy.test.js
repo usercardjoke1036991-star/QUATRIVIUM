@@ -140,7 +140,9 @@ describe('copy de pantallas clave', function () {
     const { deployProtocol } = require('./helpers.cjs');
     const deployed = await deployProtocol();
     expect(typeof deployed.reserva.desbloquear).to.equal('function');
-    await expect(deployed.reserva.connect(deployed.owner).desbloquear()).to.be.reverted;
+    await expect(
+      deployed.reserva.connect(deployed.owner).desbloquear()
+    ).to.be.revertedWithCustomError(deployed.reserva, 'NadaQueMover');
     expect(deployed.reserva.interface.hasFunction('retirarBote')).to.equal(false);
     expect(deployed.reserva.interface.hasFunction('retirarLiquidez')).to.equal(false);
     const reserva = read('components/ReservaSection.tsx');

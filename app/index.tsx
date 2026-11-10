@@ -245,8 +245,6 @@ function HomeScreenWithHooks() {
     handlePagarAcceso,
     handleDonar,
     handleAportarReserva,
-    handleProponerRetiroReserva,
-    handleAplicarRetiroReserva,
     handleRetirarComisiones,
     handleRetirarComisionesToken,
     handleExecuteProposal,
@@ -1065,8 +1063,6 @@ function HomeScreenWithHooks() {
               onLiquidar={handleLiquidarDeudor}
               onMarcarMoroso={handleMarcarMorosoSiVencido}
               onAportarReserva={handleAportarReserva}
-              onProponerRetiroReserva={handleProponerRetiroReserva}
-              onAplicarRetiroReserva={handleAplicarRetiroReserva}
               adminRoster={
                 adminInfo.adminRoster.length ? adminInfo.adminRoster : userInfo.adminRoster
               }

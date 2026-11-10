@@ -45,7 +45,10 @@ describe('QuatriviumReserva', function () {
     const { token, reserva, user } = await deployReserva();
     const amount = ethers.parseUnits('100', 18);
     await reserva.connect(user).bloquear(amount);
-    await expect(reserva.connect(user).desbloquear()).to.be.reverted;
+    await expect(reserva.connect(user).desbloquear()).to.be.revertedWithCustomError(
+      reserva,
+      'AunBloqueado'
+    );
     await ethers.provider.send('evm_increaseTime', [LOCK]);
     await ethers.provider.send('evm_mine');
     await reserva.connect(user).desbloquear();

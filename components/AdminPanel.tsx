@@ -1,7 +1,6 @@
 import { formatUnits, isAddress } from 'ethers';
 import React, { useEffect, useState } from 'react';
 import { QuatriviumCreditService } from '../services/quatriviumCreditService';
-import { leerPendienteRetiroBote, type RetiroBotePendiente } from '../services/reservaService';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useI18n } from '../i18n/LanguageContext';
 import { useTheme } from '../theme/ThemeContext';
@@ -40,8 +39,6 @@ interface AdminPanelProps {
   onLiquidar?: (debtorAddress: string, tokenAddress: string) => void;
   onMarcarMoroso?: (debtorAddress: string) => void;
   onAportarReserva?: (amount: string) => void;
-  onProponerRetiroReserva?: (amount: string, destino: string) => void;
-  onAplicarRetiroReserva?: () => void;
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({
@@ -71,18 +68,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   onLiquidar,
   onMarcarMoroso,
   onAportarReserva,
-  onProponerRetiroReserva,
-  onAplicarRetiroReserva,
 }) => {
   const { t } = useI18n();
   const { colors } = useTheme();
   const [draft, setDraft] = useState('');
   const [debtorDraft, setDebtorDraft] = useState('');
   const [reservaPot, setReservaPot] = useState('100');
-  const [retiroMonto, setRetiroMonto] = useState('');
-  const [retiroDestino, setRetiroDestino] = useState('');
-  const [retiroPendiente, setRetiroPendiente] = useState<RetiroBotePendiente | null>(null);
-  const [retiroUnread, setRetiroUnread] = useState(false);
   const [salud, setSalud] = useState<{
     cash: bigint;
     outstanding: bigint;
@@ -104,12 +95,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         }));
       })
       .catch(() => {});
-    void leerPendienteRetiroBote()
-      .then((row) => {
-        setRetiroPendiente(row);
-        setRetiroUnread(false);
-      })
-      .catch(() => setRetiroUnread(true));
   }, [isOwner, isAdmin, tokenAddress, isLoading]);
   if (!isOwner && !isAdmin) return null;
 
@@ -390,116 +375,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </AppText>
             )}
           </TouchableOpacity>
-          {onProponerRetiroReserva ? (
-            <>
-              <AppText style={[styles.note, { color: colors.textMuted, marginTop: 8 }]}>
-                {t('reservaRetiroTitle')}
-              </AppText>
-              <AppText style={[styles.meta, { color: colors.textMuted }]}>
-                {t('reservaRetiroHint')}
-              </AppText>
-              {retiroPendiente ? (
-                <AppText style={[styles.meta, { color: colors.text }]}>
-                  {t('reservaRetiroPending', {
-                    amount: formatUnits(retiroPendiente.amountWei, 18),
-                    address: formatAddress(retiroPendiente.to),
-                    when: new Date((retiroPendiente.desde + 72 * 60 * 60) * 1000).toLocaleString(),
-                  })}
-                </AppText>
-              ) : retiroUnread ? null : (
-                <AppText style={[styles.meta, { color: colors.textMuted }]}>
-                  {t('reservaRetiroNone')}
-                </AppText>
-              )}
-              {retiroUnread ? (
-                <AppText style={[styles.meta, { color: colors.warnText }]}>
-                  {t('reservaPreviewFailed')}
-                </AppText>
-              ) : null}
-              <AppTextInput
-                value={retiroMonto}
-                onChangeText={setRetiroMonto}
-                keyboardType="decimal-pad"
-                placeholder={t('amount')}
-                placeholderTextColor={colors.textMuted}
-                style={[
-                  styles.input,
-                  {
-                    color: colors.text,
-                    borderColor: colors.border,
-                    backgroundColor: colors.surface,
-                  },
-                ]}
-              />
-              <AppTextInput
-                value={retiroDestino}
-                onChangeText={setRetiroDestino}
-                autoCapitalize="none"
-                autoCorrect={false}
-                placeholder={t('reservaRetiroDestino')}
-                placeholderTextColor={colors.textMuted}
-                style={[
-                  styles.input,
-                  {
-                    color: colors.text,
-                    borderColor: colors.border,
-                    backgroundColor: colors.surface,
-                  },
-                ]}
-              />
-              <TouchableOpacity
-                disabled={isLoading}
-                onPress={() => {
-                  const amount = retiroMonto.trim();
-                  const destino = retiroDestino.trim();
-                  if (!amount || Number(amount) <= 0) {
-                    Alert.alert(t('amount'), t('amountGreaterZero'));
-                    return;
-                  }
-                  if (!isAddress(destino)) {
-                    Alert.alert(t('admin'), t('adminInvalidAddress'));
-                    return;
-                  }
-                  Alert.alert(
-                    t('reservaRetiroTitle'),
-                    t('reservaRetiroConfirm', { amount, address: destino }),
-                    [
-                      { text: t('cancel'), style: 'cancel' },
-                      { text: t('ready'), onPress: () => onProponerRetiroReserva(amount, destino) },
-                    ]
-                  );
-                }}
-                style={[styles.button, { backgroundColor: colors.chip }]}
-              >
-                <AppText style={[styles.buttonText, { color: colors.text }]}>
-                  {t('reservaRetiroPropose')}
-                </AppText>
-              </TouchableOpacity>
-              {onAplicarRetiroReserva && retiroPendiente ? (
-                <TouchableOpacity
-                  disabled={isLoading}
-                  onPress={() => {
-                    Alert.alert(
-                      t('reservaRetiroTitle'),
-                      t('reservaRetiroApplyConfirm', {
-                        amount: formatUnits(retiroPendiente.amountWei, 18),
-                        address: retiroPendiente.to,
-                      }),
-                      [
-                        { text: t('cancel'), style: 'cancel' },
-                        { text: t('ready'), onPress: () => onAplicarRetiroReserva() },
-                      ]
-                    );
-                  }}
-                  style={[styles.button, { backgroundColor: colors.primary }]}
-                >
-                  <AppText style={[styles.buttonText, { color: colors.onPrimary }]}>
-                    {t('reservaRetiroApply')}
-                  </AppText>
-                </TouchableOpacity>
-              ) : null}
-            </>
-          ) : null}
         </>
       ) : null}
       {onLiquidar || onMarcarMoroso ? (
