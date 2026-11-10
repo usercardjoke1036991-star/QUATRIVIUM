@@ -740,31 +740,9 @@ export const QuatriviumCreditService = {
     return proposeAdmin('removeAdmin', [address]);
   },
 
-  proposeFeeCollector: async (address: string) => {
-    if (!isAddress(address)) throw new Error('invalid address');
-    return proposeAdmin('setFeeCollector', [address]);
-  },
-
   proposeFundador: async (address: string) => {
     if (!isAddress(address)) throw new Error('invalid address');
     return proposeAdmin('setFundador', [address]);
-  },
-
-  proposeOwner: async (address: string) => {
-    if (!isAddress(address)) throw new Error('invalid address');
-    return proposeAdmin('setOwner', [address]);
-  },
-
-  proposeRequiredConfirmations: async (required: number) => {
-    if (!Number.isInteger(required) || required < 1 || required > 3) {
-      throw new Error('invalid confirms');
-    }
-    return proposeAdmin('setRequiredConfirmations', [required]);
-  },
-
-  proposeSetTokenConfig: async (token: string, _feed: string, enabled: boolean) => {
-    if (!isAddress(token)) throw new Error('invalid address');
-    return proposeAdmin('setTokenConfig', [token, enabled]);
   },
 
   confirmAdminAction: async (id: number) => {
@@ -848,13 +826,6 @@ export const QuatriviumCreditService = {
       logWarn('owner falló:', e);
       return '0x0000000000000000000000000000000000000000';
     }
-  },
-
-  retirarComisiones: async () => proposeAdmin('retirarComisiones', []),
-
-  retirarComisionesToken: async (tokenAddress: string) => {
-    assertToken(tokenAddress);
-    return proposeAdmin('retirarComisionesToken', [tokenAddress]);
   },
 
   cancelAdminAction: async (id: number) => {

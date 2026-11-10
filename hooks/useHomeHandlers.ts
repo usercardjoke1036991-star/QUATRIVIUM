@@ -4,10 +4,17 @@
  * Cada handler valida precondiciones y delega al hook useWeb3Transactions.
  */
 import { useRef, useState } from 'react';
-import { Contract, parseEther, parseUnits, type Eip1193Provider, type Signer } from 'ethers';
+import {
+  Contract,
+  Interface,
+  parseEther,
+  parseUnits,
+  type Eip1193Provider,
+  type Signer,
+} from 'ethers';
 import { Alert, Linking } from 'react-native';
 import { getEthersSignerFromProvider } from '../web3Config';
-import { ERC20_ABI } from '../constants/contractConfig';
+import { CONTRACT_ABI, ERC20_ABI } from '../constants/contractConfig';
 import { getTokenMeta, isOfficialWorldToken } from '../constants/tokens';
 import { setWalletSigner, QuatriviumCreditService } from '../services/quatriviumCreditService';
 import { aportarReservaBote, reservaErrorKey } from '../services/reservaService';
@@ -25,7 +32,7 @@ import {
   getContractAddress,
 } from '../constants/rpcConfig';
 import { showNotice } from '../utils/appNotice';
-import { isAltaConfigured } from '../constants/altaConfig';
+import { ALTA_ABI, getAltaAddress, isAltaConfigured } from '../constants/altaConfig';
 import {
   accessPayUsdt,
   creditNeedsAccess,
@@ -41,17 +48,47 @@ import { markLoanFullyPaid } from '../utils/loanPaidMark';
 import { formatCooldown, formatUSD, parsePositiveDecimal } from '../utils/formatters';
 import { milestoneBonusUsd } from '../constants/loanTiers';
 import { FAMA_CANJE_POR_USDT, usdtFromFama } from '../constants/fama';
+import { FAMA_ABI } from '../constants/famaConfig';
 import { useI18n } from '../i18n/LanguageContext';
 import { humanizeTxError, networkFailureError } from '../utils/txErrors';
 import type { FundsConfirmPurpose } from '../services/fundsConfirm';
-import { fundsTx } from '../utils/fundsConfirmGate';
-import { getReservaAddress } from '../constants/reservaConfig';
+import { fundsTx, quoteNetworkFee } from '../utils/fundsConfirmGate';
+import { getReservaAddress, RESERVA_ABI } from '../constants/reservaConfig';
 import { getRealDonationWallet } from '../constants/deployedAddresses';
 import type { LoanTier, UserInfo } from './useWeb3Balances';
 import type { Token } from '../constants/tokens';
 
 const ARBITRUM_TESTNET_FAUCET = 'https://faucet.quicknode.com/arbitrum/sepolia';
 const MIN_GAS_WEI = parseEther('0.0001');
+
+async function quotedFunds(
+  amount: string,
+  destination: string,
+  call?: { to: string; abi: string[]; method: string; args?: unknown[] }
+) {
+  let fee = 'no disponible';
+  try {
+    const provider = getProviderWithFallback();
+    const data = call
+      ? new Interface(call.abi).encodeFunctionData(call.method, call.args ?? [])
+      : '0x';
+    fee = await quoteNetworkFee(provider, { to: call?.to || destination, data });
+  } catch {
+    fee = 'no disponible';
+  }
+  return fundsTx(amount, destination, fee);
+}
+
+async function famaContract(): Promise<string | null> {
+  try {
+    const credit = new Contract(getContractAddress(), CONTRACT_ABI, getProviderWithFallback());
+    const addr = String(await credit.famaHermano());
+    if (!/^0x[a-fA-F0-9]{40}$/.test(addr) || /^0x0{40}$/i.test(addr)) return null;
+    return addr;
+  } catch {
+    return null;
+  }
+}
 
 async function readOnChainEth(address: string): Promise<bigint | null> {
   try {
@@ -121,18 +158,12 @@ export const useHomeHandlers = ({
     pagarPrestamo,
     pagarCuotas,
     depositarLiquidez,
-    retirarComisiones,
-    retirarComisionesToken,
     cancelAdminAction,
     executeAdminAction,
     confirmAdminAction,
     proposeAddAdmin,
     proposeRemoveAdmin,
-    proposeFeeCollector,
-    proposeRequiredConfirmations,
-    proposeSetTokenConfig,
     proposeFundador,
-    proposeOwner,
     liquidarDeudor,
     marcarMorosoSiVencido,
   } = useWeb3Transactions();
@@ -382,7 +413,17 @@ export const useHomeHandlers = ({
       Alert.alert(t('token'), t('tokenNotEnabledAlert'));
       return;
     }
-    if (!(await confirmFunds('loanRequest', fundsTx(String(tier.usdAmount), getContractAddress()))))
+    if (
+      !(await confirmFunds(
+        'loanRequest',
+        await quotedFunds(String(tier.usdAmount), getContractAddress(), {
+          to: getContractAddress(),
+          abi: CONTRACT_ABI,
+          method: 'solicitarPrestamo',
+          args: [selectedToken.address, tier.id],
+        })
+      ))
+    )
       return;
     if (!(await ensureGasForTx())) return;
     const result = await solicitarPrestamo(selectedToken.address, tier.id);
@@ -472,7 +513,20 @@ export const useHomeHandlers = ({
       return;
     }
     const canjeLusd = String(fama / 250);
-    if (!(await confirmFunds('movement', fundsTx(canjeLusd, walletAddress)))) return;
+    const famaAddr = await famaContract();
+    if (
+      !(await confirmFunds(
+        'movement',
+        await quotedFunds(
+          canjeLusd,
+          walletAddress,
+          famaAddr
+            ? { to: famaAddr, abi: FAMA_ABI, method: 'canjearFama', args: [fama] }
+            : undefined
+        )
+      ))
+    )
+      return;
     if (!(await ensureGasForTx())) return;
     const result = await canjearFama(fama);
     if (result.success) {
@@ -518,7 +572,20 @@ export const useHomeHandlers = ({
       );
       return;
     }
-    if (!(await confirmFunds('movement', fundsTx(String(fama / 250), walletAddress)))) return;
+    const famaRed = await famaContract();
+    if (
+      !(await confirmFunds(
+        'movement',
+        await quotedFunds(
+          String(fama / 250),
+          walletAddress,
+          famaRed
+            ? { to: famaRed, abi: FAMA_ABI, method: 'canjearFamaRed', args: [fama] }
+            : undefined
+        )
+      ))
+    )
+      return;
     if (!(await ensureGasForTx())) return;
     const result = await canjearFamaRed(fama);
     if (result.success) {
@@ -557,10 +624,15 @@ export const useHomeHandlers = ({
       Alert.alert(t('rachaTitle'), t('rachaNothing'));
       return;
     }
+    const rachaAddr = await famaContract();
     if (
       !(await confirmFunds(
         'movement',
-        fundsTx(String(userInfo.racha.bonoPendienteUsd), walletAddress)
+        await quotedFunds(
+          String(userInfo.racha.bonoPendienteUsd),
+          walletAddress,
+          rachaAddr ? { to: rachaAddr, abi: FAMA_ABI, method: 'cobrarBonoRacha' } : undefined
+        )
       ))
     )
       return;
@@ -594,9 +666,18 @@ export const useHomeHandlers = ({
     if (
       !(await confirmFunds(
         'loanPay',
-        fundsTx(
+        await quotedFunds(
           userInfo.activeLoan.remainingLabel || userInfo.activeLoan.totalDueLabel,
-          getContractAddress()
+          getContractAddress(),
+          {
+            to: getContractAddress(),
+            abi: CONTRACT_ABI,
+            method: 'pagarPrestamo',
+            args: [
+              userInfo.activeLoan.token,
+              userInfo.activeLoan.remainingWei || userInfo.activeLoan.totalDueWei,
+            ],
+          }
         )
       ))
     )
@@ -707,7 +788,18 @@ export const useHomeHandlers = ({
       Alert.alert(t('amount'), t('amountGreaterZero'));
       return;
     }
-    if (!(await confirmFunds('movement', fundsTx(parsed, getContractAddress())))) return;
+    if (
+      !(await confirmFunds(
+        'movement',
+        await quotedFunds(parsed, getContractAddress(), {
+          to: getContractAddress(),
+          abi: CONTRACT_ABI,
+          method: 'depositarLiquidez',
+          args: [selectedToken.address, parseUnits(parsed, selectedToken.decimals)],
+        })
+      ))
+    )
+      return;
     try {
       const amountWei = parseUnits(parsed, selectedToken.decimals).toString();
       if (!(await fundInternalFromExternal(amountWei, selectedToken.address))) return;
@@ -761,7 +853,19 @@ export const useHomeHandlers = ({
       }
       const amount = String(accessPayUsdt());
       const amountWei = parseUnits(amount, selectedToken.decimals).toString();
-      if (!(await confirmFunds('movement', fundsTx(amount, getContractAddress())))) return;
+      const accessTo = isAltaConfigured() ? getAltaAddress() : getContractAddress();
+      if (
+        !(await confirmFunds(
+          'movement',
+          await quotedFunds(amount, accessTo, {
+            to: accessTo,
+            abi: isAltaConfigured() ? ALTA_ABI : CONTRACT_ABI,
+            method: isAltaConfigured() ? 'pagarRegistro' : 'pagarVerificacion',
+            args: isAltaConfigured() ? [] : [selectedToken.address, amountWei],
+          })
+        ))
+      )
+        return;
       if (!(await fundInternalFromExternal(amountWei, selectedToken.address))) return;
       if (!(await ensureGasForTx())) return;
       try {
@@ -799,7 +903,18 @@ export const useHomeHandlers = ({
       Alert.alert(t('amount'), t('amountGreaterZero'));
       return;
     }
-    if (!(await confirmFunds('movement', fundsTx(parsed, getReservaAddress())))) return;
+    if (
+      !(await confirmFunds(
+        'movement',
+        await quotedFunds(parsed, getReservaAddress(), {
+          to: getReservaAddress(),
+          abi: RESERVA_ABI,
+          method: 'aportarBote',
+          args: [parseUnits(parsed, 18)],
+        })
+      ))
+    )
+      return;
     try {
       await runAsAdmin(async () => {
         const signer = await getEthersSignerFromProvider(adminProvider as Eip1193Provider);
@@ -847,7 +962,12 @@ export const useHomeHandlers = ({
     if (
       !(await confirmFunds(
         'movement',
-        fundsTx(parsed, getRealDonationWallet() || userInfo.founderAddress)
+        await quotedFunds(parsed, getRealDonationWallet() || userInfo.founderAddress, {
+          to: getContractAddress(),
+          abi: CONTRACT_ABI,
+          method: 'donar',
+          args: [selectedToken.address, parseUnits(parsed, selectedToken.decimals)],
+        })
       ))
     )
       return;
@@ -871,20 +991,6 @@ export const useHomeHandlers = ({
     } catch {
       Alert.alert(t('amount'), t('invalidAmount'));
     }
-  };
-
-  const handleRetirarComisiones = async () => {
-    await runAsAdmin(async () => {
-      const result = await retirarComisiones();
-      if (result.success) refetch();
-    });
-  };
-
-  const handleRetirarComisionesToken = async () => {
-    await runAsAdmin(async () => {
-      const result = await retirarComisionesToken(selectedToken.address);
-      if (result.success) refetch();
-    });
   };
 
   const handleExecuteProposal = async (id: number) => {
@@ -915,37 +1021,9 @@ export const useHomeHandlers = ({
     });
   };
 
-  const handleProposeFeeCollector = async (address: string) => {
-    await runAsAdmin(async () => {
-      const result = await proposeFeeCollector(address);
-      if (result.success) refetch();
-    });
-  };
-
-  const handleProposeConfirmations = async (required: number) => {
-    await runAsAdmin(async () => {
-      const result = await proposeRequiredConfirmations(required);
-      if (result.success) refetch();
-    });
-  };
-
   const handleProposeFundador = async (address: string) => {
     await runAsAdmin(async () => {
       const result = await proposeFundador(address);
-      if (result.success) refetch();
-    });
-  };
-
-  const handleProposeOwner = async (address: string) => {
-    await runAsAdmin(async () => {
-      const result = await proposeOwner(address);
-      if (result.success) refetch();
-    });
-  };
-
-  const handleProposeSetTokenConfig = async (token: string, feed: string, enabled: boolean) => {
-    await runAsAdmin(async () => {
-      const result = await proposeSetTokenConfig(token, feed, enabled);
       if (result.success) refetch();
     });
   };
@@ -996,17 +1074,11 @@ export const useHomeHandlers = ({
     handlePagarAcceso: track(handlePagarAcceso),
     handleDonar: track(handleDonar),
     handleAportarReserva: track(handleAportarReserva),
-    handleRetirarComisiones: track(handleRetirarComisiones),
-    handleRetirarComisionesToken: track(handleRetirarComisionesToken),
     handleExecuteProposal,
     handleConfirmProposal,
     handleProposeAddAdmin,
     handleProposeRemoveAdmin,
-    handleProposeFeeCollector,
-    handleProposeConfirmations,
     handleProposeFundador,
-    handleProposeOwner,
-    handleProposeSetTokenConfig,
     handleCancelProposal,
     handleLiquidarDeudor,
     handleMarcarMorosoSiVencido,

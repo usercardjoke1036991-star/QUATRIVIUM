@@ -36,10 +36,11 @@ describe('audit fixes', function () {
     expect(purpose).to.include("'movement'");
     expect(host).to.include("purpose === 'movement'");
     expect(host).to.include("'fundsConfirmMovement'");
-    expect((home.match(/confirmFunds\('movement'/g) || []).length).to.equal(5);
+    const homePurposes = [...home.matchAll(/confirmFunds\(\s*'([^']+)'/g)].map((hit) => hit[1]);
+    expect(homePurposes.filter((purpose) => purpose === 'movement')).to.have.length(7);
     expect(charge.match(/confirmFunds\('movement'/g) || []).to.have.length(2);
-    expect(home).to.include("confirmFunds('loanRequest'");
-    expect(home).to.include("'loanPay'");
+    expect(homePurposes).to.include('loanRequest');
+    expect(homePurposes).to.include('loanPay');
   });
 
   it('says the parked signup USDT and the liquidate reward match the contract', function () {

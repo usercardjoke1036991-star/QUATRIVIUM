@@ -7,7 +7,6 @@ import { useTheme } from '../theme/ThemeContext';
 import { AppIcon } from './icons';
 import { formatAddress } from '../utils/formatters';
 import type { OpenAdminProposal } from '../utils/adminProposal';
-import type { ConfigurableStable } from '../constants/tokens';
 import { AppText, AppTextInput } from './AppText';
 
 interface AdminPanelProps {
@@ -22,20 +21,12 @@ interface AdminPanelProps {
   proposalCount?: number;
   openProposal?: OpenAdminProposal | null;
   founderAddress?: string;
-  ownerAddress?: string;
-  extraStables?: ConfigurableStable[];
-  onWithdrawFees: () => void;
-  onWithdrawTokenFees: () => void;
   onExecuteProposal?: (id: number) => void;
   onConfirmProposal?: (id: number) => void;
   onCancelProposal?: (id: number) => void;
   onProposeAddAdmin?: (address: string) => void;
   onProposeRemoveAdmin?: (address: string) => void;
-  onProposeFeeCollector?: (address: string) => void;
-  onProposeConfirmations?: (required: number) => void;
   onProposeFundador?: (address: string) => void;
-  onProposeOwner?: (address: string) => void;
-  onProposeSetTokenConfig?: (token: string, feed: string, enabled: boolean) => void;
   onLiquidar?: (debtorAddress: string, tokenAddress: string) => void;
   onMarcarMoroso?: (debtorAddress: string) => void;
   onAportarReserva?: (amount: string) => void;
@@ -52,19 +43,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   proposalCount = 0,
   openProposal = null,
   founderAddress = '',
-  extraStables = [],
-  onWithdrawFees,
-  onWithdrawTokenFees,
   onExecuteProposal,
   onConfirmProposal,
   onCancelProposal,
   onProposeAddAdmin,
   onProposeRemoveAdmin,
-  onProposeFeeCollector,
-  onProposeConfirmations,
   onProposeFundador,
-  onProposeOwner,
-  onProposeSetTokenConfig,
   onLiquidar,
   onMarcarMoroso,
   onAportarReserva,
@@ -102,20 +86,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     Alert.alert(t('admin'), t('adminTimelockConfirm'), [
       { text: t('cancel'), style: 'cancel' },
       { text: t('ready'), onPress: () => apply(next) },
-    ]);
-  };
-
-  const confirmWithdrawBnb = () => {
-    Alert.alert(t('withdrawBnb'), t('confirmWithdrawBnb'), [
-      { text: t('cancel'), style: 'cancel' },
-      { text: t('withdrawBnb'), style: 'destructive', onPress: onWithdrawFees },
-    ]);
-  };
-
-  const confirmWithdrawToken = () => {
-    Alert.alert(t('withdrawFees'), t('confirmWithdrawFees'), [
-      { text: t('cancel'), style: 'cancel' },
-      { text: t('withdrawFees'), style: 'destructive', onPress: onWithdrawTokenFees },
     ]);
   };
 
@@ -219,75 +189,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           </AppText>
         </TouchableOpacity>
       ) : null}
-      {onProposeOwner ? (
-        <TouchableOpacity
-          disabled={isLoading}
-          onPress={() => proposeWithAddress(onProposeOwner)}
-          style={[styles.button, { backgroundColor: colors.chip }]}
-        >
-          <AppText style={[styles.buttonText, { color: colors.text }]}>
-            {t('adminSetOwner')}
-          </AppText>
-        </TouchableOpacity>
-      ) : null}
-      {onProposeFeeCollector ? (
-        <TouchableOpacity
-          disabled={isLoading}
-          onPress={() => proposeWithAddress(onProposeFeeCollector)}
-          style={[styles.button, { backgroundColor: colors.chip }]}
-        >
-          <AppText style={[styles.buttonText, { color: colors.text }]}>
-            {t('adminFeeCollector')}
-          </AppText>
-        </TouchableOpacity>
-      ) : null}
-      {onProposeConfirmations && adminRoster.length < 3 ? (
-        <View style={styles.row}>
-          <TouchableOpacity
-            disabled={isLoading}
-            onPress={() => confirmToggle(true, () => onProposeConfirmations(1))}
-            style={[styles.button, styles.half, { backgroundColor: colors.chip }]}
-          >
-            <AppText style={[styles.buttonText, { color: colors.text }]}>
-              {t('adminConfirms1')}
-            </AppText>
-          </TouchableOpacity>
-          <TouchableOpacity
-            disabled={isLoading}
-            onPress={() => confirmToggle(true, () => onProposeConfirmations(2))}
-            style={[styles.button, styles.half, { backgroundColor: colors.chip }]}
-          >
-            <AppText style={[styles.buttonText, { color: colors.text }]}>
-              {t('adminConfirms2')}
-            </AppText>
-          </TouchableOpacity>
-        </View>
-      ) : null}
       {adminRoster.length >= 3 ? (
         <AppText style={[styles.note, { color: colors.textMuted }]}>{t('adminTwoOfThree')}</AppText>
-      ) : null}
-      {onProposeSetTokenConfig && extraStables.length ? (
-        <>
-          <AppText style={[styles.note, { color: colors.textMuted }]}>
-            {t('adminEnableTokenLead')}
-          </AppText>
-          {extraStables.map((stable) => (
-            <TouchableOpacity
-              key={stable.address}
-              disabled={isLoading}
-              onPress={() =>
-                confirmToggle(true, () =>
-                  onProposeSetTokenConfig(stable.address, stable.feed, true)
-                )
-              }
-              style={[styles.button, { backgroundColor: colors.chip }]}
-            >
-              <AppText style={[styles.buttonText, { color: colors.text }]}>
-                {t('adminEnableToken', { symbol: stable.symbol })}
-              </AppText>
-            </TouchableOpacity>
-          ))}
-        </>
       ) : null}
       {openProposal ? (
         <AppText style={[styles.meta, { color: colors.text }]}>
@@ -457,42 +360,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               )}
             </TouchableOpacity>
           ) : null}
-        </>
-      ) : null}
-      {isOwner ? (
-        <>
-          <TouchableOpacity
-            disabled={isLoading}
-            onPress={confirmWithdrawBnb}
-            style={[styles.button, { backgroundColor: colors.primary }]}
-          >
-            {isLoading ? (
-              <ActivityIndicator color={colors.onPrimary} size="small" />
-            ) : (
-              <View style={styles.btnRow}>
-                <AppIcon name="withdraw" size={16} color={colors.onPrimary} />
-                <AppText style={[styles.buttonText, { color: colors.onPrimary }]}>
-                  {t('withdrawBnb')}
-                </AppText>
-              </View>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            disabled={isLoading}
-            onPress={confirmWithdrawToken}
-            style={[styles.button, { backgroundColor: colors.primary }]}
-          >
-            {isLoading ? (
-              <ActivityIndicator color={colors.onPrimary} size="small" />
-            ) : (
-              <View style={styles.btnRow}>
-                <AppIcon name="withdraw" size={16} color={colors.onPrimary} />
-                <AppText style={[styles.buttonText, { color: colors.onPrimary }]}>
-                  {t('withdrawFees')} ({tokenSymbol})
-                </AppText>
-              </View>
-            )}
-          </TouchableOpacity>
         </>
       ) : null}
     </View>

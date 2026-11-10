@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useScreenScroll } from '../hooks/useScreenScroll';
-import { parseUnits, type Eip1193Provider } from 'ethers';
+import { Interface, parseUnits, type Eip1193Provider } from 'ethers';
 import { useAccount, useAppKit, useProvider } from '@reown/appkit-react-native';
 import { getEthersSignerFromProvider } from '../web3Config';
 import { enviarBnb, enviarToken, loadAppWallet } from '../services/appWallet';
@@ -20,6 +20,9 @@ import { recordMovement } from '../services/movementHistory';
 import { useI18n } from '../i18n/LanguageContext';
 import { useTheme } from '../theme/ThemeContext';
 import { useFundsConfirm } from './FundsConfirmHost';
+import { quoteNetworkFee } from '../utils/fundsConfirmGate';
+import { ERC20_ABI } from '../constants/contractConfig';
+import { getProviderWithFallback } from '../constants/rpcConfig';
 import { formatAddress, parsePositiveDecimal } from '../utils/formatters';
 import { humanizeTxError } from '../utils/txErrors';
 import { ensureExternalWalletOnAppChain } from '../utils/walletChain';
@@ -120,7 +123,23 @@ export const TransferWalletsModal: React.FC<TransferWalletsModalProps> = ({
         amount: parsed,
         symbol: asset === 'bnb' ? 'ETH' : 'LUSD',
         destination: to,
-        fee: '0.0002 ETH',
+        fee: await (async () => {
+          try {
+            const data =
+              asset === 'bnb'
+                ? '0x'
+                : new Interface(ERC20_ABI).encodeFunctionData('transfer', [
+                    to,
+                    parseUnits(parsed, decimals),
+                  ]);
+            return quoteNetworkFee(getProviderWithFallback(), {
+              to: asset === 'bnb' ? to : selectedToken.address,
+              data,
+            });
+          } catch {
+            return 'no disponible';
+          }
+        })(),
       }))
     )
       return;

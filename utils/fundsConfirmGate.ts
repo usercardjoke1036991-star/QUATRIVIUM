@@ -1,6 +1,42 @@
 /** Datos que la pantalla debe mostrar antes de firmar un movimiento de LUSD. */
 
-export const NETWORK_FEE_ESTIMATE = '0.0002 ETH';
+import { formatEther } from 'ethers';
+
+export const NETWORK_FEE_UNAVAILABLE = 'no disponible';
+
+type FeeQuote = {
+  estimateGas(tx: { to?: string | null; data?: string | null }): Promise<bigint>;
+  getFeeData(): Promise<{ maxFeePerGas?: bigint | null; gasPrice?: bigint | null }>;
+};
+
+/** Gas estimado por el precio actual. Si la lectura falla, no se inventa una comisión. */
+export async function quoteNetworkFee(
+  source: FeeQuote,
+  tx: { to?: string | null; data?: string | null }
+): Promise<string> {
+  try {
+    const gas = await source.estimateGas(tx);
+    const fee = await source.getFeeData();
+    const price = fee.maxFeePerGas ?? fee.gasPrice;
+    if (price == null || price <= 0n || gas <= 0n) return NETWORK_FEE_UNAVAILABLE;
+    const eth = formatEther(gas * price);
+    const trimmed = eth.includes('.') ? eth.replace(/0+$/, '').replace(/\.$/, '') : eth;
+    return `${trimmed} ETH`;
+  } catch {
+    return NETWORK_FEE_UNAVAILABLE;
+  }
+}
+
+export function reservaConfirmAmount(
+  kind: 'lock' | 'unlock' | 'renew',
+  typed: string | null,
+  principal: string | null
+): string | null {
+  const raw = kind === 'lock' ? typed : principal;
+  const amount = String(raw || '').trim();
+  if (!amount || amount === '0' || amount === '0.0' || amount === '0.00') return null;
+  return amount;
+}
 
 export type FundsTxDetails = {
   amount: string;
@@ -9,12 +45,12 @@ export type FundsTxDetails = {
   fee: string;
 };
 
-export function fundsTx(amount: string, destination: string): FundsTxDetails {
+export function fundsTx(amount: string, destination: string, fee: string): FundsTxDetails {
   return {
     amount: String(amount || '').trim(),
     symbol: 'LUSD',
     destination: String(destination || '').trim(),
-    fee: NETWORK_FEE_ESTIMATE,
+    fee: String(fee || '').trim(),
   };
 }
 

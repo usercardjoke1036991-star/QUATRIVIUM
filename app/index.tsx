@@ -52,7 +52,7 @@ import { MovementHistory } from '../components/MovementHistory';
 import { GraceMoraClock } from '../components/GraceMoraClock';
 import { APP_DISPLAY_NAME } from '../constants/brand';
 import { RESERVA_MIN_LEVEL } from '../constants/reserva';
-import { getConfigurableStables, getSupportedTokens } from '../constants/tokens';
+import { getSupportedTokens } from '../constants/tokens';
 import { isAltaConfigured } from '../constants/altaConfig';
 import {
   isAccessPaymentEnabled,
@@ -103,7 +103,6 @@ function HomeScreenWithHooks() {
   const { mode } = useAppMode();
   const { confirmFunds } = useFundsConfirm();
   const tokens = useMemo(() => getSupportedTokens(mode === 'demo'), [mode]);
-  const extraStables = useMemo(() => getConfigurableStables(mode === 'demo'), [mode]);
   const [selectedToken, setSelectedToken] = useState(tokens[0]);
   const [room, setRoom] = useState<HomeRoom | null>(null);
   const [phraseBackedUp, setPhraseBackedUp] = useState(false);
@@ -245,17 +244,11 @@ function HomeScreenWithHooks() {
     handlePagarAcceso,
     handleDonar,
     handleAportarReserva,
-    handleRetirarComisiones,
-    handleRetirarComisionesToken,
     handleExecuteProposal,
     handleConfirmProposal,
     handleProposeAddAdmin,
     handleProposeRemoveAdmin,
-    handleProposeFeeCollector,
-    handleProposeConfirmations,
     handleProposeFundador,
-    handleProposeOwner,
-    handleProposeSetTokenConfig,
     handleCancelProposal,
     handleLiquidarDeudor,
     handleMarcarMorosoSiVencido,
@@ -1047,19 +1040,12 @@ function HomeScreenWithHooks() {
               isLoading={txLoading}
               tokenSymbol={selectedToken.symbol}
               tokenAddress={selectedToken.address}
-              onWithdrawFees={handleRetirarComisiones}
-              onWithdrawTokenFees={handleRetirarComisionesToken}
               onExecuteProposal={handleExecuteProposal}
               onConfirmProposal={handleConfirmProposal}
               onCancelProposal={handleCancelProposal}
               onProposeAddAdmin={handleProposeAddAdmin}
               onProposeRemoveAdmin={handleProposeRemoveAdmin}
-              onProposeFeeCollector={handleProposeFeeCollector}
-              onProposeConfirmations={handleProposeConfirmations}
               onProposeFundador={handleProposeFundador}
-              onProposeOwner={handleProposeOwner}
-              extraStables={extraStables}
-              onProposeSetTokenConfig={handleProposeSetTokenConfig}
               onLiquidar={handleLiquidarDeudor}
               onMarcarMoroso={handleMarcarMorosoSiVencido}
               onAportarReserva={handleAportarReserva}
@@ -1072,7 +1058,6 @@ function HomeScreenWithHooks() {
               proposalCount={adminInfo.proposalCount || userInfo.proposalCount}
               openProposal={adminInfo.openProposal || userInfo.openProposal}
               founderAddress={adminInfo.founderAddress || userInfo.founderAddress}
-              ownerAddress={adminInfo.ownerAddress || userInfo.ownerAddress}
             />
           ) : (
             <AppText style={{ color: colors.text }}>{t('appWalletAdminConnect')}</AppText>

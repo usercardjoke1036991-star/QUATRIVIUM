@@ -2270,7 +2270,7 @@ describe('account entry — password, email and session', () => {
       path.join(__dirname, '..', 'components', 'AdminPanel.tsx'),
       'utf8'
     );
-    expect(panel).to.include('onProposeConfirmations');
+    expect(panel).to.not.include('onProposeConfirmations');
   });
 
   it('scans KYC locally and draws square rank frames by division', () => {

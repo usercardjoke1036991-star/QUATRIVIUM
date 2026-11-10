@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from 'react-native';
 import type { Signer } from 'ethers';
-import { formatUnits } from 'ethers';
+import { formatUnits, Interface, parseUnits } from 'ethers';
 import { useI18n } from '../i18n/LanguageContext';
 import { useTheme } from '../theme/ThemeContext';
 import {
@@ -26,6 +26,10 @@ import {
   reservaErrorKey,
   type ReservaPreview,
 } from '../services/reservaService';
+import { useFundsConfirm } from './FundsConfirmHost';
+import { fundsTx, quoteNetworkFee, reservaConfirmAmount } from '../utils/fundsConfirmGate';
+import { getProviderWithFallback } from '../constants/rpcConfig';
+import { getReservaAddress, RESERVA_ABI } from '../constants/reservaConfig';
 import { AppSubsection } from './AppSection';
 import { AppText, AppTextInput } from './AppText';
 import { AppIcon } from './icons';
@@ -55,6 +59,7 @@ export function ReservaSection({
 }: ReservaSectionProps) {
   const { t } = useI18n();
   const { colors } = useTheme();
+  const { confirmFunds } = useFundsConfirm();
   const [amount, setAmount] = useState(String(RESERVA_MIN_LOCK_USDT));
   const [acked, setAcked] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -141,6 +146,28 @@ export function ReservaSection({
     const pct = reservaBoostRedBp(tramo) / 100;
     return { usd, tramo, pct };
   }, [amountOk, lockUsd, preview?.activa, preview?.principalWei]);
+
+  async function confirmMove(
+    kind: 'lock' | 'unlock' | 'renew',
+    method: 'bloquear' | 'desbloquear' | 'renovar',
+    args: unknown[],
+    destination: string
+  ) {
+    const principal = preview ? formatUnits(preview.principalWei, 18) : null;
+    const amount = reservaConfirmAmount(kind, parsed, principal);
+    if (!amount) return false;
+    let fee = 'no disponible';
+    try {
+      const data = new Interface(RESERVA_ABI).encodeFunctionData(method, args);
+      fee = await quoteNetworkFee(getProviderWithFallback(), {
+        to: getReservaAddress(),
+        data,
+      });
+    } catch {
+      fee = 'no disponible';
+    }
+    return confirmFunds('movement', fundsTx(amount, destination, fee));
+  }
 
   async function run(
     action: () => Promise<void>,
@@ -330,10 +357,19 @@ export function ReservaSection({
           <TouchableOpacity
             disabled={!canLock}
             onPress={() =>
-              void run(
-                () => bloquearReserva(signer as Signer, parsed || '0', hasPadre),
-                'reservaBlockedOk'
-              )
+              void (async () => {
+                const ok = await confirmMove(
+                  'lock',
+                  'bloquear',
+                  [parseUnits(parsed || '0', 18)],
+                  getReservaAddress()
+                );
+                if (!ok) return;
+                await run(
+                  () => bloquearReserva(signer as Signer, parsed || '0', hasPadre),
+                  'reservaBlockedOk'
+                );
+              })()
             }
             style={[styles.button, { backgroundColor: canLock ? colors.primary : colors.chip }]}
           >
@@ -362,7 +398,11 @@ export function ReservaSection({
             <TouchableOpacity
               disabled={!canUnlock}
               onPress={() =>
-                void run(() => desbloquearReserva(signer as Signer), 'reservaUnlockedOk')
+                void (async () => {
+                  const ok = await confirmMove('unlock', 'desbloquear', [], walletAddress);
+                  if (!ok) return;
+                  await run(() => desbloquearReserva(signer as Signer), 'reservaUnlockedOk');
+                })()
               }
               style={[styles.button, { backgroundColor: canUnlock ? colors.primary : colors.chip }]}
             >
@@ -380,7 +420,11 @@ export function ReservaSection({
             <TouchableOpacity
               disabled={!canRenew}
               onPress={() =>
-                void run(() => renovarReserva(signer as Signer, hasPadre), 'reservaRenewedOk')
+                void (async () => {
+                  const ok = await confirmMove('renew', 'renovar', [], getReservaAddress());
+                  if (!ok) return;
+                  await run(() => renovarReserva(signer as Signer, hasPadre), 'reservaRenewedOk');
+                })()
               }
               style={[styles.button, { backgroundColor: canRenew ? colors.primary : colors.chip }]}
             >

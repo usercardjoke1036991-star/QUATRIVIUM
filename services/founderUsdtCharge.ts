@@ -2,11 +2,12 @@
  * Cobra USDT a la fundadora por donar() desde la billetera interna.
  * La externa fondea la interna. El pool no se toca.
  */
-import { Contract, parseEther, parseUnits, type Eip1193Provider } from 'ethers';
+import { Contract, Interface, parseEther, parseUnits, type Eip1193Provider } from 'ethers';
 import { Alert, Linking } from 'react-native';
-import { ERC20_ABI } from '../constants/contractConfig';
+import { CONTRACT_ABI, ERC20_ABI } from '../constants/contractConfig';
 import { isOfficialWorldToken, type Token } from '../constants/tokens';
 import {
+  getContractAddress,
   getProviderWithFallback,
   isAccessPaymentEnabled,
   isCreditReady,
@@ -20,10 +21,25 @@ import { enviarToken } from './appWallet';
 import { loadRequiredExternalWallet } from './linkedWallet';
 import { beginExternalWalletHandoff } from './walletHandoff';
 import { ensureExternalWalletOnAppChain } from '../utils/walletChain';
-import { isAltaConfigured } from '../constants/altaConfig';
+import { ALTA_ABI, getAltaAddress, isAltaConfigured } from '../constants/altaConfig';
 import { cachedProtocolCaps, QuatriviumCreditService } from './quatriviumCreditService';
 import { recordMovement } from './movementHistory';
+import { quoteNetworkFee } from '../utils/fundsConfirmGate';
 import type { TranslationKey } from '../i18n/translations';
+
+async function movementFee(
+  method: string,
+  args: unknown[],
+  abi: string[] = CONTRACT_ABI,
+  to = getContractAddress()
+): Promise<string> {
+  try {
+    const data = new Interface(abi).encodeFunctionData(method, args);
+    return quoteNetworkFee(getProviderWithFallback(), { to, data });
+  } catch {
+    return 'no disponible';
+  }
+}
 
 const ARBITRUM_TESTNET_FAUCET = 'https://faucet.quicknode.com/arbitrum/sepolia';
 const MIN_GAS_WEI = parseEther('0.0001');
@@ -236,7 +252,9 @@ export async function chargeFounderUsdt(
       amount: human,
       symbol: 'LUSD',
       destination: ctx.founderAddress || ctx.token.address,
-      fee: '0.0002 ETH',
+      fee: isAltaConfigured()
+        ? await movementFee('pagarRegistro', [], ALTA_ABI, getAltaAddress())
+        : await movementFee('donar', [ctx.token.address, amountWei]),
     }))
   )
     return 'cancelled';
@@ -304,7 +322,7 @@ export async function chargePoolUsdt(
       amount: human,
       symbol: 'LUSD',
       destination: ctx.token.address,
-      fee: '0.0002 ETH',
+      fee: await movementFee('pagarVerificacion', [ctx.token.address, amountWei]),
     }))
   )
     return 'cancelled';
