@@ -1,19 +1,18 @@
 /** Datos que la pantalla debe mostrar antes de firmar un movimiento de LUSD. */
 
-import { formatEther } from 'ethers';
+import { formatEther, parseUnits } from 'ethers';
 
 export const NETWORK_FEE_UNAVAILABLE = 'no disponible';
 
+type FeeTx = { to?: string | null; data?: string | null; from?: string | null };
+
 type FeeQuote = {
-  estimateGas(tx: { to?: string | null; data?: string | null }): Promise<bigint>;
+  estimateGas(tx: FeeTx): Promise<bigint>;
   getFeeData(): Promise<{ maxFeePerGas?: bigint | null; gasPrice?: bigint | null }>;
 };
 
 /** Gas estimado por el precio actual. Si la lectura falla, no se inventa una comisión. */
-export async function quoteNetworkFee(
-  source: FeeQuote,
-  tx: { to?: string | null; data?: string | null }
-): Promise<string> {
+export async function quoteNetworkFee(source: FeeQuote, tx: FeeTx): Promise<string> {
   try {
     const gas = await source.estimateGas(tx);
     const fee = await source.getFeeData();
@@ -27,6 +26,16 @@ export async function quoteNetworkFee(
   }
 }
 
+function positiveAmount(raw: string): boolean {
+  const amount = String(raw || '').trim();
+  if (!amount) return false;
+  try {
+    return parseUnits(amount, 18) > 0n;
+  } catch {
+    return false;
+  }
+}
+
 export function reservaConfirmAmount(
   kind: 'lock' | 'unlock' | 'renew',
   typed: string | null,
@@ -34,7 +43,7 @@ export function reservaConfirmAmount(
 ): string | null {
   const raw = kind === 'lock' ? typed : principal;
   const amount = String(raw || '').trim();
-  if (!amount || amount === '0' || amount === '0.0' || amount === '0.00') return null;
+  if (!positiveAmount(amount)) return null;
   return amount;
 }
 
@@ -56,8 +65,7 @@ export function fundsTx(amount: string, destination: string, fee: string): Funds
 
 export function fundsDetailsComplete(details?: Partial<FundsTxDetails> | null): boolean {
   if (!details) return false;
-  const amount = String(details.amount || '').trim();
-  if (!amount || amount === '0' || amount === '0.0' || amount === '0.00') return false;
+  if (!positiveAmount(String(details.amount || ''))) return false;
   if (!String(details.symbol || '').trim()) return false;
   if (!/^0x[a-fA-F0-9]{40}$/.test(String(details.destination || '').trim())) return false;
   if (/^0x0{40}$/i.test(String(details.destination || '').trim())) return false;

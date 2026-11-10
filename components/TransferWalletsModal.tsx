@@ -133,6 +133,7 @@ export const TransferWalletsModal: React.FC<TransferWalletsModalProps> = ({
                     parseUnits(parsed, decimals),
                   ]);
             return quoteNetworkFee(getProviderWithFallback(), {
+              from: direction === 'out' ? walletAddress : linked,
               to: asset === 'bnb' ? to : selectedToken.address,
               data,
             });

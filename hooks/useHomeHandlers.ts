@@ -64,7 +64,8 @@ const MIN_GAS_WEI = parseEther('0.0001');
 async function quotedFunds(
   amount: string,
   destination: string,
-  call?: { to: string; abi: string[]; method: string; args?: unknown[] }
+  call?: { to: string; abi: string[]; method: string; args?: unknown[] },
+  from?: string | null
 ) {
   let fee = 'no disponible';
   try {
@@ -72,7 +73,7 @@ async function quotedFunds(
     const data = call
       ? new Interface(call.abi).encodeFunctionData(call.method, call.args ?? [])
       : '0x';
-    fee = await quoteNetworkFee(provider, { to: call?.to || destination, data });
+    fee = await quoteNetworkFee(provider, { from, to: call?.to || destination, data });
   } catch {
     fee = 'no disponible';
   }
@@ -416,12 +417,17 @@ export const useHomeHandlers = ({
     if (
       !(await confirmFunds(
         'loanRequest',
-        await quotedFunds(String(tier.usdAmount), getContractAddress(), {
-          to: getContractAddress(),
-          abi: CONTRACT_ABI,
-          method: 'solicitarPrestamo',
-          args: [selectedToken.address, tier.id],
-        })
+        await quotedFunds(
+          String(tier.usdAmount),
+          getContractAddress(),
+          {
+            to: getContractAddress(),
+            abi: CONTRACT_ABI,
+            method: 'solicitarPrestamo',
+            args: [selectedToken.address, tier.id],
+          },
+          walletAddress
+        )
       ))
     )
       return;
@@ -522,7 +528,8 @@ export const useHomeHandlers = ({
           walletAddress,
           famaAddr
             ? { to: famaAddr, abi: FAMA_ABI, method: 'canjearFama', args: [fama] }
-            : undefined
+            : undefined,
+          walletAddress
         )
       ))
     )
@@ -581,7 +588,8 @@ export const useHomeHandlers = ({
           walletAddress,
           famaRed
             ? { to: famaRed, abi: FAMA_ABI, method: 'canjearFamaRed', args: [fama] }
-            : undefined
+            : undefined,
+          walletAddress
         )
       ))
     )
@@ -631,7 +639,8 @@ export const useHomeHandlers = ({
         await quotedFunds(
           String(userInfo.racha.bonoPendienteUsd),
           walletAddress,
-          rachaAddr ? { to: rachaAddr, abi: FAMA_ABI, method: 'cobrarBonoRacha' } : undefined
+          rachaAddr ? { to: rachaAddr, abi: FAMA_ABI, method: 'cobrarBonoRacha' } : undefined,
+          walletAddress
         )
       ))
     )
@@ -677,7 +686,8 @@ export const useHomeHandlers = ({
               userInfo.activeLoan.token,
               userInfo.activeLoan.remainingWei || userInfo.activeLoan.totalDueWei,
             ],
-          }
+          },
+          walletAddress
         )
       ))
     )
@@ -791,12 +801,17 @@ export const useHomeHandlers = ({
     if (
       !(await confirmFunds(
         'movement',
-        await quotedFunds(parsed, getContractAddress(), {
-          to: getContractAddress(),
-          abi: CONTRACT_ABI,
-          method: 'depositarLiquidez',
-          args: [selectedToken.address, parseUnits(parsed, selectedToken.decimals)],
-        })
+        await quotedFunds(
+          parsed,
+          getContractAddress(),
+          {
+            to: getContractAddress(),
+            abi: CONTRACT_ABI,
+            method: 'depositarLiquidez',
+            args: [selectedToken.address, parseUnits(parsed, selectedToken.decimals)],
+          },
+          walletAddress
+        )
       ))
     )
       return;
@@ -857,12 +872,17 @@ export const useHomeHandlers = ({
       if (
         !(await confirmFunds(
           'movement',
-          await quotedFunds(amount, accessTo, {
-            to: accessTo,
-            abi: isAltaConfigured() ? ALTA_ABI : CONTRACT_ABI,
-            method: isAltaConfigured() ? 'pagarRegistro' : 'pagarVerificacion',
-            args: isAltaConfigured() ? [] : [selectedToken.address, amountWei],
-          })
+          await quotedFunds(
+            amount,
+            accessTo,
+            {
+              to: accessTo,
+              abi: isAltaConfigured() ? ALTA_ABI : CONTRACT_ABI,
+              method: isAltaConfigured() ? 'pagarRegistro' : 'pagarVerificacion',
+              args: isAltaConfigured() ? [] : [selectedToken.address, amountWei],
+            },
+            walletAddress
+          )
         ))
       )
         return;
@@ -906,12 +926,17 @@ export const useHomeHandlers = ({
     if (
       !(await confirmFunds(
         'movement',
-        await quotedFunds(parsed, getReservaAddress(), {
-          to: getReservaAddress(),
-          abi: RESERVA_ABI,
-          method: 'aportarBote',
-          args: [parseUnits(parsed, 18)],
-        })
+        await quotedFunds(
+          parsed,
+          getReservaAddress(),
+          {
+            to: getReservaAddress(),
+            abi: RESERVA_ABI,
+            method: 'aportarBote',
+            args: [parseUnits(parsed, 18)],
+          },
+          walletAddress
+        )
       ))
     )
       return;
@@ -962,12 +987,17 @@ export const useHomeHandlers = ({
     if (
       !(await confirmFunds(
         'movement',
-        await quotedFunds(parsed, getRealDonationWallet() || userInfo.founderAddress, {
-          to: getContractAddress(),
-          abi: CONTRACT_ABI,
-          method: 'donar',
-          args: [selectedToken.address, parseUnits(parsed, selectedToken.decimals)],
-        })
+        await quotedFunds(
+          parsed,
+          getRealDonationWallet() || userInfo.founderAddress,
+          {
+            to: getContractAddress(),
+            abi: CONTRACT_ABI,
+            method: 'donar',
+            args: [selectedToken.address, parseUnits(parsed, selectedToken.decimals)],
+          },
+          walletAddress
+        )
       ))
     )
       return;

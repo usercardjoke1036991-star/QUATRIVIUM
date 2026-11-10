@@ -160,6 +160,7 @@ export function ReservaSection({
     try {
       const data = new Interface(RESERVA_ABI).encodeFunctionData(method, args);
       fee = await quoteNetworkFee(getProviderWithFallback(), {
+        from: walletAddress,
         to: getReservaAddress(),
         data,
       });

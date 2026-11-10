@@ -16,6 +16,8 @@ describe('Pantalla de confirmación de fondos', function () {
     expect(fundsDetailsComplete(null)).to.equal(false);
     expect(fundsDetailsComplete(fundsTx('', DEST, '1 ETH'))).to.equal(false);
     expect(fundsDetailsComplete(fundsTx('0', DEST, '1 ETH'))).to.equal(false);
+    expect(fundsDetailsComplete(fundsTx('0.000', DEST, '1 ETH'))).to.equal(false);
+    expect(fundsDetailsComplete(fundsTx('00', DEST, '1 ETH'))).to.equal(false);
     expect(fundsDetailsComplete({ ...fundsTx('4', DEST, '1 ETH'), destination: '' })).to.equal(
       false
     );
@@ -31,13 +33,19 @@ describe('Pantalla de confirmación de fondos', function () {
   });
 
   it('con la protección apagada la pantalla sigue y el botón confirma si los datos están', async function () {
+    const FROM = '0x' + 'ab'.repeat(20);
+    let seenFrom = '';
     const quoted = await quoteNetworkFee(
       {
-        estimateGas: async () => 21000n,
+        estimateGas: async (tx) => {
+          seenFrom = tx.from;
+          return 21000n;
+        },
         getFeeData: async () => ({ gasPrice: 100_000_000n, maxFeePerGas: null }),
       },
-      { to: DEST, data: '0x' }
+      { from: FROM, to: DEST, data: '0x' }
     );
+    expect(seenFrom).to.equal(FROM);
     expect(quoted).to.equal('0.0000021 ETH');
     const down = await quoteNetworkFee(
       {
@@ -55,6 +63,8 @@ describe('Pantalla de confirmación de fondos', function () {
     expect(reservaConfirmAmount('lock', '25', null)).to.equal('25');
     expect(reservaConfirmAmount('unlock', '1', '40')).to.equal('40');
     expect(reservaConfirmAmount('renew', '1', '0')).to.equal(null);
+    expect(reservaConfirmAmount('lock', '0.000', null)).to.equal(null);
+    expect(reservaConfirmAmount('lock', '00', null)).to.equal(null);
     const plan = fundsConfirmPlan({ movesFunds: true, protectionOn: false, details });
     expect(plan.showScreen).to.equal(true);
     expect(plan.mode).to.equal('button');
