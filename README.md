@@ -6,7 +6,9 @@ El alta son 4 LUSD: 1 al fundador, 1 al bote de Reserva, 1 apartado para quien i
 
 Reserva: nivel 10 o más, bloqueo de 30 días, tope del 12 % anual pagado del bote, capital siempre devuelto. El fondo de seguro es el 5 % de lo que entra al pool y solo cubre el premio de un impago. La liquidación espera 48 h más el tiempo caído del sequencer de Arbitrum. Para cobrar unilevel, padrino, fama o racha hay que tener el alta y el L1 pagados.
 
-El detalle cerrado, el mapa y lo que falta están en `HANDOFF.md`.
+Sin Rust y sin pruebas de conocimiento cero. Sin servidor y sin tienda de aplicaciones. El mensaje privado por Nostr está oculto: no hay cifrado NIP-17/44.
+
+El detalle cerrado, el mapa y lo que falta están en `HANDOFF.md`. Último commit de producto: `708fc24`. Hardhat 305, Foundry 51. Credit: 21891 bytes, 2685 libres de 24576.
 
 ## Probar
 
@@ -23,9 +25,27 @@ npm run format:check
 
 `npm run typecheck` revisa los 17 idiomas y rechaza servicios que esta app ya no usa. Foundry necesita `lib/forge-std` (no está en git).
 
+## Abierto
+
+- Bajo: una segunda cuenta puede cobrar el LUSD apartado de la primera. Cuesta los otros 3 LUSD más el interés del nivel 1.
+- Bajo: `soltarPadrino` no suelta ese LUSD si el padre viniera vacío. El registro normal no hace eso.
+- Bajo: algunos tests de dinero todavía leen texto. La lista está en `AUDITORIA.md`.
+- Medio: `npm audit` marca `handlebars` en las herramientas, no en la app.
+- Medio: el cifrado NIP-17/44 no está implementado.
+
+## Pendiente antes de dinero real
+
+Auditoría externa de los contratos. La billetera del fundador tiene que ser de varias firmas o física, y el despliegue no sigue sin `CONFIRM_FOUNDER_WALLET=yes`.
+
+## Pendiente cuando Jose lo ordene
+
+Nada de esto se ha hecho. El orden es: 1) compilar el APK y calcular su SHA-256, 2) desplegar en Arbitrum One y escribir las direcciones en `constants/deployedAddresses.ts`, 3) publicar la huella del certificado y el hash en `QuatriviumApk`, 4) IPFS, 5) ENS.
+
+La clave que estuvo en el historial (commits `10553d4` y `dc40f15`, archivo `.env.worker.example`) ya fue revocada. El valor no se copia.
+
 ## Pendiente de despliegue
 
-Los contratos no están desplegados. En `constants/deployedAddresses.ts` las direcciones de Credit, Reserva, fama y alta siguen vacías. El APK firmado, su hash on-chain, IPFS y ENS esperan una orden explícita. No forman parte de `npm test`.
+Los contratos no están desplegados. En `constants/deployedAddresses.ts` las direcciones de Credit, Reserva, fama y alta siguen vacías.
 
 La dirección de fundador tiene que ser una billetera de varias firmas o una billetera física con respaldo. Si esa llave se pierde, nadie publica hashes ni cobra la parte del fundador. El despliegue lo avisa y no sigue sin `CONFIRM_FOUNDER_WALLET=yes`.
 

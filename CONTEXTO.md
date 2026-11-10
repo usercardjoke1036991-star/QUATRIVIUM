@@ -8,15 +8,16 @@ No hay servidor de la empresa. La billetera nace en el teléfono (`services/appW
 
 ## Reglas cerradas
 
-- Tres admins, votación fija 2 de 3, espera 72 h, sin caducidad. Solo votan su entrada o salida. `pausarPrestamosNuevos` lo llama un admin, dura 7 días y no frena pagos ni liquidaciones.
+- Tres admins, votación fija 2 de 3, espera 72 h, sin caducidad. Votan su entrada, su salida y la pausa de préstamos nuevos. Nadie pausa solo. La pausa se levanta sola a los 7 días y después hay 7 días de descanso. No frena pagos ni liquidaciones.
 - `retirarLiquidez` revierte. Nadie saca el pool.
 - Alta de 4 LUSD en `QuatriviumAlta.pagarRegistro`: 1 al fundador, 1 al bote de Reserva, 1 apartado para quien invitó y 1 de sello a Credit. De ese sello, el 5 % queda en el fondo de seguro y el 95 % en la liquidez. Entrar sin invitación cuelga del fundador. Ese 1 apartado no se queda bloqueado: al pagar el primer nivel 1 va a quien invitó si ya tiene alta y nivel 1, y si no, al pool. A los 7 días sin ese pago, entra al pool. Una misma cuenta no puede ser su propio invitador. El fundador cobra además el 15 % del interés en la misma transacción. Solo él rota su billetera, con 72 h. No necesita alta ni L1.
 - Fondo de seguro: 5 % de las entradas al pool. Solo paga el premio del impago.
 - Reserva: nivel ≥ 10, 30 días, tope 12 % anual del bote, principal siempre devuelto. Sin owner ni retiro del bote.
-- Liquidación: 48 h más el tiempo caído del sequencer y 1 h tras volver. Feed `0xFdB631F5EE196F0ed6FAa767959853A9F217697D`, obligatorio si chainId es 42161. Premio = el menor entre 5 % del principal restante y el interés que queda.
+- Liquidación: 48 h más el tiempo caído del sequencer y 1 h tras volver. Si el feed tiene más de 24 h, falla o viene vacío, las liquidaciones se posponen. Feed `0xFdB631F5EE196F0ed6FAa767959853A9F217697D`, obligatorio si chainId es 42161. Premio = el menor entre 5 % del principal restante y el interés que queda.
 - Unilevel, padrino, fama y racha exigen alta y L1 (`cobradorListo`). Si no, esa parte entra al pool. La racha solo cuenta nivel ≥ 2 pagado a tiempo.
-- Avisos locales. No hay mensaje privado por Nostr mientras no exista cifrado. La mora no se publica. Ranking leído de eventos de la cadena.
-- Distribución: APK firmado y hash en `QuatriviumApk`. Eso, el despliegue, IPFS y ENS están pendientes.
+- Avisos locales. No hay mensaje privado por Nostr: el cifrado NIP-17/44 no está hecho y `prepareNostrPayload` devuelve null. La mora no se publica. Ranking leído de eventos de la cadena.
+- Sin Rust y sin pruebas de conocimiento cero. Sin servidor y sin tienda de aplicaciones. La lista de nombres prohibidos está en `HANDOFF.md`.
+- Distribución: APK firmado, con huella del certificado y hash en `QuatriviumApk`. Nada de eso está publicado.
 
 La escalera de 1000 niveles y los porcentajes de arriba no se tocan sin una orden nueva.
 
@@ -24,7 +25,7 @@ La escalera de 1000 niveles y los porcentajes de arriba no se tocan sin una orde
 
 | Archivo | Rol |
 | --- | --- |
-| `contracts/QuatriviumCredit.sol` | Préstamos, pool, interés, liquidación, admins, sequencer, fondo. 21769 bytes en el artifact de Hardhat. Límite EIP-170: 24576. |
+| `contracts/QuatriviumCredit.sol` | Préstamos, pool, interés, liquidación, admins, sequencer, fondo. 21891 bytes. Libres: 2685 de 24576. |
 | `contracts/QuatriviumAlta.sol` | Alta de 4 LUSD. |
 | `contracts/QuatriviumReserva.sol` | Bloqueos y bote. |
 | `contracts/QuatriviumFamaCaja.sol` | Fama, canje y racha. |
@@ -49,4 +50,12 @@ Despliegue, solo con orden explícita: `CONFIRM_MAINNET=yes npm run deploy:arbit
 
 ## Estado
 
-Fases 1 a 6 están en la rama `cursor/soberania-contratos-8e15`. El mapa de commits, la simulación de impago y los riesgos están en `HANDOFF.md`.
+Último commit de producto: `708fc24`, en `cursor/soberania-contratos-8e15`. Hardhat 305, Foundry 51. El mapa de commits está en `HANDOFF.md`.
+
+Abierto: dos hallazgos bajos del alta (segunda cuenta, y `soltarPadrino` si el padre viniera vacío), tests que leen texto, `npm audit` con `handlebars`, y el cifrado NIP-17/44.
+
+Pendiente antes de dinero real: auditoría externa de los contratos, y que la billetera del fundador sea de varias firmas o física, con `CONFIRM_FOUNDER_WALLET=yes`.
+
+Pendiente cuando Jose lo ordene, y nada de esto se ha hecho: 1) compilar el APK y calcular su SHA-256, 2) desplegar en Arbitrum One y escribir las direcciones en `constants/deployedAddresses.ts`, 3) publicar la huella del certificado y el hash en `QuatriviumApk`, 4) IPFS, 5) ENS.
+
+La clave que estuvo en el historial (commits `10553d4` y `dc40f15`, archivo `.env.worker.example`) ya fue revocada. El valor no se copia.

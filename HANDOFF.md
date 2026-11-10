@@ -1,6 +1,6 @@
 # HANDOFF — QUATRIVIUM
 
-Documento para otro asistente, sin contexto previo. Los datos salen del código y de los commits de la rama `cursor/soberania-contratos-8e15` (HEAD al crear este archivo: `6c42f4d`). El dueño es Jose. Habla español. Las respuestas hacia él van en español, cortas.
+Documento para otro asistente, sin contexto previo. Los datos salen del código de la rama `cursor/soberania-contratos-8e15`. El último commit de producto es `708fc24`. El dueño es Jose. Habla español. Las respuestas hacia él van en español, cortas.
 
 ## 1. Qué es
 
@@ -66,11 +66,15 @@ Todas en `cursor/soberania-contratos-8e15`. PR: https://github.com/usercardjoke1
 | 3 | `54821d6` | Fee de liquidación al pool. Fondo de seguro 5 %. `QuatriviumApk`. Feed obligatorio en 42161. Simulación de 100 préstamos L1. | `test/fase3-seguro-apk.test.js`, `forge-test/QuatriviumFase3.t.sol` |
 | 4 | `45153f2` | La app muestra el reparto del alta, el 15 % y el 5 %, la gracia, el aviso de Reserva, avisos locales, Nostr sin mora, ranking y lectura de admins. Sin Expo OTA. | `test/fase4-app.test.js`, `test/screen-copy.test.js` |
 | 5 | `6c42f4d` | Seis relés públicos con relevo. APK vacío o caído = «versión no verificada»; hash distinto = aviso fuerte. Capturas de tienda borradas. Ranking determinista desde eventos. Servicios prohibidos fuera del árbol. Escáner en CI. | `test/fase4-app.test.js`, `scripts/check-external-services.mjs` (también dentro de `npm run typecheck`) |
-| 6 | el commit que reescribe `README.md` y `CONTEXTO.md` | Fuera el meta-tooling de README, conectores y `.cursor/`. Docs viejas que hablaban de otra app o de un oráculo de precio, borradas. `HANDOFF.md` no lo escanea el detector de servicios: es la lista de lo prohibido. | La misma suite. No hay tests nuevos. |
+| 6 | `facc8a9` | Fuera el meta-tooling de README, conectores y `.cursor/`. Docs viejas que hablaban de otra app o de un oráculo de precio, borradas. | La misma suite. |
+| docs | `cf2575b`, `c13e694` | `HANDOFF.md` y la primera `AUDITORIA.md`. | No cambian contratos. |
+| limpieza | `15e45af`, `3661ba8` | Fuera `zk-contracts/`, `Groth16Verifier.sol` y `services/zkService.ts`. Sin ZKP. El id de Sonar es `usercardjoke1036991-star_QUATRIVIUM`. | `test/fase4-app.test.js` |
+| arreglos | `60a9654` | Pausa 2 de 3 y 72 h, descanso de 7 días, huella del certificado en `QuatriviumApk`, feed de más de 24 h pospone la liquidación. | `test/pausa-quorum.test.js`, `test/sequencer-gracia.test.js`, `test/fase3-seguro-apk.test.js` |
+| alta | `960f446`, `708fc24` | Los textos dicen el reparto real. Tests del alta con invitación, sin invitación, invitador inválido y segunda cuenta. Nostr privado sigue oculto. | `test/alta-invitacion.test.js`, `test/alta-registro.test.js` |
 
 ## 5. Números
 
-Tras la pausa con quórum y el tope de 24 h del feed, Credit mide 21891 bytes (2685 libres de 24576).
+Medidos en `708fc24`, sin cambio de contratos desde entonces: Hardhat 305 pasando, Foundry 51 pasando. `QuatriviumCredit`: 21891 bytes, 2685 libres de 24576.
 
 ## 6. Simulación de impago
 
@@ -95,29 +99,37 @@ Eso es el interés que se queda en el sistema, en LUSD. El test lo exige con `as
 Orden de prioridad:
 
 1. **Fase 6: hecha en este árbol.** Se borraron los generadores de README, contexto, mapa, visión, memoria y QA, y la carpeta `.cursor/`. `README.md` y `CONTEXTO.md` describen este protocolo. Se dejó, porque un test lo lee y fallaría la suite, este arnés: `scripts/run-full-cyber-audit.sh`, `scripts/zap-health-wsl.sh`, `scripts/fetch-wallet-logos.py`, `scripts/run-slither.mjs`, `scripts/run-slither-wsl.sh`, `scripts/run-snyk.mjs`, `scripts/run-sonar.mjs`, `scripts/scan-mobile.mjs`, `scripts/trivy-lock.sh`, `trivy.yaml`, `.trivyignore`, `slither.config.json`, `sonar-project.properties`, `scripts/patch-i18n-leftovers*.mjs` (el test exige al menos cuatro) y `scripts/linkCredit.cjs`. El id de Sonar pasó a `usercardjoke1036991-star_QUATRIVIUM` en `sonar-project.properties` y `.sonarcloud.properties`. Se borraron `zk-contracts/` y `contracts/Groth16Verifier.sol`: ningún contrato, test ni job de CI los importaba, y `QuatriviumCreditZK` traía pausa, owner y oráculo. `web/` se queda. `services/zkService.ts`, su reexportación, `services/secureStorageService.ts` y `types/zkTypes.ts` se borraron: ninguna pantalla, perfil, ranking ni test los llamaba. La identidad es la dirección de `services/appWallet.ts`.
-2. **Pendiente hasta que Jose lo diga, y no antes:**
-   - Compilar el APK firmado y calcular su SHA-256.
-   - Desplegar en Arbitrum One y rellenar `constants/deployedAddresses.ts` (`contract`, `reserva`, `fama`, `alta`). No inventar direcciones.
-   - Publicar ese hash en `QuatriviumApk`.
-   - IPFS y ENS.
-3. **Incompleto a propósito en el código actual:**
+2. **Abierto, con severidad.** No cambiarlo sin que Jose lo pida.
+   - Bajo: una segunda cuenta puede nombrar a la primera y cobrar el 1 apartado si esa ya pagó alta y nivel 1. El costo son los otros 3 LUSD más el interés del nivel 1. No es ganancia. `test/alta-invitacion.test.js`.
+   - Bajo: `soltarPadrino` no suelta el 1 si el padre viene vacío o es el mismo deudor (`QuatriviumAlta.sol`). El registro normal no produce ese padre.
+   - Bajo: siguen tests que leen texto y hablan de dinero. La lista está en `AUDITORIA.md`, sección «Segunda auditoría». No reescribirlos todavía.
+   - Medio: `npm audit` marca `handlebars` (herramienta, no dependencia directa de la app) y otras altas del árbol. No se actualizó.
+   - Medio: el cifrado NIP-17/44 no está implementado. `prepareNostrPayload` devuelve null. No hay pantalla de mensaje privado.
+3. **Pendiente antes de dinero real.**
+   - Auditoría externa de los contratos. `AUDITORIA.md` no la sustituye.
+   - La dirección de fundador debe ser una billetera de varias firmas (Safe) o una billetera física con respaldo. El despliegue exige `CONFIRM_FOUNDER_WALLET=yes`.
+4. **Pendiente cuando Jose lo ordene,** en este orden. Nada de esto se ha hecho.
+   1. Compilar el APK firmado y calcular su SHA-256.
+   2. Desplegar en Arbitrum One y escribir las direcciones reales en `constants/deployedAddresses.ts` (`contract`, `reserva`, `fama`, `alta`). No inventarlas.
+   3. Publicar la huella del certificado y el hash del archivo en `QuatriviumApk`.
+   4. IPFS.
+   5. ENS.
+5. **Incompleto a propósito en el código actual:**
    - Nostr no abre un websocket ni ofrece mensaje privado: `prepareNostrPayload` devuelve null. La mora sigue bloqueada.
    - El hash del APK instalado no se calcula en el teléfono. Sin registro, la UI dice «versión no verificada».
    - Credit tiene 2685 bytes libres. Cualquier lógica nueva en ese contrato puede no caber. Preferir un contrato hermano, como ya se hizo con Apk, Leveling y LoanLadder.
-4. Revisión humana de textos que aún digan alta de 1 o 2 USDT, o el nombre del proyecto anterior, dentro de la app y de los tests. Las docs sueltas que lo decían ya no están. `sonar-project.properties` conserva el id viejo porque `test/cyber-hardening.test.js` lo exige.
-5. Auditoría externa de los contratos antes de dinero real. El informe viejo de agosto de 2026 se borró: hablaba de otro contrato y de Solidity 0.8.17. No lo reemplaza este archivo.
-6. Revocar en Resend la clave que quedó en el historial de git, commits `10553d4` y `dc40f15`. No reescribir historia. No copiar el valor de la clave en ningún documento. Twilio, Textbelt y Sumsub aparecen como nombres de variable, no como secretos asignados. El token con forma de bot de Telegram que hay en la historia es un fixture de tests.
+6. La clave que estuvo en el historial (commits `10553d4` y `dc40f15`, archivo `.env.worker.example`) ya fue revocada por Jose. No está en el árbol. No se reescribe la historia y no se copia el valor.
 
 ## 8. Riesgos
 
 - 2685 bytes libres en Credit. No añadir funciones ahí sin medir `deployedBytecode`.
 - Hardhat tiene `allowUnlimitedContractSize: true`. Un test verde no prueba el límite. El tamaño real es el del artifact (21891).
 - Los `require` de texto se borran del bytecode (`revertStrings: strip`). Los tests no pueden usar `revertedWith("mensaje")` para esos revert. Los errores con nombre (`SequencerFeedRequerido`, `SoloFundador`) sí se distinguen.
-- `pausarPrestamosNuevos` lo llama un solo admin, sin el quórum de 2. La votación 2 de 3 es solo para entrar o salir de admin. La pausa dura como máximo 7 días y no frena pagos ni liquidaciones.
+- La pausa de préstamos nuevos exige 2 de 3 y 72 h. Se levanta sola a los 7 días y luego hay 7 de descanso. No frena pagos ni liquidaciones.
 - El pool y el fondo de seguro no tienen retiro. Un error en el reparto no se «arregla» sacando el dinero.
 - La liquidación exige EOA (`tx.origin == msg.sender`) y prohíbe autoliquidarse.
 - Direcciones de contrato vacías: la app no opera en mainnet hasta el despliegue.
-- La clave de Resend sigue en commits viejos aunque el árbol actual no la tiene.
+- Esa clave del historial ya fue revocada. El valor no se escribe en documentos nuevos.
 - No usar dinero real sin auditoría externa.
 
 ## 9. Cómo continuar

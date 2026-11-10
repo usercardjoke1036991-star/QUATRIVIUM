@@ -1,6 +1,12 @@
 # Auditoría de QUATRIVIUM
 
-Fecha de la revisión: 10 de noviembre de 2026 (America/Caracas). Rama `cursor/soberania-contratos-8e15`.
+Fecha de la revisión: 10 de noviembre de 2026 (America/Caracas). Rama `cursor/soberania-contratos-8e15`. Último commit de producto: `708fc24`. Hardhat 305, Foundry 51. Credit: 21891 bytes, 2685 libres de 24576.
+
+La clave del historial (commits `10553d4` y `dc40f15`, archivo `.env.worker.example`) ya fue revocada. No está en el árbol. El valor no se copia y la historia no se reescribe.
+
+Sigue abierto: los dos hallazgos bajos del alta (S-01 y S-02), los tests que solo leen texto y cubren dinero (lista en la segunda auditoría), `npm audit` con `handlebars` (B-03) y el cifrado NIP-17/44, que no se ha implementado.
+
+Antes de dinero real hace falta una auditoría externa y una billetera de fundador de varias firmas o física (`CONFIRM_FOUNDER_WALLET=yes`). Cuando Jose lo ordene, y nada de esto se ha hecho: compilar el APK y su SHA-256, desplegar en Arbitrum One y llenar `constants/deployedAddresses.ts`, publicar huella y hash en `QuatriviumApk`, IPFS y ENS.
 
 ## Estado de los hallazgos
 
@@ -11,7 +17,7 @@ El quinto punto grave del resumen (feed viejo) era **B-01, Medio**, no Alto. Tra
 | A-01 | Alto | Arreglado. `QuatriviumApk` guarda la huella del certificado. `apkCertCheck` cubre los tres estados. La lectura nativa está en `modules/quatrivium-signing-cert` y se prueba al compilar. |
 | A-02 | Alto | Arreglado. La pausa entra por el voto 2 de 3 y 72 h, con 7 días de descanso. Tests en `test/pausa-quorum.test.js`. |
 | A-03 | Alto | Documentado, sin cambio de contrato. README, HANDOFF y `CONFIRM_FOUNDER_WALLET=yes` en el despliegue. La llave perdida sigue sin relevo dentro del contrato: es la decisión tomada. |
-| A-04 | Alto | Pendiente del dueño. La clave está en el historial, commits `10553d4` y `dc40f15`, archivo `.env.worker.example`. No afecta a la app. Hay que borrarla en la cuenta de Resend. El valor no se copia. El historial no se reescribe. |
+| A-04 | Alto | Cerrado por el dueño. La clave estaba en el historial, commits `10553d4` y `dc40f15`, archivo `.env.worker.example`. Ya fue revocada. No está en la app. El valor no se copia. El historial no se reescribe. |
 | B-01 | Medio | Arreglado. Una ronda con más de 24 h se trata como feed caído. Test en `test/sequencer-gracia.test.js`. |
 | B-02 | Medio | Arreglado en la superficie: `prepareNostrPayload` devuelve null en todos los caminos. No hay pantalla de mensaje privado. Cifrar NIP-17/44 sigue sin hacerse. La mora no se publica. |
 | B-03 | Medio | Requiere decisión. `npm audit` sigue con 1 crítica (`handlebars`, herramienta, no dependencia directa) y 11 altas. Actualizar el árbol a ciegas puede romper Expo. No se tocó. |
