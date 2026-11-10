@@ -1254,5 +1254,11 @@
   "notificationLocalChangeConfirm": "اس ڈیوائس پر مقامی اطلاعات کی ترجیحات اپ ڈیٹ ہو جائیں گی۔ جاری رکھیں؟",
   "notificationLocalChange": "مقامی اطلاعات اپ ڈیٹ کریں",
   "notificationLocal": "ڈیوائس کا مقامی چینل",
-  "apkUnverified": "ورژن تصدیق شدہ نہیں۔"
+  "apkUnverified": "ورژن تصدیق شدہ نہیں۔",
+  "fundsTxAmount": "رقم: {amount} {symbol}",
+  "fundsTxDestination": "منزل",
+  "fundsTxFee": "نیٹ ورک کی اندازاً فیس: {fee}",
+  "fundsConfirmAck": "تصدیق",
+  "fundsConfirmAckLead": "رقم، منزل اور فیس دیکھیں۔ فنڈ تحفظ بند ہے، اس لیے PIN نہیں چاہیے۔",
+  "fundsConfirmBiometricFail": "فنگر پرنٹ سے والیٹ نہیں کھلا۔"
 }

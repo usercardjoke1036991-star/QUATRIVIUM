@@ -5,7 +5,11 @@ const { assertDeployConfig, deploySovereign, ZERO } = require('../scripts/deploy
 describe('Despliegue soberano local', function () {
   it('en 42161 no sigue sin la confirmación del fundador ni sin el feed', function () {
     const founder = '0x5023bf46dB7458B9bb9152a7ffE64f195CD1a047';
-    const admins = [founder, '0x0000000000000000000000000000000000000002', '0x0000000000000000000000000000000000000003'];
+    const admins = [
+      founder,
+      '0x0000000000000000000000000000000000000002',
+      '0x0000000000000000000000000000000000000003',
+    ];
     expect(() =>
       assertDeployConfig({
         chainId: 42161,

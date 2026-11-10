@@ -53,15 +53,17 @@ async function deploySovereign(cfg) {
   const Fama = await ethers.getContractFactory('QuatriviumFamaCaja', signer);
   const fama = await Fama.deploy(ready.token, creditAddr, altaAddr, reservaAddr);
   await fama.waitForDeployment();
-  const credit = await factory.connect(signer).deploy(
-    ready.token,
-    ready.feeCollector,
-    500,
-    ready.admins,
-    2,
-    await fama.getAddress(),
-    ready.sequencerFeed
-  );
+  const credit = await factory
+    .connect(signer)
+    .deploy(
+      ready.token,
+      ready.feeCollector,
+      500,
+      ready.admins,
+      2,
+      await fama.getAddress(),
+      ready.sequencerFeed
+    );
   await credit.waitForDeployment();
   const Reserva = await ethers.getContractFactory('QuatriviumReserva', signer);
   const reserva = await Reserva.deploy(

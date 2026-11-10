@@ -95,7 +95,10 @@ describe('QuatriviumFamaCaja - fama de caja y canje', function () {
     expect(await fama.famaCanjeada(user.address)).to.equal(0n);
 
     const liqBefore = await contract.totalLiquidity(tokenAddr);
-    await expect(fama.connect(user).canjearFama(250n)).to.be.revertedWithCustomError(fama, 'SinFama');
+    await expect(fama.connect(user).canjearFama(250n)).to.be.revertedWithCustomError(
+      fama,
+      'SinFama'
+    );
     expect(await contract.totalLiquidity(tokenAddr)).to.equal(liqBefore);
     expect(await fama.famaDisponible(user.address)).to.equal(0n);
     await assertNavInvariant(token, contract, tokenAddr, contractAddr);
@@ -177,7 +180,10 @@ describe('QuatriviumFamaCaja - fama de caja y canje', function () {
     await ethers.provider.send('evm_mine');
     const now = (await ethers.provider.getBlock('latest')).timestamp;
     expect(now).to.be.lt(Number(info.vencimiento));
-    await expect(fama.connect(user).canjearFama(250n)).to.be.revertedWithCustomError(fama, 'SinFama');
+    await expect(fama.connect(user).canjearFama(250n)).to.be.revertedWithCustomError(
+      fama,
+      'SinFama'
+    );
     await assertNavInvariant(token, contract, tokenAddr, contractAddr);
   });
 

@@ -1254,5 +1254,11 @@
   "notificationLocalChangeConfirm": "Preferensi peringatan lokal di perangkat ini akan diperbarui. Lanjutkan?",
   "notificationLocalChange": "Perbarui peringatan lokal",
   "notificationLocal": "Saluran perangkat lokal",
-  "apkUnverified": "Versi belum diperiksa."
+  "apkUnverified": "Versi belum diperiksa.",
+  "fundsTxAmount": "Jumlah: {amount} {symbol}",
+  "fundsTxDestination": "Tujuan",
+  "fundsTxFee": "Perkiraan biaya jaringan: {fee}",
+  "fundsConfirmAck": "Konfirmasi",
+  "fundsConfirmAckLead": "Periksa jumlah, tujuan, dan biaya. PIN tidak perlu karena perlindungan dana dimatikan.",
+  "fundsConfirmBiometricFail": "Sidik jari tidak membuka dompet."
 }

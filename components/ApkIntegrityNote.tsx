@@ -65,11 +65,14 @@ export function ApkIntegrityNote({
   }, [publishedCert]);
 
   const status = apkRegistryStatus({
-    registryAddress: chainCert || publishedCert ? DEPLOYED_MAINNET.apk || 'set' : DEPLOYED_MAINNET.apk,
+    registryAddress: registryEmpty
+      ? ''
+      : chainCert || publishedCert
+        ? DEPLOYED_MAINNET.apk || '0x0000000000000000000000000000000000000001'
+        : DEPLOYED_MAINNET.apk,
     localCert: readCert,
-    publishedCert: chainCert,
-    registryEmpty: registryEmpty || !chainCert,
-    readFailed: chainFailed,
+    publishedCert: registryEmpty ? '' : chainCert,
+    readFailed: chainFailed || readFailed,
   });
   if (status === 'match') return null;
   if (status === 'unverified') {

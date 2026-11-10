@@ -1254,5 +1254,11 @@
   "notificationLocalChangeConfirm": "Die Einstellungen für lokale Hinweise auf diesem Gerät werden aktualisiert. Fortfahren?",
   "notificationLocalChange": "Lokale Hinweise aktualisieren",
   "notificationLocal": "Lokaler Gerätekanal",
-  "apkUnverified": "Fassung nicht geprüft."
+  "apkUnverified": "Fassung nicht geprüft.",
+  "fundsTxAmount": "Betrag: {amount} {symbol}",
+  "fundsTxDestination": "Ziel",
+  "fundsTxFee": "Geschätzte Netzwerkgebühr: {fee}",
+  "fundsConfirmAck": "Bestätigen",
+  "fundsConfirmAckLead": "Prüfen Sie Betrag, Ziel und Gebühr. Keine PIN, weil der Fundschutz aus ist.",
+  "fundsConfirmBiometricFail": "Der Fingerabdruck hat die Wallet nicht geöffnet."
 }

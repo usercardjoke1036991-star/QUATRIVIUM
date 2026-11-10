@@ -1254,5 +1254,11 @@
   "notificationLocalChangeConfirm": "سيتم تحديث تفضيلات التنبيهات المحلية على هذا الجهاز. متابعة؟",
   "notificationLocalChange": "تحديث التنبيهات المحلية",
   "notificationLocal": "القناة المحلية للجهاز",
-  "apkUnverified": "إصدار غير موثّق."
+  "apkUnverified": "إصدار غير موثّق.",
+  "fundsTxAmount": "المبلغ: {amount} {symbol}",
+  "fundsTxDestination": "الوجهة",
+  "fundsTxFee": "رسوم الشبكة التقديرية: {fee}",
+  "fundsConfirmAck": "تأكيد",
+  "fundsConfirmAckLead": "راجعوا المبلغ والوجهة والرسوم. لا حاجة لرقم سري لأن حماية الأموال متوقفة.",
+  "fundsConfirmBiometricFail": "البصمة لم تفتح المحفظة."
 }

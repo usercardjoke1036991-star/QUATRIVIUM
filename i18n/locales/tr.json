@@ -1254,5 +1254,11 @@
   "notificationLocalChangeConfirm": "Bu cihazdaki yerel bildirim tercihleri güncellenecek. Devam edilsin mi?",
   "notificationLocalChange": "Yerel bildirimleri güncelle",
   "notificationLocal": "Yerel cihaz kanalı",
-  "apkUnverified": "Sürüm doğrulanmadı."
+  "apkUnverified": "Sürüm doğrulanmadı.",
+  "fundsTxAmount": "Tutar: {amount} {symbol}",
+  "fundsTxDestination": "Hedef",
+  "fundsTxFee": "Tahmini ağ ücreti: {fee}",
+  "fundsConfirmAck": "Onayla",
+  "fundsConfirmAckLead": "Tutarı, hedefi ve ücreti kontrol edin. Fon koruması kapalı olduğu için PIN gerekmez.",
+  "fundsConfirmBiometricFail": "Parmak izi cüzdanı açmadı."
 }

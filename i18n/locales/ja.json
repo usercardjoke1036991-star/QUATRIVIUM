@@ -1254,5 +1254,11 @@
   "notificationLocalChangeConfirm": "この端末のローカル通知設定を更新します。続行しますか？",
   "notificationLocalChange": "ローカル通知を更新",
   "notificationLocal": "端末ローカルチャネル",
-  "apkUnverified": "未確認の版です。"
+  "apkUnverified": "未確認の版です。",
+  "fundsTxAmount": "金額: {amount} {symbol}",
+  "fundsTxDestination": "宛先",
+  "fundsTxFee": "推定ネットワーク手数料: {fee}",
+  "fundsConfirmAck": "確認",
+  "fundsConfirmAckLead": "金額、宛先、手数料を確認してください。資金保護がオフのため PIN は不要です。",
+  "fundsConfirmBiometricFail": "指紋でウォレットを開けませんでした。"
 }

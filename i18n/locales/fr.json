@@ -1254,5 +1254,11 @@
   "notificationLocalChangeConfirm": "Les préférences d’alertes locales sur cet appareil seront mises à jour. Continuer ?",
   "notificationLocalChange": "Mettre à jour les alertes locales",
   "notificationLocal": "Canal local de l’appareil",
-  "apkUnverified": "Version non vérifiée."
+  "apkUnverified": "Version non vérifiée.",
+  "fundsTxAmount": "Montant : {amount} {symbol}",
+  "fundsTxDestination": "Destination",
+  "fundsTxFee": "Frais de réseau estimés : {fee}",
+  "fundsConfirmAck": "Confirmer",
+  "fundsConfirmAckLead": "Vérifiez le montant, la destination et les frais. Pas de PIN : la protection des fonds est désactivée.",
+  "fundsConfirmBiometricFail": "L’empreinte n’a pas ouvert le portefeuille."
 }

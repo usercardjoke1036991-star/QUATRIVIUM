@@ -1254,5 +1254,11 @@
   "notificationLocalChangeConfirm": "将更新此设备上的本地提醒偏好设置。是否继续？",
   "notificationLocalChange": "更新本地提醒",
   "notificationLocal": "设备本地通道",
-  "apkUnverified": "版本未验证。"
+  "apkUnverified": "版本未验证。",
+  "fundsTxAmount": "金额：{amount} {symbol}",
+  "fundsTxDestination": "目的地",
+  "fundsTxFee": "预计网络费用：{fee}",
+  "fundsConfirmAck": "确认",
+  "fundsConfirmAckLead": "请核对金额、目的地和费用。资金保护已关闭，因此不需要 PIN。",
+  "fundsConfirmBiometricFail": "指纹没有打开钱包。"
 }

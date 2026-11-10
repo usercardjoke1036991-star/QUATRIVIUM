@@ -1254,5 +1254,11 @@
   "notificationLocalChangeConfirm": "이 기기의 로컬 알림 설정이 업데이트됩니다. 계속할까요?",
   "notificationLocalChange": "로컬 알림 업데이트",
   "notificationLocal": "기기 로컬 채널",
-  "apkUnverified": "검증되지 않은 버전입니다."
+  "apkUnverified": "검증되지 않은 버전입니다.",
+  "fundsTxAmount": "금액: {amount} {symbol}",
+  "fundsTxDestination": "받는 주소",
+  "fundsTxFee": "예상 네트워크 수수료: {fee}",
+  "fundsConfirmAck": "확인",
+  "fundsConfirmAckLead": "금액, 주소, 수수료를 확인하세요. 자금 보호가 꺼져 있어 PIN이 필요 없습니다.",
+  "fundsConfirmBiometricFail": "지문으로 지갑을 열지 못했습니다."
 }

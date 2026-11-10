@@ -1254,5 +1254,11 @@
   "notificationLocalChangeConfirm": "Tùy chọn thông báo cục bộ trên thiết bị này sẽ được cập nhật. Tiếp tục?",
   "notificationLocalChange": "Cập nhật thông báo cục bộ",
   "notificationLocal": "Kênh cục bộ trên thiết bị",
-  "apkUnverified": "Bản chưa được kiểm tra."
+  "apkUnverified": "Bản chưa được kiểm tra.",
+  "fundsTxAmount": "Số tiền: {amount} {symbol}",
+  "fundsTxDestination": "Đích",
+  "fundsTxFee": "Phí mạng ước tính: {fee}",
+  "fundsConfirmAck": "Xác nhận",
+  "fundsConfirmAckLead": "Kiểm tra số tiền, đích và phí. Không cần PIN vì bảo vệ quỹ đang tắt.",
+  "fundsConfirmBiometricFail": "Vân tay không mở được ví."
 }

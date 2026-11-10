@@ -9,11 +9,15 @@ const OTHER = '0x' + 'cd'.repeat(32);
 
 describe('Registro del APK', function () {
   it('sin dirección el estado es no verificada, y con huellas puede coincidir o no', function () {
-    expect(apkRegistryStatus({ registryAddress: '', localCert: CERT, publishedCert: CERT })).to.equal(
-      'unverified'
-    );
     expect(
-      apkRegistryStatus({ registryAddress: '0x0000000000000000000000000000000000000001', publishedCert: CERT, localCert: CERT })
+      apkRegistryStatus({ registryAddress: '', localCert: CERT, publishedCert: CERT })
+    ).to.equal('unverified');
+    expect(
+      apkRegistryStatus({
+        registryAddress: '0x0000000000000000000000000000000000000001',
+        publishedCert: CERT,
+        localCert: CERT,
+      })
     ).to.equal('match');
     expect(
       apkRegistryStatus({

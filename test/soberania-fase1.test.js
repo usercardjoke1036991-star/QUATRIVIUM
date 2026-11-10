@@ -139,8 +139,9 @@ describe('Fase 1 — soberanía de cobros, racha, alta, liquidación y oráculo'
     const minted = ethers.parseUnits('1200000', 18);
     await token.mint(liquidator.address, minted);
     await token.connect(liquidator).approve(contractAddr, ethers.MaxUint256);
-    await expect(contract.connect(liquidator).liquidate(user.address, tokenAddr))
-      .to.be.revertedWithCustomError(contract, 'GraciaLiquidacion');
+    await expect(
+      contract.connect(liquidator).liquidate(user.address, tokenAddr)
+    ).to.be.revertedWithCustomError(contract, 'GraciaLiquidacion');
     await ethers.provider.send('evm_setNextBlockTimestamp', [
       Number(info.vencimiento) + 48 * 60 * 60 + 10,
     ]);

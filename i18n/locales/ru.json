@@ -1254,5 +1254,11 @@
   "notificationLocalChangeConfirm": "Настройки локальных уведомлений на этом устройстве будут обновлены. Продолжить?",
   "notificationLocalChange": "Обновить локальные уведомления",
   "notificationLocal": "Локальный канал устройства",
-  "apkUnverified": "Версия не проверена."
+  "apkUnverified": "Версия не проверена.",
+  "fundsTxAmount": "Сумма: {amount} {symbol}",
+  "fundsTxDestination": "Назначение",
+  "fundsTxFee": "Оценка комиссии сети: {fee}",
+  "fundsConfirmAck": "Подтвердить",
+  "fundsConfirmAckLead": "Проверьте сумму, адрес и комиссию. PIN не нужен: защита средств выключена.",
+  "fundsConfirmBiometricFail": "Отпечаток не открыл кошелёк."
 }

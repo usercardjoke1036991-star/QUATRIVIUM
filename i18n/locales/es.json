@@ -1254,5 +1254,11 @@
   "notificationLocalChangeConfirm": "Se actualizarán las preferencias de avisos locales en este dispositivo. ¿Continuar?",
   "notificationLocalChange": "Actualizar avisos locales",
   "notificationLocal": "Canal local del dispositivo",
-  "apkUnverified": "Versión no verificada."
+  "apkUnverified": "Versión no verificada.",
+  "fundsTxAmount": "Monto: {amount} {symbol}",
+  "fundsTxDestination": "Destino",
+  "fundsTxFee": "Comisión estimada de red: {fee}",
+  "fundsConfirmAck": "Confirmar",
+  "fundsConfirmAckLead": "Revise monto, destino y comisión. No hace falta PIN porque la protección de fondos está apagada.",
+  "fundsConfirmBiometricFail": "La huella no abrió la billetera."
 }

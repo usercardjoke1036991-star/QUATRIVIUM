@@ -1254,5 +1254,11 @@
   "notificationLocalChangeConfirm": "इस उपकरण पर स्थानीय सूचना प्राथमिकताएँ अपडेट होंगी। जारी रखें?",
   "notificationLocalChange": "स्थानीय सूचनाएँ बदलें",
   "notificationLocal": "स्थानीय उपकरण चैनल",
-  "apkUnverified": "संस्करण जाँचा नहीं गया।"
+  "apkUnverified": "संस्करण जाँचा नहीं गया।",
+  "fundsTxAmount": "राशि: {amount} {symbol}",
+  "fundsTxDestination": "गंतव्य",
+  "fundsTxFee": "अनुमानित नेटवर्क शुल्क: {fee}",
+  "fundsConfirmAck": "पुष्टि करें",
+  "fundsConfirmAckLead": "राशि, गंतव्य और शुल्क देखें। फंड सुरक्षा बंद है, इसलिए PIN नहीं चाहिए।",
+  "fundsConfirmBiometricFail": "अंगुली की छाप से वॉलेट नहीं खुला।"
 }

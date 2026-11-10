@@ -22,7 +22,10 @@ describe('Fama de donación y de depósito no sale del pool', function () {
     expect(await fama.famaDisponible(user.address)).to.equal(0n);
     expect(await token.balanceOf(owner.address)).to.be.gte(gift);
 
-    await expect(fama.connect(user).canjearFama(250n)).to.be.revertedWithCustomError(fama, 'SinFama');
+    await expect(fama.connect(user).canjearFama(250n)).to.be.revertedWithCustomError(
+      fama,
+      'SinFama'
+    );
     await token.connect(owner).transfer(user.address, gift);
     expect(await contract.totalLiquidity(tokenAddr)).to.equal(poolBefore);
     expect(await token.balanceOf(await contract.getAddress())).to.equal(cajaBefore);
@@ -43,12 +46,23 @@ describe('Fama de donación y de depósito no sale del pool', function () {
     await contract.connect(user).depositarLiquidez(tokenAddr, amount);
     expect(await fama.famaVisible(user.address)).to.equal(1000n);
     expect(await fama.famaDisponible(user.address)).to.equal(0n);
-    await expect(fama.connect(user).canjearFama(250n)).to.be.revertedWithCustomError(fama, 'SinFama');
+    await expect(fama.connect(user).canjearFama(250n)).to.be.revertedWithCustomError(
+      fama,
+      'SinFama'
+    );
     expect(await contract.totalLiquidity(tokenAddr)).to.be.gt(poolBefore);
   });
 
   it('el canje de fama de intereses pagados sigue sacando 1 LUSD', async () => {
-    const { token, contract, fama, owner, extra: padre, tokenAddr, signers } = await deployProtocol();
+    const {
+      token,
+      contract,
+      fama,
+      owner,
+      extra: padre,
+      tokenAddr,
+      signers,
+    } = await deployProtocol();
     const abuelo = signers[3];
     await seedPool(token, contract, owner, '500');
     await contract.connect(abuelo).registrarHumanoConPadre(ethers.ZeroAddress);
@@ -67,7 +81,9 @@ describe('Fama de donación y de depósito no sale del pool', function () {
     const balBefore = await token.balanceOf(abuelo.address);
     await fama.connect(abuelo).canjearFamaRed(250n);
     expect(await token.balanceOf(abuelo.address)).to.equal(balBefore + ethers.parseUnits('1', 18));
-    expect(await contract.totalLiquidity(tokenAddr)).to.equal(liqBefore - ethers.parseUnits('1', 18));
+    expect(await contract.totalLiquidity(tokenAddr)).to.equal(
+      liqBefore - ethers.parseUnits('1', 18)
+    );
   });
 
   it('si el boost de Reserva falla, el pago sigue y queda el evento', async () => {

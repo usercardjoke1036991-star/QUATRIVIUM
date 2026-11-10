@@ -4,13 +4,7 @@
  * Cada handler valida precondiciones y delega al hook useWeb3Transactions.
  */
 import { useRef, useState } from 'react';
-import {
-  Contract,
-  parseEther,
-  parseUnits,
-  type Eip1193Provider,
-  type Signer,
-} from 'ethers';
+import { Contract, parseEther, parseUnits, type Eip1193Provider, type Signer } from 'ethers';
 import { Alert, Linking } from 'react-native';
 import { getEthersSignerFromProvider } from '../web3Config';
 import { ERC20_ABI } from '../constants/contractConfig';
@@ -33,6 +27,7 @@ import {
   isDemoMode,
   isDonationEnabled,
   isDonationVisible,
+  getContractAddress,
 } from '../constants/rpcConfig';
 import { showNotice } from '../utils/appNotice';
 import { isAltaConfigured } from '../constants/altaConfig';
@@ -54,6 +49,9 @@ import { FAMA_CANJE_POR_USDT, usdtFromFama } from '../constants/fama';
 import { useI18n } from '../i18n/LanguageContext';
 import { humanizeTxError, networkFailureError } from '../utils/txErrors';
 import type { FundsConfirmPurpose } from '../services/fundsConfirm';
+import { fundsTx } from '../utils/fundsConfirmGate';
+import { getReservaAddress } from '../constants/reservaConfig';
+import { getRealDonationWallet } from '../constants/deployedAddresses';
 import type { LoanTier, UserInfo } from './useWeb3Balances';
 import type { Token } from '../constants/tokens';
 
@@ -87,7 +85,10 @@ export interface HomeHandlersParams {
   adminProvider: unknown;
   adminAddress?: string;
   openExternalWallet?: () => void;
-  confirmFunds: (purpose?: FundsConfirmPurpose) => Promise<boolean>;
+  confirmFunds: (
+    purpose?: FundsConfirmPurpose,
+    details?: ReturnType<typeof fundsTx>
+  ) => Promise<boolean>;
   refetch: () => void;
   clearPendingInvite: () => Promise<void>;
   loanReadsReady?: boolean;
@@ -386,7 +387,8 @@ export const useHomeHandlers = ({
       Alert.alert(t('token'), t('tokenNotEnabledAlert'));
       return;
     }
-    if (!(await confirmFunds('loanRequest'))) return;
+    if (!(await confirmFunds('loanRequest', fundsTx(String(tier.usdAmount), getContractAddress()))))
+      return;
     if (!(await ensureGasForTx())) return;
     const result = await solicitarPrestamo(selectedToken.address, tier.id);
     if (!result.success) {
@@ -474,7 +476,8 @@ export const useHomeHandlers = ({
       );
       return;
     }
-    if (!(await confirmFunds('movement'))) return;
+    const canjeLusd = String(fama / 250);
+    if (!(await confirmFunds('movement', fundsTx(canjeLusd, walletAddress)))) return;
     if (!(await ensureGasForTx())) return;
     const result = await canjearFama(fama);
     if (result.success) {
@@ -520,7 +523,7 @@ export const useHomeHandlers = ({
       );
       return;
     }
-    if (!(await confirmFunds('movement'))) return;
+    if (!(await confirmFunds('movement', fundsTx(String(fama / 250), walletAddress)))) return;
     if (!(await ensureGasForTx())) return;
     const result = await canjearFamaRed(fama);
     if (result.success) {
@@ -559,7 +562,13 @@ export const useHomeHandlers = ({
       Alert.alert(t('rachaTitle'), t('rachaNothing'));
       return;
     }
-    if (!(await confirmFunds('movement'))) return;
+    if (
+      !(await confirmFunds(
+        'movement',
+        fundsTx(String(userInfo.racha.bonoPendienteUsd), walletAddress)
+      ))
+    )
+      return;
     if (!(await ensureGasForTx())) return;
     const result = await cobrarBonoRacha();
     if (result.success) {
@@ -587,7 +596,16 @@ export const useHomeHandlers = ({
       Alert.alert(t('noDebt'), t('noActiveLoan'));
       return;
     }
-    if (!(await confirmFunds('loanPay'))) return;
+    if (
+      !(await confirmFunds(
+        'loanPay',
+        fundsTx(
+          userInfo.activeLoan.remainingLabel || userInfo.activeLoan.totalDueLabel,
+          getContractAddress()
+        )
+      ))
+    )
+      return;
     if (!(await ensureGasForTx())) return;
 
     const loanToken = userInfo.activeLoan.token;
@@ -694,7 +712,7 @@ export const useHomeHandlers = ({
       Alert.alert(t('amount'), t('amountGreaterZero'));
       return;
     }
-    if (!(await confirmFunds('movement'))) return;
+    if (!(await confirmFunds('movement', fundsTx(parsed, getContractAddress())))) return;
     try {
       const amountWei = parseUnits(parsed, selectedToken.decimals).toString();
       if (!(await fundInternalFromExternal(amountWei, selectedToken.address))) return;
@@ -748,7 +766,7 @@ export const useHomeHandlers = ({
       }
       const amount = String(accessPayUsdt());
       const amountWei = parseUnits(amount, selectedToken.decimals).toString();
-      if (!(await confirmFunds('movement'))) return;
+      if (!(await confirmFunds('movement', fundsTx(amount, getContractAddress())))) return;
       if (!(await fundInternalFromExternal(amountWei, selectedToken.address))) return;
       if (!(await ensureGasForTx())) return;
       try {
@@ -786,7 +804,7 @@ export const useHomeHandlers = ({
       Alert.alert(t('amount'), t('amountGreaterZero'));
       return;
     }
-    if (!(await confirmFunds('movement'))) return;
+    if (!(await confirmFunds('movement', fundsTx(parsed, getReservaAddress())))) return;
     try {
       await runAsAdmin(async () => {
         const signer = await getEthersSignerFromProvider(adminProvider as Eip1193Provider);
@@ -806,7 +824,7 @@ export const useHomeHandlers = ({
       Alert.alert(t('amount'), t('amountGreaterZero'));
       return;
     }
-    if (!(await confirmFunds('movement'))) return;
+    if (!(await confirmFunds('movement', fundsTx(parsed, destino)))) return;
     try {
       await runAsAdmin(async () => {
         const signer = await getEthersSignerFromProvider(adminProvider as Eip1193Provider);
@@ -821,7 +839,7 @@ export const useHomeHandlers = ({
   };
 
   const handleAplicarRetiroReserva = async () => {
-    if (!(await confirmFunds('movement'))) return;
+    if (!(await confirmFunds('movement', fundsTx('0', getReservaAddress())))) return;
     try {
       await runAsAdmin(async () => {
         const signer = await getEthersSignerFromProvider(adminProvider as Eip1193Provider);
@@ -866,7 +884,13 @@ export const useHomeHandlers = ({
       Alert.alert(t('amount'), t('amountGreaterZero'));
       return;
     }
-    if (!(await confirmFunds('movement'))) return;
+    if (
+      !(await confirmFunds(
+        'movement',
+        fundsTx(parsed, getRealDonationWallet() || userInfo.founderAddress)
+      ))
+    )
+      return;
     try {
       const amountWei = parseUnits(parsed, selectedToken.decimals).toString();
       if (!(await fundInternalFromExternal(amountWei, selectedToken.address))) return;

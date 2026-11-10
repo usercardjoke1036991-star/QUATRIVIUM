@@ -99,7 +99,9 @@ export function apkRegistryStatus(input: {
   localCert?: string;
   readFailed?: boolean;
 }): ApkCheck {
-  const address = String(input.registryAddress || '').trim().toLowerCase();
+  const address = String(input.registryAddress || '')
+    .trim()
+    .toLowerCase();
   if (!address || address === '0x0000000000000000000000000000000000000000') return 'unverified';
   return apkCertCheck({
     registryEmpty: !normalizeSha256(input.publishedCert || ''),

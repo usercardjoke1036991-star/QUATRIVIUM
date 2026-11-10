@@ -1254,5 +1254,11 @@
   "notificationLocalChangeConfirm": "Local alert preferences on this device will be updated. Continue?",
   "notificationLocalChange": "Update local alerts",
   "notificationLocal": "Local device channel",
-  "apkUnverified": "Unverified build."
+  "apkUnverified": "Unverified build.",
+  "fundsTxAmount": "Amount: {amount} {symbol}",
+  "fundsTxDestination": "Destination",
+  "fundsTxFee": "Estimated network fee: {fee}",
+  "fundsConfirmAck": "Confirm",
+  "fundsConfirmAckLead": "Check the amount, destination and fee. No PIN is required because fund protection is off.",
+  "fundsConfirmBiometricFail": "The fingerprint did not open the wallet."
 }

@@ -1254,5 +1254,11 @@
   "notificationLocalChangeConfirm": "Le preferenze degli avvisi locali su questo dispositivo verranno aggiornate. Continuare?",
   "notificationLocalChange": "Aggiorna avvisi locali",
   "notificationLocal": "Canale locale del dispositivo",
-  "apkUnverified": "Versione non verificata."
+  "apkUnverified": "Versione non verificata.",
+  "fundsTxAmount": "Importo: {amount} {symbol}",
+  "fundsTxDestination": "Destinazione",
+  "fundsTxFee": "Commissione di rete stimata: {fee}",
+  "fundsConfirmAck": "Conferma",
+  "fundsConfirmAckLead": "Controlli importo, destinazione e commissione. Nessun PIN: la protezione fondi è spenta.",
+  "fundsConfirmBiometricFail": "L’impronta non ha aperto il portafoglio."
 }

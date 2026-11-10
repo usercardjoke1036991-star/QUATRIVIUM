@@ -44,16 +44,19 @@ describe('Sequencer de Arbitrum y liquidaciones', function () {
     await en(listo);
     const ahora = (await ethers.provider.getBlock('latest')).timestamp;
     await sequencer.setRound(2, 1, ahora - 60, ahora - 60, 2);
-    await expect(contract.connect(liquidator).liquidate(user.address, tokenAddr))
-      .to.be.revertedWithCustomError(contract, 'SequencerNoListo');
+    await expect(
+      contract.connect(liquidator).liquidate(user.address, tokenAddr)
+    ).to.be.revertedWithCustomError(contract, 'SequencerNoListo');
 
     await sequencer.setRound(3, 0, ahora, ahora, 3);
-    await expect(contract.connect(liquidator).liquidate(user.address, tokenAddr))
-      .to.be.revertedWithCustomError(contract, 'SequencerNoListo');
+    await expect(
+      contract.connect(liquidator).liquidate(user.address, tokenAddr)
+    ).to.be.revertedWithCustomError(contract, 'SequencerNoListo');
 
     await marca(BigInt(ahora) + BigInt(HORA));
-    await expect(contract.connect(liquidator).liquidate(user.address, tokenAddr))
-      .to.be.revertedWithCustomError(contract, 'SequencerNoListo');
+    await expect(
+      contract.connect(liquidator).liquidate(user.address, tokenAddr)
+    ).to.be.revertedWithCustomError(contract, 'SequencerNoListo');
 
     await marca(BigInt(ahora) + BigInt(HORA) + 2n);
     await expect(contract.connect(liquidator).liquidate(user.address, tokenAddr)).to.not.be
@@ -69,8 +72,9 @@ describe('Sequencer de Arbitrum y liquidaciones', function () {
     await sequencer.setRound(3, 0, vuelta, vuelta, 3);
 
     await marca(vuelta + BigInt(HORA));
-    await expect(contract.connect(liquidator).liquidate(user.address, tokenAddr))
-      .to.be.revertedWithCustomError(contract, 'SequencerNoListo');
+    await expect(
+      contract.connect(liquidator).liquidate(user.address, tokenAddr)
+    ).to.be.revertedWithCustomError(contract, 'SequencerNoListo');
 
     await marca(vuelta + BigInt(HORA) + 2n);
     await expect(contract.connect(liquidator).liquidate(user.address, tokenAddr)).to.not.be
@@ -87,8 +91,9 @@ describe('Sequencer de Arbitrum y liquidaciones', function () {
 
     const pronto = info.vencimiento + 48n * BigInt(HORA) + 10n;
     await en(pronto);
-    await expect(contract.connect(liquidator).liquidate(user.address, tokenAddr))
-      .to.be.revertedWithCustomError(contract, 'GraciaLiquidacion');
+    await expect(
+      contract.connect(liquidator).liquidate(user.address, tokenAddr)
+    ).to.be.revertedWithCustomError(contract, 'GraciaLiquidacion');
 
     await en(info.vencimiento + 48n * BigInt(HORA) + 20n * BigInt(HORA) + 2n);
     await expect(contract.connect(liquidator).liquidate(user.address, tokenAddr)).to.not.be
@@ -99,8 +104,9 @@ describe('Sequencer de Arbitrum y liquidaciones', function () {
     const { contract, user, liquidator, tokenAddr, sequencer, info } = await prestar();
     await en(info.vencimiento + 48n * BigInt(HORA) + 10n);
     await sequencer.setRound(4, 0, 0, 0, 4);
-    await expect(contract.connect(liquidator).liquidate(user.address, tokenAddr))
-      .to.be.revertedWithCustomError(contract, 'SequencerNoListo');
+    await expect(
+      contract.connect(liquidator).liquidate(user.address, tokenAddr)
+    ).to.be.revertedWithCustomError(contract, 'SequencerNoListo');
     const debt = await contract.obtenerDeuda(user.address);
     await expect(contract.connect(user).pagarPrestamo(tokenAddr, debt.total)).to.not.be.reverted;
     expect((await contract.usuarios(user.address)).montoActivo).to.equal(0n);

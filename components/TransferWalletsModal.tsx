@@ -114,7 +114,16 @@ export const TransferWalletsModal: React.FC<TransferWalletsModalProps> = ({
       Alert.alert(t('amount'), t('invalidAmount'));
       return;
     }
-    if (!(await confirmFunds())) return;
+    const to = direction === 'in' ? walletAddress || '' : linked;
+    if (
+      !(await confirmFunds('transfer', {
+        amount: parsed,
+        symbol: asset === 'bnb' ? 'ETH' : 'LUSD',
+        destination: to,
+        fee: '0.0002 ETH',
+      }))
+    )
+      return;
     setBusy(true);
     try {
       const amountWei = parseUnits(parsed, decimals).toString();

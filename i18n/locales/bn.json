@@ -1254,5 +1254,11 @@
   "notificationLocalChangeConfirm": "এই ডিভাইসে স্থানীয় সতর্কতার পছন্দ আপডেট হবে। চালিয়ে যাবেন?",
   "notificationLocalChange": "স্থানীয় সতর্কতা আপডেট করুন",
   "notificationLocal": "ডিভাইসের স্থানীয় চ্যানেল",
-  "apkUnverified": "সংস্করণ যাচাই হয়নি।"
+  "apkUnverified": "সংস্করণ যাচাই হয়নি।",
+  "fundsTxAmount": "পরিমাণ: {amount} {symbol}",
+  "fundsTxDestination": "গন্তব্য",
+  "fundsTxFee": "আনুমানিক নেটওয়ার্ক ফি: {fee}",
+  "fundsConfirmAck": "নিশ্চিত",
+  "fundsConfirmAckLead": "পরিমাণ, গন্তব্য ও ফি দেখুন। তহবিল সুরক্ষা বন্ধ, তাই PIN লাগবে না।",
+  "fundsConfirmBiometricFail": "আঙুলের ছাপ দিয়ে ওয়ালেট খোলেনি।"
 }

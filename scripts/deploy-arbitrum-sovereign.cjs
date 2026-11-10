@@ -21,7 +21,9 @@ async function main() {
     .map((item) => item.trim())
     .filter(Boolean);
   const feed =
-    chainId === 42161 ? process.env.SEQUENCER_FEED || SEQUENCER_ARBITRUM_ONE : process.env.SEQUENCER_FEED || null;
+    chainId === 42161
+      ? process.env.SEQUENCER_FEED || SEQUENCER_ARBITRUM_ONE
+      : process.env.SEQUENCER_FEED || null;
   await deploySovereign({
     chainId,
     signer: deployer,
