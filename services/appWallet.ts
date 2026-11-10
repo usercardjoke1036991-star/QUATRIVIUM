@@ -5,6 +5,7 @@ import { ERC20_ABI } from '../constants/contractConfig';
 import { getProductMode, NETWORK_CONFIG } from '../constants/rpcConfig';
 import { createWriteProvider } from './writeRpc';
 import { isAllowedWei, isHexAddress } from '../utils/sanitize';
+import { migrateSealedValue, type LockStore } from '../utils/lockMigration';
 import { isSealedBlob, openSecret, sealSecret, sealedBlobVersion } from '../utils/secretBox';
 import { allowWalletAsyncFallback } from '../utils/walletVaultPolicy';
 import { assertRestoreFitsThisDevice, lookupBoundWalletOnThisDevice } from './deviceClaim';
@@ -132,6 +133,43 @@ async function writeStored(record: StoredWallet): Promise<void> {
   }
   await persistRecord(record);
   await bindAppWallet(record.address);
+}
+
+export async function walletOpensWith(key: string): Promise<boolean> {
+  const raw = await readRawWallet();
+  if (!raw || !isSealedBlob(raw)) return true;
+  try {
+    openSecret(raw, key);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Abre el cofre con la llave vieja y solo entonces lo guarda con la nueva. */
+export async function rewrapStoredWallet(
+  oldKeys: readonly string[],
+  newWrap: string
+): Promise<void> {
+  const raw = await readRawWallet();
+  if (!raw || !isSealedBlob(raw)) return;
+  const memory = new Map<string, string>([[WALLET_KEY, raw]]);
+  const store: LockStore = {
+    get: async (key) => memory.get(key) ?? null,
+    set: async (key, value) => {
+      await SecureStore.setItemAsync(key, value, OPTIONS);
+      memory.set(key, value);
+    },
+    del: async (key) => {
+      memory.delete(key);
+      try {
+        await SecureStore.deleteItemAsync(key);
+      } catch {
+        /* el ensayo ya se comprobó */
+      }
+    },
+  };
+  await migrateSealedValue(store, WALLET_KEY, `${WALLET_KEY}:next`, oldKeys, newWrap);
 }
 
 export async function rewrapWalletWithNewKey(rotatePin: () => Promise<string>): Promise<void> {

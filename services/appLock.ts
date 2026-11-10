@@ -3,6 +3,16 @@ import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
 import { isPinLengthOk, isWeakPin, lockoutMs, remainingLockMs } from '../utils/pinPolicy';
 import { PIN_KDF, PIN_PBKDF2_ROUNDS, pbkdf2Sha256Hex, wrapStoreMode } from '../utils/pinKdf';
+import {
+  assertSessionBeforePinWrite,
+  legacyPasswordWrap,
+  legacyPinWrapRounds,
+  migrateSealedValue,
+  pinVerifier,
+  verifierMatches,
+  wrapKeyFromPbkdf2,
+  type LockStore,
+} from '../utils/lockMigration';
 import { resolveBiometricAvailability, type BiometricAvailability } from '../utils/biometricStatus';
 import {
   isValidMasterPassword,
@@ -60,6 +70,7 @@ interface PasswordRecord {
   salt: string;
   hash: string;
   rounds: number;
+  kdf?: string;
 }
 
 interface GateRecord {
@@ -69,7 +80,7 @@ interface GateRecord {
 
 async function hashSecret(secret: string, salt: string, rounds: number): Promise<string> {
   let digest = `${salt}:${secret}`;
-  const n = Math.max(1, Math.min(rounds, 20_000));
+  const n = Math.max(1, Math.floor(rounds));
   for (let i = 0; i < n; i += 1) {
     digest = sha256(toUtf8Bytes(digest)).slice(2);
     if (i % 250 === 249) {
@@ -208,21 +219,36 @@ export async function isPasswordSet(): Promise<boolean> {
 function passwordRounds(record: PasswordRecord): number {
   const n = Number(record.rounds || PIN_ROUNDS);
   if (!Number.isFinite(n)) return PIN_ROUNDS;
-  return Math.min(20_000, Math.max(1, Math.floor(n)));
+  return Math.max(1, Math.floor(n));
+}
+
+function lockStore(): LockStore {
+  return {
+    get: async (key) => (await SecureStore.getItemAsync(key)) || null,
+    set: async (key, value) => {
+      await SecureStore.setItemAsync(key, value, OPTIONS);
+    },
+    del: async (key) => {
+      await SecureStore.deleteItemAsync(key);
+    },
+  };
 }
 
 async function pinHashMatches(pin: string): Promise<boolean> {
   const record = await readPinRecord();
   if (!record || !isSixDigits(pin)) return false;
-  const hash = await hashSecret(pin, record.salt, pinRoundsForRecord(record));
-  return timingSafeEqualHex(digestHex(hash), digestHex(record.hash));
+  const hash =
+    record.kdf === PIN_KDF
+      ? await pinVerifier(pin, record)
+      : await hashSecret(pin, record.salt, legacyPinWrapRounds(record));
+  return verifierMatches(hash, record.hash);
 }
 
 async function persistPinWrap(pin: string): Promise<void> {
   const wrap = getWalletWrapKey();
   const record = await readPinRecord();
   if (!wrap || !record || !isSixDigits(pin)) return;
-  const pinKey = await deriveWrapKeyAsync(pin, record.salt, pinRoundsForRecord(record));
+  const pinKey = await wrapKeyFromPbkdf2(pin, record.salt);
   await SecureStore.setItemAsync(PIN_WRAP_KEY, sealSecret(wrap, pinKey), OPTIONS);
 }
 
@@ -230,10 +256,22 @@ async function unlockWithPinWrap(pin: string, record: PinRecord): Promise<boolea
   try {
     const raw = await SecureStore.getItemAsync(PIN_WRAP_KEY);
     if (!raw || !isSealedBlob(raw)) return false;
-    const pinKey = await deriveWrapKeyAsync(pin, record.salt, pinRoundsForRecord(record));
-    const wrap = openSecret(raw, pinKey);
-    setWalletWrapKey(wrap);
-    return Boolean(getWalletWrapKey());
+    const nextKey = await wrapKeyFromPbkdf2(pin, record.salt);
+    try {
+      setWalletWrapKey(openSecret(raw, nextKey));
+      return Boolean(getWalletWrapKey());
+    } catch {
+      const oldKey = await deriveWrapKeyAsync(pin, record.salt, legacyPinWrapRounds(record));
+      const wrap = await migrateSealedValue(
+        lockStore(),
+        PIN_WRAP_KEY,
+        `${PIN_WRAP_KEY}:next`,
+        [oldKey],
+        nextKey
+      );
+      setWalletWrapKey(wrap);
+      return Boolean(getWalletWrapKey());
+    }
   } catch {
     return false;
   }
@@ -257,16 +295,11 @@ function passwordError(password: string): Error {
   return new Error('weak-password');
 }
 
-function pinRoundsForRecord(record: PinRecord): number {
-  if (record.v !== 2) return 1;
-  const n = Number(record.rounds || PIN_ROUNDS);
-  if (!Number.isFinite(n)) return PIN_ROUNDS;
-  return Math.min(20_000, Math.max(1, Math.floor(n)));
-}
-
 async function activateSession(pin: string, record: PinRecord): Promise<string> {
-  const rounds = record.v === 2 ? pinRoundsForRecord(record) : PIN_ROUNDS;
-  const wrap = await deriveWrapKeyAsync(pin, record.salt, rounds);
+  const wrap =
+    record.kdf === PIN_KDF
+      ? await wrapKeyFromPbkdf2(pin, record.salt)
+      : await deriveWrapKeyAsync(pin, record.salt, legacyPinWrapRounds(record));
   setWalletWrapKey(wrap);
   return wrap;
 }
@@ -385,6 +418,9 @@ export async function setPin(pin: string): Promise<string> {
   if (!isSixDigits(pin) || isWeakPin(pin)) {
     throw new Error('weak-pin');
   }
+  const passwordSet = await isPasswordSet();
+  const existingWrap = getWalletWrapKey();
+  assertSessionBeforePinWrite(passwordSet, existingWrap);
   const salt = Crypto.randomUUID();
   const hash = await pbkdf2Sha256Hex(pin, salt, PIN_PBKDF2_ROUNDS);
   const record: PinRecord = {
@@ -397,12 +433,7 @@ export async function setPin(pin: string): Promise<string> {
   await SecureStore.setItemAsync(PIN_KEY, JSON.stringify(record), OPTIONS);
   await setLockOnOpenEnabled(true);
   await writeGate({ fails: 0, until: 0 });
-  const passwordSet = await isPasswordSet();
-  const existingWrap = getWalletWrapKey();
-  if (passwordSet) {
-    if (!existingWrap) {
-      throw new Error('locked');
-    }
+  if (passwordSet && existingWrap) {
     await persistPinWrap(pin);
     if (await isBiometricEnabled()) {
       await persistWrapForBiometric(existingWrap);
@@ -434,8 +465,8 @@ export async function checkPin(pin: string): Promise<PinCheck> {
   }
   const legacy = record.kdf !== PIN_KDF;
   const hash = legacy
-    ? await hashSecret(pin, record.salt, pinRoundsForRecord(record))
-    : await pbkdf2Sha256Hex(pin, record.salt, record.rounds || PIN_PBKDF2_ROUNDS);
+    ? await hashSecret(pin, record.salt, legacyPinWrapRounds(record))
+    : await pinVerifier(pin, record);
   if (!timingSafeEqualHex(digestHex(hash), digestHex(record.hash))) {
     const gate = await readGate();
     const fails = gate.fails + 1;
@@ -443,16 +474,43 @@ export async function checkPin(pin: string): Promise<PinCheck> {
     await writeGate({ fails, until });
     return { ok: false, remainingMs: remainingLockMs(until), locked: remainingLockMs(until) > 0 };
   }
-  if (legacy || Number(record.rounds || 0) < PIN_PBKDF2_ROUNDS) {
-    await setPin(pin);
-  } else if (await isPasswordSet()) {
+  if (await isPasswordSet()) {
     const opened = await unlockWithPinWrap(pin, record);
     if (!opened) {
       return { ok: false, remainingMs: 0, locked: false };
     }
+    if (legacy || Number(record.rounds || 0) < PIN_PBKDF2_ROUNDS) {
+      const nextHash = await pbkdf2Sha256Hex(pin, record.salt, PIN_PBKDF2_ROUNDS);
+      const next: PinRecord = {
+        ...record,
+        v: 3,
+        hash: nextHash,
+        rounds: PIN_PBKDF2_ROUNDS,
+        kdf: PIN_KDF,
+      };
+      await SecureStore.setItemAsync(PIN_KEY, JSON.stringify(next), OPTIONS);
+    }
     await writeGate({ fails: 0, until: 0 });
   } else {
-    await activateSession(pin, record);
+    const next = await wrapKeyFromPbkdf2(pin, record.salt);
+    const { rewrapStoredWallet, walletOpensWith } = await import('./appWallet');
+    if (!(await walletOpensWith(next))) {
+      const oldSession = await deriveWrapKeyAsync(pin, record.salt, PIN_ROUNDS);
+      const oldOne = await deriveWrapKeyAsync(pin, record.salt, legacyPinWrapRounds(record));
+      await rewrapStoredWallet([oldSession, oldOne], next);
+    }
+    if (legacy || Number(record.rounds || 0) < PIN_PBKDF2_ROUNDS) {
+      const nextHash = await pbkdf2Sha256Hex(pin, record.salt, PIN_PBKDF2_ROUNDS);
+      const updated: PinRecord = {
+        ...record,
+        v: 3,
+        hash: nextHash,
+        rounds: PIN_PBKDF2_ROUNDS,
+        kdf: PIN_KDF,
+      };
+      await SecureStore.setItemAsync(PIN_KEY, JSON.stringify(updated), OPTIONS);
+    }
+    setWalletWrapKey(next);
     await writeGate({ fails: 0, until: 0 });
   }
   await persistCompanionWraps();
@@ -531,9 +589,15 @@ export async function setPassword(password: string, conveniencePin?: string): Pr
     throw new Error('wrong-pin');
   }
   const salt = Crypto.randomUUID();
-  const hash = await hashSecret(password, salt, PIN_ROUNDS);
-  const record: PasswordRecord = { v: 1, salt, hash, rounds: PIN_ROUNDS };
-  const nextWrap = await deriveWrapKeyAsync(password, salt, PIN_ROUNDS);
+  const hash = await pbkdf2Sha256Hex(password, salt, PIN_PBKDF2_ROUNDS);
+  const record: PasswordRecord = {
+    v: 1,
+    salt,
+    hash,
+    rounds: PIN_PBKDF2_ROUNDS,
+    kdf: PIN_KDF,
+  };
+  const nextWrap = await wrapKeyFromPbkdf2(password, salt);
   const serialized = JSON.stringify(record);
   const stored = await withTimeout(
     SecureStore.setItemAsync(PASSWORD_KEY, serialized, OPTIONS)
@@ -601,16 +665,35 @@ export async function checkPassword(password: string): Promise<PinCheck> {
   if (!record) {
     return { ok: false, remainingMs: 0, locked: false };
   }
+  const modern = record.kdf === PIN_KDF;
   const rounds = passwordRounds(record);
-  const hash = await hashSecret(password, record.salt, rounds);
-  if (!timingSafeEqualHex(digestHex(hash), digestHex(record.hash))) {
+  const hash = modern
+    ? await pbkdf2Sha256Hex(password, record.salt, rounds)
+    : await hashSecret(password, record.salt, rounds);
+  if (!verifierMatches(hash, record.hash)) {
     const gate = await readGate();
     const fails = gate.fails + 1;
     const until = Date.now() + lockoutMs(fails);
     await writeGate({ fails, until });
     return { ok: false, remainingMs: remainingLockMs(until), locked: remainingLockMs(until) > 0 };
   }
-  setWalletWrapKey(await deriveWrapKeyAsync(password, record.salt, rounds));
+  if (modern) {
+    setWalletWrapKey(await wrapKeyFromPbkdf2(password, record.salt));
+  } else {
+    const oldWrap = await legacyPasswordWrap(password, record.salt, rounds);
+    const newWrap = await wrapKeyFromPbkdf2(password, record.salt);
+    const { rewrapStoredWallet } = await import('./appWallet');
+    await rewrapStoredWallet([oldWrap], newWrap);
+    const next: PasswordRecord = {
+      v: 1,
+      salt: record.salt,
+      hash: await pbkdf2Sha256Hex(password, record.salt, PIN_PBKDF2_ROUNDS),
+      rounds: PIN_PBKDF2_ROUNDS,
+      kdf: PIN_KDF,
+    };
+    await SecureStore.setItemAsync(PASSWORD_KEY, JSON.stringify(next), OPTIONS);
+    setWalletWrapKey(newWrap);
+  }
   await writeGate({ fails: 0, until: 0 });
   void persistCompanionWraps();
   return { ok: true };
@@ -621,8 +704,11 @@ export async function matchPassword(password: string): Promise<boolean> {
   const record = await readPasswordRecord();
   if (!record) return false;
   const rounds = passwordRounds(record);
-  const hash = await hashSecret(password, record.salt, rounds);
-  return timingSafeEqualHex(digestHex(hash), digestHex(record.hash));
+  const hash =
+    record.kdf === PIN_KDF
+      ? await pbkdf2Sha256Hex(password, record.salt, rounds)
+      : await hashSecret(password, record.salt, rounds);
+  return verifierMatches(hash, record.hash);
 }
 
 export async function changePassword(
