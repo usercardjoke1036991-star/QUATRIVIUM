@@ -340,6 +340,7 @@
   "lockPinMismatch": "رمزا PIN غير متطابقين. حاول مرة أخرى.",
   "lockPinWrong": "PIN خاطئ.",
   "lockPinWeak": "هذا PIN سهل جداً. لا تستخدم تكراراً أو تسلسلاً أو تواريخ واضحة.",
+  "lockKdfMissing": "هذا الهاتف لا يصنع مفتاح القفل. لا يوجد مسار ضعيف.",
   "lockCooldown": "محاولات كثيرة. انتظر {seconds} ث.",
   "lockPinChanged": "تم تحديث PIN.",
   "lockBiometric": "فتح بالبصمة",

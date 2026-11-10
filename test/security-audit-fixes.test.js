@@ -41,7 +41,8 @@ describe('security audit remediations', function () {
     expect(wrapStoreMode(true)).to.equal('hardware');
     expect(wrapStoreMode(false)).to.equal('software');
     expect(needsPinUpgrade({ kdf: 'sha256', rounds: 20_000 })).to.equal(true);
-    expect(needsPinUpgrade({ kdf: PIN_KDF, rounds: PIN_PBKDF2_ROUNDS })).to.equal(false);
+    expect(needsPinUpgrade({ kdf: PIN_KDF, rounds: PIN_PBKDF2_ROUNDS })).to.equal(true);
+    expect(needsPinUpgrade({ kdf: PIN_KDF, rounds: PIN_PBKDF2_ROUNDS, split: 1 })).to.equal(false);
     const hash = await pbkdf2Sha256Hex('847291', 'sal-prueba', 2);
     expect(hash).to.match(/^[0-9a-f]{64}$/);
     const again = await pbkdf2Sha256Hex('847291', 'sal-prueba', 2);

@@ -790,17 +790,19 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
       passwordCommittedRef.current = false;
       const code = err instanceof Error ? err.message : '';
       setError(
-        code === 'password-key'
-          ? t('lockPasswordPrivateKey')
-          : code === 'device-bound'
-            ? t('errDeviceBound')
-            : code === 'wallet-persist' || code === 'password-persist'
-              ? t('errWalletPersist')
-              : code === 'wallet-other-app' || code.includes('wallet-other-app')
-                ? t('errWalletOtherApp')
-                : code === 'username'
-                  ? t('usernameInvalid')
-                  : t('appWalletFailed')
+        code === 'pbkdf2-missing'
+          ? t('lockKdfMissing')
+          : code === 'password-key'
+            ? t('lockPasswordPrivateKey')
+            : code === 'device-bound'
+              ? t('errDeviceBound')
+              : code === 'wallet-persist' || code === 'password-persist'
+                ? t('errWalletPersist')
+                : code === 'wallet-other-app' || code.includes('wallet-other-app')
+                  ? t('errWalletOtherApp')
+                  : code === 'username'
+                    ? t('usernameInvalid')
+                    : t('appWalletFailed')
       );
     } finally {
       setBusy(false);

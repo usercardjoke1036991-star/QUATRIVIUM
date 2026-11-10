@@ -340,6 +340,7 @@
   "lockPinMismatch": "Die PINs stimmen nicht überein. Erneut versuchen.",
   "lockPinWrong": "Falsche PIN.",
   "lockPinWeak": "Diese PIN ist zu einfach. Keine Wiederholungen, Folgen oder offensichtliche Daten.",
+  "lockKdfMissing": "Dieses Telefon baut den Schluessel nicht. Kein schwacher Weg.",
   "lockCooldown": "Zu viele Versuche. {seconds} s warten.",
   "lockPinChanged": "PIN aktualisiert.",
   "lockBiometric": "Mit Fingerabdruck entsperren",

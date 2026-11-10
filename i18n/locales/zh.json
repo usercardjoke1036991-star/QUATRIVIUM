@@ -340,6 +340,7 @@
   "lockPinMismatch": "两次 PIN 不一致。请再试一次。",
   "lockPinWrong": "PIN 错误。",
   "lockPinWeak": "该 PIN 过于简单。请勿使用重复数字、连续序列或明显日期。",
+  "lockKdfMissing": "此手机无法生成锁定密钥。不会改用弱推导。",
   "lockCooldown": "尝试次数过多。请等待 {seconds} 秒。",
   "lockPinChanged": "PIN 已更新。",
   "lockBiometric": "用指纹解锁",

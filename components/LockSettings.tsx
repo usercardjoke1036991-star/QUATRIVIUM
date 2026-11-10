@@ -89,9 +89,11 @@ export const LockSettings: React.FC<{
       setMessage(
         error instanceof Error && error.message === 'weak-pin'
           ? t('lockPinWeak')
-          : error instanceof Error && error.message === 'locked'
-            ? t('lockUnlockLead')
-            : t('lockPinWrong')
+          : error instanceof Error && error.message === 'pbkdf2-missing'
+            ? t('lockKdfMissing')
+            : error instanceof Error && error.message === 'locked'
+              ? t('lockUnlockLead')
+              : t('lockPinWrong')
       );
     } finally {
       setBusy(false);
@@ -141,6 +143,7 @@ export const LockSettings: React.FC<{
   const passwordFail = (error: unknown) => {
     const code = error instanceof Error ? error.message : '';
     if (code === 'password-key') return t('lockPasswordPrivateKey');
+    if (code === 'pbkdf2-missing') return t('lockKdfMissing');
     return t('lockPasswordWeak');
   };
 

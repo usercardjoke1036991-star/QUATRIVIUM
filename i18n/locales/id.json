@@ -340,6 +340,7 @@
   "lockPinMismatch": "PIN tidak cocok. Coba lagi.",
   "lockPinWrong": "PIN salah.",
   "lockPinWeak": "PIN itu terlalu mudah. Jangan pakai pengulangan, urutan, atau tanggal yang jelas.",
+  "lockKdfMissing": "Ponsel ini tidak bisa menyusun kunci gembok. Jalur lemah ditutup.",
   "lockCooldown": "Terlalu banyak percobaan. Tunggu {seconds} d.",
   "lockPinChanged": "PIN diperbarui.",
   "lockBiometric": "Buka dengan sidik jari",

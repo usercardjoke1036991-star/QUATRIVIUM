@@ -125,6 +125,7 @@ const REVERT_KEYS: [string, TranslationKey][] = [
   ['invalid feed', 'adminInvalidAddress'],
   ['pool locked', 'poolLockedNote'],
   ['weak-pin', 'lockPinWeak'],
+  ['pbkdf2-missing', 'lockKdfMissing'],
   ['weak-password', 'lockPasswordWeak'],
   ['password-key', 'lockPasswordPrivateKey'],
   ['wrong-pin', 'lockPinWrong'],

@@ -340,6 +340,7 @@
   "lockPinMismatch": "PIN মিলে না। আবার চেষ্টা করুন।",
   "lockPinWrong": "ভুল PIN।",
   "lockPinWeak": "সেই PIN খুব সহজ। পুনরাবৃত্তি, ক্রম বা স্পষ্ট তারিখ ব্যবহার করবেন না।",
+  "lockKdfMissing": "এই ফোন লক চাবি বানাতে পারে না। দুর্বল পথ চলবে না।",
   "lockCooldown": "অনেক চেষ্টা। {seconds} সেকেন্ড অপেক্ষা করুন।",
   "lockPinChanged": "PIN আপডেট হয়েছে।",
   "lockBiometric": "ফিঙ্গারপ্রিন্ট দিয়ে আনলক করুন",

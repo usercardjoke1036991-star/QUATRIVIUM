@@ -1,4 +1,10 @@
-import { PIN_KDF, PIN_PBKDF2_ROUNDS, pbkdf2Sha256Hex } from './pinKdf';
+import {
+  PIN_KDF,
+  PIN_PBKDF2_ROUNDS,
+  PIN_SPLIT,
+  derivePinMaterial,
+  pbkdf2Sha256Hex,
+} from './pinKdf';
 import {
   deriveWrapKeyAsync,
   isSealedBlob,
@@ -13,7 +19,18 @@ export type LockStore = {
   del(key: string): Promise<void>;
 };
 
-export type PinLike = { v?: number; salt: string; hash: string; rounds?: number; kdf?: string };
+export type PinLike = {
+  v?: number;
+  salt: string;
+  hash: string;
+  rounds?: number;
+  kdf?: string;
+  split?: number;
+};
+
+export function isSplitKdf(record: { kdf?: string; split?: number }): boolean {
+  return record.kdf === PIN_KDF && record.split === PIN_SPLIT;
+}
 
 /** La vuelta única era el registro que no era v:2. Solo sirve para abrir el sello viejo. */
 export function legacyPinWrapRounds(record: { v?: number; rounds?: number }): number {
@@ -32,6 +49,10 @@ export async function wrapKeyFromPbkdf2(secret: string, salt: string): Promise<s
 }
 
 export async function pinVerifier(pin: string, record: PinLike): Promise<string> {
+  if (isSplitKdf(record)) {
+    const material = await derivePinMaterial(pin, record.salt, record.rounds || PIN_PBKDF2_ROUNDS);
+    return material.verifier;
+  }
   if (record.kdf === PIN_KDF) {
     return pbkdf2Sha256Hex(pin, record.salt, record.rounds || PIN_PBKDF2_ROUNDS);
   }
