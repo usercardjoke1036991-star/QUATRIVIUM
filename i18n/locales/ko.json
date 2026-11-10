@@ -200,6 +200,7 @@
   "subsectionWallet": "내 자금",
   "subsectionBalances": "계정 잔액",
   "walletVsPoolHint": "이것은 계정 잔액뿐입니다. 유동성 풀은 프로토콜의 것이며 전용 창에서 열립니다.",
+  "rpcMoneyUnconfirmed": "네트워크 값이 서로 다릅니다. 금액은 숨깁니다.",
   "hubChoose": "창 선택",
   "hubWalletLead": "잔액, 입금, 출금.",
   "hubCreditLead": "활성화, 등급, 이 일: 빌리고, 갚고, 레벨업.",

@@ -200,6 +200,7 @@
   "subsectionWallet": "您的资金",
   "subsectionBalances": "账户余额",
   "walletVsPoolHint": "这只是您的账户余额。流动性资金池属于协议，会在独立窗口中打开。",
+  "rpcMoneyUnconfirmed": "网络来源不一致。金额暂不显示。",
   "hubChoose": "选择一个窗口",
   "hubWalletLead": "余额、充值和提现。",
   "hubCreditLead": "开通、段位和这项营生：借款、还款、升级。",

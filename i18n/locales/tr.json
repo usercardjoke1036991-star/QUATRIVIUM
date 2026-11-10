@@ -200,6 +200,7 @@
   "subsectionWallet": "Paranız",
   "subsectionBalances": "Hesap bakiyesi",
   "walletVsPoolHint": "Bu yalnızca hesap bakiyenizdir. Likidite havuzu protokole aittir ve kendi penceresinde açılır.",
+  "rpcMoneyUnconfirmed": "Ağ kaynakları uyuşmuyor. Tutar gizlendi.",
   "hubChoose": "Bir pencere seçin",
   "hubWalletLead": "Bakiye, para ekleme ve çekme.",
   "hubCreditLead": "Etkinleştirme, rütbe ve zanaat: borçlan, öde, seviye atla.",

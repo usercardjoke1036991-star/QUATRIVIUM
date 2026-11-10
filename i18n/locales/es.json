@@ -200,6 +200,7 @@
   "subsectionWallet": "Su dinero",
   "subsectionBalances": "Saldo de su cuenta",
   "walletVsPoolHint": "Este es su saldo personal.",
+  "rpcMoneyUnconfirmed": "Las fuentes de la red no coinciden. El importe queda oculto.",
   "hubChoose": "Servicios",
   "hubWalletLead": "Saldos y movimientos de su cuenta.",
   "hubCreditLead": "Solicite y cancele crédito.",

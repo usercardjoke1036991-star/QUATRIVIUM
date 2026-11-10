@@ -988,6 +988,7 @@ function HomeScreenWithHooks() {
             poolBalance={balances.poolBalance}
             poolOutstanding={balances.poolOutstanding}
             poolCash={balances.poolCash}
+            moneyUnconfirmed={balances.moneyUnconfirmed}
             lpBalance={balances.lpBalance}
             walletConnected={Boolean(walletAddress)}
             paused={creditPaused}

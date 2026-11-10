@@ -200,6 +200,7 @@
   "subsectionWallet": "Your money",
   "subsectionBalances": "Account balance",
   "walletVsPoolHint": "Your personal balance.",
+  "rpcMoneyUnconfirmed": "Network sources disagree. The amount stays hidden.",
   "hubChoose": "Services",
   "hubWalletLead": "Balances and movements of your account.",
   "hubCreditLead": "Request and repay credit.",

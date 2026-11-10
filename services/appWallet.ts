@@ -1,16 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  Contract,
-  HDNodeWallet,
-  JsonRpcProvider,
-  Mnemonic,
-  Wallet,
-  randomBytes,
-  type Signer,
-} from 'ethers';
+import { Contract, HDNodeWallet, Mnemonic, Wallet, randomBytes, type Signer } from 'ethers';
 import * as SecureStore from 'expo-secure-store';
 import { ERC20_ABI } from '../constants/contractConfig';
-import { getProductMode, NETWORK_CONFIG, RPC_URLS } from '../constants/rpcConfig';
+import { getProductMode, NETWORK_CONFIG } from '../constants/rpcConfig';
+import { createWriteProvider } from './writeRpc';
 import { isAllowedWei, isHexAddress } from '../utils/sanitize';
 import { isSealedBlob, openSecret, sealSecret, sealedBlobVersion } from '../utils/secretBox';
 import { allowWalletAsyncFallback } from '../utils/walletVaultPolicy';
@@ -150,11 +143,7 @@ export async function rewrapWalletWithNewKey(rotatePin: () => Promise<string>): 
 }
 
 function writeProvider() {
-  return new JsonRpcProvider(
-    RPC_URLS.primary,
-    { chainId: NETWORK_CONFIG.chainId, name: NETWORK_CONFIG.chainName },
-    { staticNetwork: true }
-  );
+  return createWriteProvider(NETWORK_CONFIG.chainId, NETWORK_CONFIG.chainName);
 }
 
 function toConnectedWallet(privateKey: string): HDNodeWallet | Wallet {

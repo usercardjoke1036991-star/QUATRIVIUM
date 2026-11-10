@@ -167,6 +167,12 @@ export function getActiveContractNetwork(): 'mainnet' | 'testnet' {
   return runtimeMode === 'live' ? 'mainnet' : 'testnet';
 }
 
+/** Los RPC públicos de la red activa. Sin clave de proveedor. */
+export function publicRpcList(): string[] {
+  const list = runtimeMode === 'live' ? ARBITRUM_MAINNET.rpc : ARBITRUM_SEPOLIA.rpc;
+  return list.filter((url) => url.startsWith('https://') && !/[?&](?:apikey|key)=/i.test(url));
+}
+
 function uniqueHttpsRpcs(): string[] {
   const seen = new Set<string>();
   const out: string[] = [];

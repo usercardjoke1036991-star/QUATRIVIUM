@@ -8,6 +8,7 @@ import {
   isContractConfigured,
   isDemoAccount,
   NETWORK_CONFIG,
+  publicRpcList,
   subscribeRuntimeMode,
 } from '../constants/rpcConfig';
 import { canHydrateCreditStatus } from '../utils/creditGates';
@@ -25,6 +26,7 @@ import { describeAdminCalldata, type OpenAdminProposal } from '../utils/adminPro
 import { asWeiString, QuatriviumCreditService } from '../services/quatriviumCreditService';
 import { REFERRAL_BONUS_THRESHOLD, REFERRAL_REPUTATION_POINTS } from '../constants/reputation';
 import { esperaParaVolverAPedir } from '../utils/creditCooldown';
+import { agreedBalance, agreedCallData } from '../utils/broadcastRpc';
 import { readLoanFullyPaidAt } from '../utils/loanPaidMark';
 
 const logErr = __DEV__ ? console.log.bind(console) : () => {};
@@ -70,6 +72,7 @@ export interface UserBalances {
   poolOutstanding: string;
   poolCash: string;
   lpBalance: string;
+  moneyUnconfirmed: boolean;
 }
 
 export interface ActiveLoan {
@@ -91,6 +94,7 @@ export interface ActiveLoan {
 
 export interface UserInfo {
   hasActiveLoan: boolean;
+  moneyUnconfirmed: boolean;
   isRegistered: boolean;
   isTokenSupported: boolean;
   reputation: number;
@@ -186,10 +190,12 @@ const EMPTY_BALANCES: UserBalances = {
   poolOutstanding: '0.00',
   poolCash: '0.00',
   lpBalance: '0.00',
+  moneyUnconfirmed: false,
 };
 
 const EMPTY_USER_INFO: UserInfo = {
   hasActiveLoan: false,
+  moneyUnconfirmed: false,
   isRegistered: false,
   isTokenSupported: false,
   reputation: 0,
@@ -265,6 +271,19 @@ function formatDue(amountWei: bigint, decimals: number, symbol: string): string 
   return `${formatted} ${symbol}`;
 }
 
+async function agreedUint(
+  contract: Contract,
+  method: string,
+  args: readonly unknown[]
+): Promise<{ kind: 'value'; value: bigint } | { kind: 'mismatch' } | { kind: 'unavailable' }> {
+  const data = contract.interface.encodeFunctionData(method, [...args]);
+  const to = await contract.getAddress();
+  const agreed = await agreedCallData(publicRpcList(), to, data);
+  if (agreed.kind !== 'value') return agreed;
+  const decoded = contract.interface.decodeFunctionResult(method, agreed.value);
+  return { kind: 'value', value: BigInt(decoded[0]) };
+}
+
 export const useWeb3Balances = (walletAddress: string, selectedToken: Token) => {
   const [balances, setBalances] = useState<UserBalances>(EMPTY_BALANCES);
   const [userInfo, setUserInfo] = useState<UserInfo>(EMPTY_USER_INFO);
@@ -284,6 +303,7 @@ export const useWeb3Balances = (walletAddress: string, selectedToken: Token) => 
     async (opts?: { silent?: boolean }) => {
       const gen = ++fetchGen.current;
       const live = () => gen === fetchGen.current;
+      let moneyUnconfirmed = false;
 
       if (!opts?.silent) {
         setIsLoading(true);
@@ -323,14 +343,20 @@ export const useWeb3Balances = (walletAddress: string, selectedToken: Token) => 
               curveRateRead = null;
             }
             try {
-              const nav = (await creditContract.totalLiquidity(tokenAddress)) as bigint;
-              let outstanding: bigint | null = null;
-              try {
-                outstanding = (await creditContract.outstandingLoans(tokenAddress)) as bigint;
-              } catch {
-                outstanding = null;
+              const navRead = await agreedUint(creditContract, 'totalLiquidity', [tokenAddress]);
+              const outRead = await agreedUint(creditContract, 'outstandingLoans', [tokenAddress]);
+              if (navRead.kind === 'mismatch' || outRead.kind === 'mismatch') {
+                moneyUnconfirmed = true;
+                poolRead = { poolBalance: '—', poolOutstanding: '—', poolCash: '—' };
+              } else if (navRead.kind === 'value') {
+                poolRead = poolFigures(
+                  navRead.value,
+                  outRead.kind === 'value' ? outRead.value : null,
+                  decimals
+                );
+              } else {
+                poolRead = null;
               }
-              poolRead = poolFigures(nav, outstanding, decimals);
             } catch {
               poolRead = null;
             }
@@ -353,33 +379,59 @@ export const useWeb3Balances = (walletAddress: string, selectedToken: Token) => 
             canPagarVerificacion: false,
             founderAddress: getRealDonationWallet(),
           });
-          setBalances({ ...EMPTY_BALANCES, ...(poolRead ?? {}) });
+          setBalances({ ...EMPTY_BALANCES, ...(poolRead ?? {}), moneyUnconfirmed });
           return;
         }
 
         try {
-          const bnb = await provider.getBalance(walletAddress);
+          const bnbRead = await agreedBalance(publicRpcList(), walletAddress);
           if (!live()) return;
-          setBalances((prev) => ({
-            ...prev,
-            bnbBalance: Number(formatEther(bnb)).toFixed(4),
-            ...(poolRead ?? {}),
-          }));
+          if (bnbRead.kind === 'value') {
+            setBalances((prev) => ({
+              ...prev,
+              bnbBalance: Number(formatEther(bnbRead.value)).toFixed(4),
+              moneyUnconfirmed,
+              ...(poolRead ?? {}),
+            }));
+          } else if (bnbRead.kind === 'mismatch') {
+            moneyUnconfirmed = true;
+            setBalances((prev) => ({
+              ...prev,
+              bnbBalance: '—',
+              moneyUnconfirmed: true,
+              ...(poolRead ?? {}),
+            }));
+          } else if (poolRead) {
+            setBalances((prev) => ({ ...prev, ...poolRead, moneyUnconfirmed }));
+          }
         } catch (e) {
           logErr('Error fetching BNB balance:', e);
-          if (poolRead) setBalances((prev) => ({ ...prev, ...poolRead }));
+          if (poolRead) setBalances((prev) => ({ ...prev, ...poolRead, moneyUnconfirmed }));
         }
 
         try {
-          const bal = (await tokenContract.balanceOf(walletAddress)) as bigint;
-          setBalances((prev) => ({
-            ...prev,
-            tokenBalance: Number(formatUnits(bal, decimals)).toFixed(4),
-            ...(poolRead ?? {}),
-          }));
+          const balRead = await agreedUint(tokenContract, 'balanceOf', [walletAddress]);
+          if (balRead.kind === 'value') {
+            setBalances((prev) => ({
+              ...prev,
+              tokenBalance: Number(formatUnits(balRead.value, decimals)).toFixed(4),
+              moneyUnconfirmed,
+              ...(poolRead ?? {}),
+            }));
+          } else if (balRead.kind === 'mismatch') {
+            moneyUnconfirmed = true;
+            setBalances((prev) => ({
+              ...prev,
+              tokenBalance: '—',
+              moneyUnconfirmed: true,
+              ...(poolRead ?? {}),
+            }));
+          } else if (poolRead) {
+            setBalances((prev) => ({ ...prev, ...poolRead, moneyUnconfirmed }));
+          }
         } catch (e) {
           logErr('Error fetching token balances:', e);
-          if (poolRead) setBalances((prev) => ({ ...prev, ...poolRead }));
+          if (poolRead) setBalances((prev) => ({ ...prev, ...poolRead, moneyUnconfirmed }));
         }
 
         if (!live()) return;
@@ -485,15 +537,32 @@ export const useWeb3Balances = (walletAddress: string, selectedToken: Token) => 
             const principal = loan ? BigInt(loan.montoActivo) : 0n;
             const hasLoan = principal > 0n;
             let activeLoan: ActiveLoan | null = null;
+            let keepPreviousDebt = false;
 
             if (loan && principal > 0n) {
               let totalDue = principal;
-              try {
-                const debt = await creditContract.obtenerDeuda(walletAddress);
-                totalDue = BigInt(debt.total);
-              } catch {
-                const tasa = BigInt(loan.tasaAplicadaBP);
-                totalDue = principal + (principal * tasa) / 10000n;
+              let debtHidden = false;
+              const debtData = creditContract.interface.encodeFunctionData('obtenerDeuda', [
+                walletAddress,
+              ]);
+              const debtAgreed = await agreedCallData(
+                publicRpcList(),
+                await creditContract.getAddress(),
+                debtData
+              );
+              if (debtAgreed.kind === 'value') {
+                const decoded = creditContract.interface.decodeFunctionResult(
+                  'obtenerDeuda',
+                  debtAgreed.value
+                );
+                totalDue = BigInt(decoded.total ?? decoded[2]);
+              } else if (debtAgreed.kind === 'mismatch') {
+                moneyUnconfirmed = true;
+                debtHidden = true;
+                totalDue = 0n;
+                setBalances((prev) => ({ ...prev, moneyUnconfirmed: true }));
+              } else {
+                keepPreviousDebt = true;
               }
 
               const loanToken = String(loan.monedaActivo || tokenAddress).toLowerCase();
@@ -506,38 +575,63 @@ export const useWeb3Balances = (walletAddress: string, selectedToken: Token) => 
               let cuotasPagadas = 0;
               let cuotasTotales = 1;
               let proximaCuota = Number(loan.vencimiento);
-              try {
-                const plan = await creditContract.planPago(walletAddress);
-                const pagado = BigInt(plan.pagado);
-                const restantes = totalDue > pagado ? totalDue - pagado : 0n;
-                const totales = Math.max(1, Number(plan.totales) || 1);
-                const pagadas = Number(plan.pagadas);
-                const left = Math.max(1, totales - pagadas);
-                remainingWei = restantes.toString();
-                cuotaWei = (left <= 1 ? restantes : restantes / BigInt(left)).toString();
-                cuotasPagadas = pagadas;
-                cuotasTotales = totales;
-                proximaCuota = Number(plan.venceCuota) || Number(loan.vencimiento);
-              } catch {
-                // contrato anterior sin plan de cuotas
+              if (!keepPreviousDebt && !debtHidden) {
+                try {
+                  const planData = creditContract.interface.encodeFunctionData('planPago', [
+                    walletAddress,
+                  ]);
+                  const planAgreed = await agreedCallData(
+                    publicRpcList(),
+                    await creditContract.getAddress(),
+                    planData
+                  );
+                  if (planAgreed.kind === 'value') {
+                    const plan = creditContract.interface.decodeFunctionResult(
+                      'planPago',
+                      planAgreed.value
+                    );
+                    const pagado = BigInt(plan.pagado);
+                    const restantes = totalDue > pagado ? totalDue - pagado : 0n;
+                    const totales = Math.max(1, Number(plan.totales) || 1);
+                    const pagadas = Number(plan.pagadas);
+                    const left = Math.max(1, totales - pagadas);
+                    remainingWei = restantes.toString();
+                    cuotaWei = (left <= 1 ? restantes : restantes / BigInt(left)).toString();
+                    cuotasPagadas = pagadas;
+                    cuotasTotales = totales;
+                    proximaCuota = Number(plan.venceCuota) || Number(loan.vencimiento);
+                  } else if (planAgreed.kind === 'mismatch') {
+                    moneyUnconfirmed = true;
+                    debtHidden = true;
+                    setBalances((prev) => ({ ...prev, moneyUnconfirmed: true }));
+                  }
+                } catch {
+                  // contrato anterior sin plan de cuotas
+                }
               }
 
-              activeLoan = {
-                tierId: Number(loan.nivelActual || 0),
-                principalWei: principal.toString(),
-                totalDueWei: totalDue.toString(),
-                totalDueLabel: formatDue(totalDue, loanDecimals, loanSymbol),
-                remainingWei,
-                cuotaWei,
-                cuotaLabel: formatDue(BigInt(cuotaWei), loanDecimals, loanSymbol),
-                remainingLabel: formatDue(BigInt(remainingWei), loanDecimals, loanSymbol),
-                cuotasPagadas,
-                cuotasTotales,
-                proximaCuota,
-                token: loanToken,
-                tokenSymbol: loanSymbol,
-                vencimiento: Number(loan.vencimiento),
-              };
+              if (!keepPreviousDebt) {
+                activeLoan = {
+                  tierId: Number(loan.nivelActual || 0),
+                  principalWei: principal.toString(),
+                  totalDueWei: totalDue.toString(),
+                  totalDueLabel: debtHidden ? '—' : formatDue(totalDue, loanDecimals, loanSymbol),
+                  remainingWei,
+                  cuotaWei,
+                  cuotaLabel: debtHidden
+                    ? '—'
+                    : formatDue(BigInt(cuotaWei), loanDecimals, loanSymbol),
+                  remainingLabel: debtHidden
+                    ? '—'
+                    : formatDue(BigInt(remainingWei), loanDecimals, loanSymbol),
+                  cuotasPagadas,
+                  cuotasTotales,
+                  proximaCuota,
+                  token: loanToken,
+                  tokenSymbol: loanSymbol,
+                  vencimiento: Number(loan.vencimiento),
+                };
+              }
             }
 
             const nowSec = Math.floor(Date.now() / 1000);
@@ -555,7 +649,12 @@ export const useWeb3Balances = (walletAddress: string, selectedToken: Token) => 
               setUserInfo((prev) => ({
                 ...prev,
                 hasActiveLoan: loanReadOk ? hasLoan : prev.hasActiveLoan,
-                activeLoan: loanReadOk ? activeLoan : prev.activeLoan,
+                moneyUnconfirmed,
+                activeLoan: keepPreviousDebt
+                  ? prev.activeLoan
+                  : loanReadOk
+                    ? activeLoan
+                    : prev.activeLoan,
                 isDelinquent: loanReadOk ? overdue : prev.isDelinquent,
                 isRegistered: registeredReadOk ? registered : hasLoan || prev.isRegistered,
               }));
@@ -709,25 +808,44 @@ export const useWeb3Balances = (walletAddress: string, selectedToken: Token) => 
           }
 
           try {
-            const lpValue = (await creditContract.valorLp(walletAddress, tokenAddress)) as bigint;
-            setBalances((prev) => ({
-              ...prev,
-              lpBalance: Number(formatUnits(lpValue, decimals)).toFixed(4),
-            }));
+            const lpRead = await agreedUint(creditContract, 'valorLp', [
+              walletAddress,
+              tokenAddress,
+            ]);
+            if (lpRead.kind === 'mismatch') {
+              moneyUnconfirmed = true;
+              setBalances((prev) => ({ ...prev, lpBalance: '—', moneyUnconfirmed: true }));
+            } else if (lpRead.kind === 'value') {
+              setBalances((prev) => ({
+                ...prev,
+                lpBalance: Number(formatUnits(lpRead.value, decimals)).toFixed(4),
+                moneyUnconfirmed,
+              }));
+            }
           } catch (e) {
             logWarn('valorLp failed:', e);
           }
 
           try {
-            const nav = (await creditContract.totalLiquidity(tokenAddress)) as bigint;
-            let outstanding: bigint | null = null;
-            try {
-              outstanding = (await creditContract.outstandingLoans(tokenAddress)) as bigint;
-            } catch {
-              outstanding = null;
+            const navRead = await agreedUint(creditContract, 'totalLiquidity', [tokenAddress]);
+            const outRead = await agreedUint(creditContract, 'outstandingLoans', [tokenAddress]);
+            if (navRead.kind === 'mismatch' || outRead.kind === 'mismatch') {
+              moneyUnconfirmed = true;
+              setBalances((prev) => ({
+                ...prev,
+                poolBalance: '—',
+                poolOutstanding: '—',
+                poolCash: '—',
+                moneyUnconfirmed: true,
+              }));
+            } else if (navRead.kind === 'value') {
+              const figures = poolFigures(
+                navRead.value,
+                outRead.kind === 'value' ? outRead.value : null,
+                decimals
+              );
+              setBalances((prev) => ({ ...prev, ...figures, moneyUnconfirmed }));
             }
-            const figures = poolFigures(nav, outstanding, decimals);
-            setBalances((prev) => ({ ...prev, ...figures }));
           } catch {
             // La lectura no llegó: se conserva la cifra anterior, no se pinta 0.
           }

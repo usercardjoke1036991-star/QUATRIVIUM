@@ -11,9 +11,7 @@ const {
   apkIntegrity,
   interestToFounder,
   insuranceOfInflow,
-  nextNostrRelay,
   nextPublicRpc,
-  nostrRelays,
   nostrMayPublish,
   nostrPrivateReady,
   prepareNostrPayload,
@@ -126,13 +124,7 @@ describe('Fase 4 — app soberana', function () {
     expect(hook).to.not.include('https://');
   });
 
-  it('Nostr releva relés públicos y no publica la mora', function () {
-    const relays = nostrRelays();
-    expect(relays.length).to.be.at.least(5);
-    expect(nextNostrRelay(relays[0])).to.equal(relays[1]);
-    expect(nextNostrRelay(relays[relays.length - 1])).to.equal(null);
-    const custom = relays.map((url, index) => `wss://alt${index}.example`);
-    expect(nostrRelays(custom)[0]).to.equal(custom[0]);
+  it('Nostr no publica la mora ni un mensaje privado', function () {
     expect(nostrPrivateReady()).to.equal(false);
     expect(nostrMayPublish('mora')).to.equal(false);
     expect(nostrMayPublish('message')).to.equal(false);

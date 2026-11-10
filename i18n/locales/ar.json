@@ -200,6 +200,7 @@
   "subsectionWallet": "مالك",
   "subsectionBalances": "رصيد الحساب",
   "walletVsPoolHint": "هذا رصيد حسابك فقط. مجمع السيولة يخص البروتوكول ويُفتح في نافذته.",
+  "rpcMoneyUnconfirmed": "مصادر الشبكة غير متطابقة. المبلغ مخفي.",
   "hubChoose": "اختر نافذة",
   "hubWalletLead": "الرصيد، وإضافة الأموال وسحبها.",
   "hubCreditLead": "التفعيل والرتبة والحرفة: اقترض، سدد، ترقَّ.",

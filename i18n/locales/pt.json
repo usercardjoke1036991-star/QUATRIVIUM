@@ -200,6 +200,7 @@
   "subsectionWallet": "Seu dinheiro",
   "subsectionBalances": "Saldo da conta",
   "walletVsPoolHint": "Isto é só o saldo da sua conta. O pool de liquidez pertence ao protocolo e abre em uma janela própria.",
+  "rpcMoneyUnconfirmed": "As fontes da rede não coincidem. O valor fica oculto.",
   "hubChoose": "Escolha uma janela",
   "hubWalletLead": "Saldo, adicionar e sacar fundos.",
   "hubCreditLead": "Ativar, patente e o ofício: pedir, pagar, subir de nível.",

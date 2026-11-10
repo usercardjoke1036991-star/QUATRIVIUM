@@ -50,30 +50,6 @@ export function nextPublicRpc(urls: readonly string[], failed: string): string |
   return list[index + 1] ?? null;
 }
 
-/** Relés públicos. Nadie los configura; una lista avanzada solo sustituye esta si trae cinco o más. */
-export const PUBLIC_NOSTR_RELAYS = [
-  'wss://relay.damus.io',
-  'wss://nos.lol',
-  'wss://relay.nostr.band',
-  'wss://nostr.mom',
-  'wss://relay.primal.net',
-  'wss://offchain.pub',
-] as const;
-
-export function nostrRelays(advanced?: readonly string[]): string[] {
-  const extra = (advanced || []).map((url) => url.trim()).filter((url) => url.startsWith('wss://'));
-  return extra.length >= 5 ? [...extra] : [...PUBLIC_NOSTR_RELAYS];
-}
-
-/** Si un relé falla, el siguiente. El último no inventa otro. */
-export function nextNostrRelay(failed: string, advanced?: readonly string[]): string | null {
-  const list = nostrRelays(advanced);
-  if (list.length === 0) return null;
-  const index = list.indexOf(failed.trim());
-  if (index < 0) return list[0];
-  return list[index + 1] ?? null;
-}
-
 export type ApkCheck = 'match' | 'mismatch' | 'unverified';
 
 /** Registro vacío o sin respuesta: no verificada. Hash distinto: no coincide. */

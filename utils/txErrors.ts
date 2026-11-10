@@ -76,6 +76,7 @@ const REVERT_KEYS: [string, TranslationKey][] = [
   ['EnforcedPause', 'errPaused'],
   ['RPC chain mismatch', 'errRpcMismatch'],
   ['El RPC no ve el contrato', 'errRpcNoContract'],
+  ['rpc-money-mismatch', 'rpcMoneyUnconfirmed'],
   ['wrong-network-demo', 'linkWalletNetworkDemo'],
   ['wrong-network', 'errWrongNetwork'],
   ['La billetera está en otra red', 'errWrongNetwork'],

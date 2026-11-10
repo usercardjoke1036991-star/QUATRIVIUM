@@ -200,6 +200,7 @@
   "subsectionWallet": "Votre argent",
   "subsectionBalances": "Solde du compte",
   "walletVsPoolHint": "Ceci n’est que le solde de votre compte. Le pool de liquidité appartient au protocole et s’ouvre dans sa propre fenêtre.",
+  "rpcMoneyUnconfirmed": "Les sources du réseau divergent. Le montant reste caché.",
   "hubChoose": "Choisissez une fenêtre",
   "hubWalletLead": "Solde, ajouter et retirer des fonds.",
   "hubCreditLead": "Activer, rang et le métier : emprunter, rembourser, monter de niveau.",
