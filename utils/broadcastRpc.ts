@@ -103,18 +103,21 @@ export async function highestPendingNonce(
   return ok.reduce((max, nonce) => (nonce > max ? nonce : max), ok[0]);
 }
 
-/** Mientras el nonce pendiente no esté incluido, el siguiente envío usa el de después. */
+/**
+ * Con un envío retenido la red no puede saltar a N+1.
+ * Si el nonce de red ya pasó, ese envío quedó incluido y se puede seguir.
+ */
 export function nonceAfterHold(networkNonce: number, held: HeldSend | null): number {
   if (!held) return networkNonce;
   if (networkNonce > held.nonce) return networkNonce;
-  return held.nonce + 1;
+  throw new Error('pending-nonce');
 }
 
-/** Otra firma con el mismo nonce queda bloqueada. La misma transacción no se vuelve a mandar. */
+/** Otra firma, aunque use el mismo nonce, queda bloqueada. La misma transacción sí puede repetirse. */
 export function rejectReusedNonce(held: HeldSend | null, nonce: number, hash: string): void {
-  if (held && held.nonce === nonce && held.hash !== hash.toLowerCase()) {
-    throw new Error('pending-nonce');
-  }
+  if (!held) return;
+  if (held.nonce === nonce && held.hash === hash.toLowerCase()) return;
+  throw new Error('pending-nonce');
 }
 
 /**

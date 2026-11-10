@@ -34,13 +34,23 @@ export const useWeb3Transactions = () => {
       await Promise.race([
         transactionFn(),
         new Promise<never>((_, reject) => {
-          timer = setTimeout(() => reject(new Error('tx-timeout')), 90_000);
+          timer = setTimeout(() => reject(new Error('tx-pending')), 90_000);
         }),
       ]);
       showNotice(t('ready'), successMessage || t('txConfirmed', { action: actionName }));
       return { success: true };
     } catch (error: unknown) {
       const errorMessage = humanizeTxError(error);
+      const raw = error instanceof Error ? error.message : '';
+      if (
+        raw.includes('tx-pending') ||
+        raw.includes('tx-timeout') ||
+        raw.includes('pending-nonce')
+      ) {
+        const hash = (error as { hash?: string }).hash || '';
+        showNotice(t('rpcSendPending'), hash || t('rpcSendPending'));
+        return { success: false, error: 'tx-pending' };
+      }
       showNotice(t('error'), errorMessage);
       return { success: false, error: errorMessage };
     } finally {

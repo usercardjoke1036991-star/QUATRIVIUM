@@ -18,7 +18,12 @@ function sleep(ms: number): Promise<void> {
 /** Espera el recibo en el RPC de la app. Nunca usa tx.wait() de WalletConnect (se cuelga). */
 export async function waitMined(tx: MinedTx, timeoutMs = DEFAULT_MS) {
   const hash = typeof tx.hash === 'string' ? tx.hash : '';
-  if (!HASH.test(hash)) throw new Error('tx-timeout');
+  if (!HASH.test(hash)) throw new Error('tx-pending');
+  if ((tx as { broadcastKind?: string }).broadcastKind === 'pending') {
+    const pending = new Error('tx-pending');
+    (pending as Error & { hash: string }).hash = hash;
+    throw pending;
+  }
   const provider = getProviderWithFallback();
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -36,5 +41,7 @@ export async function waitMined(tx: MinedTx, timeoutMs = DEFAULT_MS) {
     }
     await sleep(POLL_MS);
   }
-  throw new Error('tx-timeout');
+  const pending = new Error('tx-pending');
+  (pending as Error & { hash: string }).hash = hash;
+  throw pending;
 }

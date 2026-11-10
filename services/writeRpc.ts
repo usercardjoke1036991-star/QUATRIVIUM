@@ -7,35 +7,42 @@ import {
   type TransactionRequest,
 } from 'ethers';
 import { publicRpcList } from '../constants/rpcConfig';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   broadcastRawAcrossRpcs,
+  hashSightings,
   highestFee,
   highestPendingNonce,
   nonceAfterHold,
   publicJsonRpc,
   rejectReusedNonce,
-  type HeldSend,
 } from '../utils/broadcastRpc';
+import {
+  deleteHold,
+  readHold,
+  settleHold,
+  shouldReleaseHold,
+  type HoldStore,
+} from '../utils/pendingHold';
 
-const heldBySender = new Map<string, HeldSend>();
+const holdStore: HoldStore = {
+  get: (key) => AsyncStorage.getItem(key),
+  set: async (key, value) => {
+    await AsyncStorage.setItem(key, value);
+  },
+  del: async (key) => {
+    await AsyncStorage.removeItem(key);
+  },
+};
 
-function holdKey(from: string): string {
-  return from.toLowerCase();
-}
-
-export function notePendingSend(from: string, nonce: number, hash: string): void {
-  heldBySender.set(holdKey(from), { nonce, hash: hash.toLowerCase() });
-}
-
-export function heldSend(from: string): HeldSend | null {
-  return heldBySender.get(holdKey(from)) ?? null;
-}
-
-export function nonceForSender(networkNonce: number, from: string): number {
-  const held = heldSend(from);
-  const next = nonceAfterHold(networkNonce, held);
-  if (held && networkNonce > held.nonce) heldBySender.delete(holdKey(from));
-  return next;
+export async function nonceForSender(networkNonce: number, from: string): Promise<number> {
+  const held = await readHold(holdStore, from);
+  if (!held) return networkNonce;
+  if (networkNonce > held.nonce) {
+    await deleteHold(holdStore, from);
+    return networkNonce;
+  }
+  return nonceAfterHold(networkNonce, held);
 }
 
 /** Proveedor de escritura: nonce, gas, comisión y espera no salen de un solo RPC. */
@@ -114,6 +121,14 @@ export function createWriteProvider(chainId: number, chainName: string): JsonRpc
   provider.getTransactionCount = async (address: string, blockTag?: BlockTag) => {
     if (blockTag == null || blockTag === 'pending') {
       const networkNonce = await highestPendingNonce(urls, address, publicJsonRpc);
+      const held = await readHold(holdStore, address);
+      if (
+        held &&
+        shouldReleaseHold(await hashSightings(urls, held.hash, publicJsonRpc), networkNonce, held)
+      ) {
+        await deleteHold(holdStore, address);
+        return networkNonce;
+      }
       return nonceForSender(networkNonce, address);
     }
     const raw = await relay((node) => node.getTransactionCount(address, blockTag));
@@ -125,7 +140,7 @@ export function createWriteProvider(chainId: number, chainName: string): JsonRpc
     if (!tx.from || tx.hash == null || tx.nonce == null || !tx.signature) {
       throw new Error('unsigned');
     }
-    rejectReusedNonce(heldSend(tx.from), tx.nonce, tx.hash);
+    rejectReusedNonce(await readHold(holdStore, tx.from), tx.nonce, tx.hash);
     const outcome = await broadcastRawAcrossRpcs({
       urls,
       raw: signedTx,
@@ -134,8 +149,22 @@ export function createWriteProvider(chainId: number, chainName: string): JsonRpc
       hash: tx.hash,
       call: publicJsonRpc,
     });
-    notePendingSend(tx.from, tx.nonce, outcome.hash);
-    return new TransactionResponse(
+    let networkNonce: number | null = null;
+    try {
+      networkNonce = await highestPendingNonce(urls, tx.from, publicJsonRpc);
+    } catch {
+      networkNonce = null;
+    }
+    const seen = await hashSightings(urls, outcome.hash, publicJsonRpc);
+    const release = outcome.kind === 'pending' && seen === 0 && networkNonce === tx.nonce;
+    const kept = await settleHold(holdStore, {
+      from: tx.from,
+      nonce: tx.nonce,
+      hash: outcome.hash,
+      release,
+    });
+    if (kept === 'released') throw new Error('broadcast-failed');
+    const response = new TransactionResponse(
       {
         hash: outcome.hash,
         blockNumber: null,
@@ -158,6 +187,9 @@ export function createWriteProvider(chainId: number, chainName: string): JsonRpc
       },
       provider
     );
+    (response as TransactionResponse & { broadcastKind: 'sent' | 'pending' }).broadcastKind =
+      outcome.kind;
+    return response;
   };
 
   return provider;

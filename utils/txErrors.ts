@@ -92,7 +92,8 @@ const REVERT_KEYS: [string, TranslationKey][] = [
   ['rate', 'otpRate'],
   ['internal-wallet-only', 'errInternalOnly'],
   ['no-admin-proposal', 'errNoAdminProposal'],
-  ['tx-timeout', 'txWaitTimeout'],
+  ['tx-pending', 'rpcSendPending'],
+  ['tx-timeout', 'rpcSendPending'],
   ['tx-reverted', 'txFailed'],
   ['user rejected', 'errRejected'],
   ['User rejected', 'errRejected'],
@@ -148,7 +149,10 @@ export function humanizeTxError(error: unknown): string {
   const match = REVERT_KEYS.find(([needle]) => raw.includes(needle));
   if (match) {
     const key = match[1] === 'errEmptyRevert' ? emptyRevertKey() : match[1];
-    return table[key];
+    const text = table[key];
+    const hash = (error as { hash?: string }).hash || '';
+    if (key === 'rpcSendPending' && /^0x[0-9a-fA-F]{64}$/.test(hash)) return `${text} ${hash}`;
+    return text;
   }
   if (/execution reverted/i.test(raw) && !/execution reverted:\s+\S/i.test(raw)) {
     return table[emptyRevertKey()];

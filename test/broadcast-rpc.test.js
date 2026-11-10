@@ -223,14 +223,28 @@ describe('rpc broadcast and money quorum', function () {
     } catch (error) {
       expect(error.message).to.equal('nonce-unconfirmed');
     }
-    expect(broadcast.nonceAfterHold(5, { nonce: 5, hash: HASH })).to.equal(6);
+    let heldNonce = '';
+    try {
+      broadcast.nonceAfterHold(5, { nonce: 5, hash: HASH });
+    } catch (error) {
+      heldNonce = error.message;
+    }
+    expect(heldNonce).to.equal('pending-nonce');
     expect(broadcast.nonceAfterHold(8, { nonce: 5, hash: HASH })).to.equal(8);
+    let otherNonce = '';
+    try {
+      broadcast.rejectReusedNonce({ nonce: 5, hash: HASH }, 6, HASH);
+    } catch (error) {
+      otherNonce = error.message;
+    }
+    expect(otherNonce).to.equal('pending-nonce');
     try {
       broadcast.rejectReusedNonce({ nonce: 5, hash: HASH }, 5, '0x' + 'cd'.repeat(32));
-      expect.fail('a pending nonce cannot be reused');
+      otherNonce = 'signed';
     } catch (error) {
-      expect(error.message).to.equal('pending-nonce');
+      otherNonce = error.message;
     }
+    expect(otherNonce).to.equal('pending-nonce');
     broadcast.rejectReusedNonce({ nonce: 5, hash: HASH }, 5, HASH);
     const fee = await broadcast.highestFee([
       async () => {
