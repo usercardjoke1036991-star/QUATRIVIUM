@@ -19,15 +19,7 @@ contract QuatriviumFase3Test is Test {
         admins[1] = address(0xB0B);
         admins[2] = address(0xB0C);
         vm.expectRevert(QuatriviumCredit.SequencerFeedRequerido.selector);
-        new QuatriviumCredit(
-            address(1),
-            payable(address(1)),
-            500,
-            admins,
-            2,
-            address(2),
-            address(0)
-        );
+        new QuatriviumCredit(address(1), admins, address(2), address(0));
     }
 
     function test_sepolia_allows_zero_sequencer() public {
@@ -85,9 +77,11 @@ contract QuatriviumFase3Test is Test {
         vm.chainId(31337);
         vm.warp(1_700_000_000);
         (QuatriviumCredit credit, QuatriviumAlta alta, ERC20Mock token,,) = _stack(address(0));
-        token.mint(address(this), 20_000 ether);
+        address caja = address(0xCA1A);
+        token.mint(caja, 20_000 ether);
+        vm.prank(caja);
         token.approve(address(credit), type(uint256).max);
-        vm.prank(address(this), address(this));
+        vm.prank(caja, caja);
         credit.depositarLiquidez(address(token), 10_000 ether);
 
         uint256 liq0 = credit.totalLiquidity(address(token));
@@ -149,7 +143,6 @@ contract QuatriviumFase3Test is Test {
         console2.log("fondo", fondoDelta);
         console2.log("cubierto", credit.totalImpagoCubierto());
 
-        assertEq(credit.collectedFees(address(token)), 0, "fee atascado");
         assertEq(sistema, esperado, "sistema");
         assertEq(credit.totalImpagoCubierto(), malos * 1 ether, "cobertura");
         assertGt(int256(ganancia), int256(-2175) * int256(1e16), "mejor que -21.75");
@@ -178,10 +171,7 @@ contract QuatriviumFase3Test is Test {
         fama = new QuatriviumFamaCaja(address(token), predictedCredit, predictedAlta, predictedReserva);
         credit = new QuatriviumCredit(
             address(token),
-            payable(address(this)),
-            500,
             admins,
-            2,
             address(fama),
             feed
         );
@@ -202,9 +192,11 @@ contract QuatriviumFase3Test is Test {
         vm.warp(1_700_000_000);
         (QuatriviumCredit credit, QuatriviumAlta alta, ERC20Mock token, QuatriviumReserva reserva,) =
             _stack(address(0));
-        token.mint(address(this), 1000 ether);
+        address caja = address(0xCA1A);
+        token.mint(caja, 1000 ether);
+        vm.prank(caja);
         token.approve(address(credit), type(uint256).max);
-        vm.prank(address(this), address(this));
+        vm.prank(caja, caja);
         credit.depositarLiquidez(address(token), 100 ether);
 
         address deudor = address(0xD00D);
@@ -237,7 +229,7 @@ contract QuatriviumFase3Test is Test {
         assertEq(_caja(token, credit, alta, reserva, deudor, liq), suma);
         assertEq(
             token.balanceOf(address(credit)) + credit.outstandingLoans(address(token)),
-            credit.totalLiquidity(address(token)) + credit.fondoSeguro(address(token)) + credit.collectedFees(address(token))
+            credit.totalLiquidity(address(token)) + credit.fondoSeguro(address(token))
         );
         assertLe(credit.fondoSeguro(address(token)), fondoAntes);
         assertEq(token.balanceOf(address(reserva)), reserva.bote() + reserva.totalBloqueado());

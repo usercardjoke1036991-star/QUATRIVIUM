@@ -55,15 +55,7 @@ async function deploySovereign(cfg) {
   await fama.waitForDeployment();
   const credit = await factory
     .connect(signer)
-    .deploy(
-      ready.token,
-      ready.feeCollector,
-      500,
-      ready.admins,
-      2,
-      await fama.getAddress(),
-      ready.sequencerFeed
-    );
+    .deploy(ready.token, ready.admins, await fama.getAddress(), ready.sequencerFeed);
   await credit.waitForDeployment();
   const Reserva = await ethers.getContractFactory('QuatriviumReserva', signer);
   const reserva = await Reserva.deploy(

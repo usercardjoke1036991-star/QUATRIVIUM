@@ -43,10 +43,7 @@ contract QuatriviumBlindajesTest is Test {
         fama = new QuatriviumFamaCaja(address(token), predictedCredit, predictedAlta, predictedReserva);
         credit = new QuatriviumCreditHarness(
             address(token),
-            payable(owner),
-            500,
             admins,
-            1,
             address(fama),
             address(0)
         );
@@ -135,8 +132,7 @@ contract QuatriviumBlindajesTest is Test {
     function _assertNav() internal view {
         assertEq(
             token.balanceOf(address(credit)) + credit.outstandingLoans(address(token)),
-            credit.totalLiquidity(address(token)) + credit.collectedFees(address(token))
-                + credit.fondoSeguro(address(token)),
+            credit.totalLiquidity(address(token)) + credit.fondoSeguro(address(token)),
             "NAV"
         );
     }

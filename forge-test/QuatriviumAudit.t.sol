@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
+import {console2} from "forge-std/console2.sol";
 import {QuatriviumCredit} from "../contracts/QuatriviumCredit.sol";
 import {QuatriviumFamaCaja} from "../contracts/QuatriviumFamaCaja.sol";
 import {QuatriviumFamaLib} from "../contracts/libraries/QuatriviumFamaLib.sol";
@@ -45,10 +46,7 @@ contract QuatriviumAuditForgeTest is Test {
         fama = new QuatriviumFamaCaja(address(token), predictedCredit, predictedAlta, predictedReserva);
         credit = new QuatriviumCredit(
             address(token),
-            payable(owner),
-            500,
             admins,
-            1,
             address(fama),
             address(0)
         );
@@ -62,6 +60,41 @@ contract QuatriviumAuditForgeTest is Test {
         token.approve(address(credit), type(uint256).max);
         credit.depositarLiquidez(address(token), 500 ether);
         vm.stopPrank();
+    }
+
+    function test_gas_pago_40_generaciones() public {
+        address prev = address(0);
+        address leaf;
+        for (uint256 i; i < 40; ++i) {
+            address who = address(uint160(0xA100 + i));
+            vm.prank(who, who);
+            credit.registrarHumanoConPadre(prev);
+            token.mint(who, 20 ether);
+            vm.prank(who);
+            token.approve(address(credit), type(uint256).max);
+            vm.prank(who);
+            token.approve(address(alta), type(uint256).max);
+            vm.prank(who, who);
+            alta.pagarRegistro();
+            vm.prank(who, who);
+            credit.solicitarPrestamo(address(token), 1);
+            (,, uint256 total,) = credit.obtenerDeuda(who);
+            vm.prank(who, who);
+            credit.pagarPrestamo(address(token), total);
+            prev = who;
+            leaf = who;
+        }
+        vm.warp(block.timestamp + 48 hours + 1);
+        vm.prank(leaf, leaf);
+        credit.solicitarPrestamo(address(token), 1);
+        (,, uint256 due,) = credit.obtenerDeuda(leaf);
+        uint256 mark = gasleft();
+        vm.prank(leaf, leaf);
+        credit.pagarPrestamo(address(token), due);
+        uint256 used = mark - gasleft();
+        console2.log("gas pago 40 generaciones", used);
+        assertGt(used, 21_000);
+        assertLt(used, 30_000_000);
     }
 
     function test_runtime_fits_eip170() public view {
@@ -210,7 +243,6 @@ contract QuatriviumAuditForgeTest is Test {
         uint256 trasFee = credit.totalLiquidity(address(token)) + credit.fondoSeguro(address(token));
         assertLt(trasFee, antes);
         assertEq(credit.outstandingLoans(address(token)), 0);
-        assertEq(credit.collectedFees(address(token)), 0);
 
         vm.prank(credit.ownerList(1));
         credit.confirmAdminAction(id);
@@ -219,7 +251,7 @@ contract QuatriviumAuditForgeTest is Test {
         (,,,, bool done,) = credit.proposals(id);
         assertTrue(done);
         assertFalse(credit.admins(third));
-        assertEq(credit.collectedFees(address(token)), 0);
+        assertEq(credit.outstandingLoans(address(token)), 0);
         assertEq(credit.totalLiquidity(address(token)) + credit.fondoSeguro(address(token)), trasFee);
         _assertNav();
     }
@@ -327,13 +359,18 @@ contract QuatriviumAuditForgeTest is Test {
         credit.donar(address(token), amount);
     }
 
+    function test_un_contrato_no_puede_pedir() public {
+        BorrowProxy proxy = new BorrowProxy(credit);
+        vm.expectRevert(QuatriviumCredit.NoEsEOA.selector);
+        proxy.borrow();
+    }
+
     function _assertNav() internal view {
         uint256 cash = token.balanceOf(address(credit));
         uint256 outstanding = credit.outstandingLoans(address(token));
         uint256 liquidity = credit.totalLiquidity(address(token));
-        uint256 fees = credit.collectedFees(address(token));
         uint256 fondo = credit.fondoSeguro(address(token));
-        assertEq(cash + outstanding, liquidity + fees + fondo, "NAV broken");
+        assertEq(cash + outstanding, liquidity + fondo, "NAV broken");
     }
 }
 

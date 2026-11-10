@@ -31,13 +31,12 @@ async function deployFamaAndCredit(
   await fama.waitForDeployment();
   const contract = await factory.deploy(
     tokenAddr,
-    owner.address,
-    feeBp,
     admins,
-    confirms,
     await fama.getAddress(),
     sequencerAddress
   );
+  void feeBp;
+  void confirms;
   await contract.waitForDeployment();
   if ((await contract.getAddress()).toLowerCase() !== creditAddr.toLowerCase()) {
     throw new Error('predicted Credit address mismatch');
@@ -224,9 +223,8 @@ async function assertNavInvariant(token, contract, tokenAddr, contractAddr) {
   const cash = await token.balanceOf(contractAddr);
   const outstanding = await contract.outstandingLoans(tokenAddr);
   const liquidity = await contract.totalLiquidity(tokenAddr);
-  const fees = await contract.collectedFees(tokenAddr);
   const fondo = await contract.fondoSeguro(tokenAddr);
-  expectAmt(cash + outstanding, liquidity + fees + fondo);
+  expectAmt(cash + outstanding, liquidity + fondo);
 }
 
 function expectAmt(actual, expected) {

@@ -471,11 +471,10 @@ export const QuatriviumCreditService = {
       const { provider } = await getProviderAndSigner();
       const credit = contractWith(provider);
       const token = new Contract(tokenAddress, ERC20_ABI, provider);
-      const [cash, outstanding, liquidity, fees] = await Promise.all([
+      const [cash, outstanding, liquidity] = await Promise.all([
         token.balanceOf(getContractAddress()),
         credit.outstandingLoans(tokenAddress),
         credit.totalLiquidity(tokenAddress),
-        credit.collectedFees(tokenAddress),
       ]);
       let reservaBote: bigint | null = null;
       let reservaLocked: bigint | null = null;
@@ -504,7 +503,7 @@ export const QuatriviumCreditService = {
         cash: BigInt(cash),
         outstanding: BigInt(outstanding),
         liquidity: BigInt(liquidity),
-        fees: BigInt(fees),
+        fees: 0n,
         reservaBote,
         reservaLocked,
         reservaApyBps,

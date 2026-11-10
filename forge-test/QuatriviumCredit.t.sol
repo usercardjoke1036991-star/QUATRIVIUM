@@ -41,10 +41,7 @@ contract QuatriviumCreditForgeTest is Test {
         QuatriviumFamaCaja fama = new QuatriviumFamaCaja(address(token), predictedCredit, predictedAlta, predictedReserva);
         credit = new QuatriviumCredit(
             address(token),
-            payable(owner),
-            500,
             admins,
-            1,
             address(fama),
             address(0)
         );
@@ -138,9 +135,8 @@ contract QuatriviumCreditForgeTest is Test {
         uint256 cash = token.balanceOf(address(credit));
         uint256 outstanding = credit.outstandingLoans(address(token));
         uint256 liquidity = credit.totalLiquidity(address(token));
-        uint256 fees = credit.collectedFees(address(token));
         uint256 fondo = credit.fondoSeguro(address(token));
-        assertEq(cash + outstanding, liquidity + fees + fondo, "NAV broken");
+        assertEq(cash + outstanding, liquidity + fondo, "NAV broken");
     }
 }
 

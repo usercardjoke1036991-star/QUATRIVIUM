@@ -1,5 +1,9 @@
 # Auditoría de QUATRIVIUM
 
+`QuatriviumCredit` mide 23330 bytes (1246 libres de 24576). El contrato de prueba que hereda de él, `QuatriviumCreditHarness`, mide 24541 bytes y también cabe. Un pago con 40 generaciones de comisión usó 1246534 de gas en Foundry. Un bloque de Arbitrum suele admitir unos 32 millones, así que no recorté el recorrido.
+
+Arbitrum One ya acepta EIP-7702 (ArbOS 40, según el blog de la fundación y la lista de autorizaciones de Arbiscan). El chequeo `tx.origin == msg.sender` deja pasar a una cuenta normal con código delegado. Ahora entra solo quien no tiene código (`NoEsEOA`). Fuente: https://blog.arbitrum.foundation/the-smartest-wallet-you-already-own-is-on-arbitrum/ y https://eips.ethereum.org/EIPS/eip-7702.
+
 Un PIN de 6 dígitos solo tiene 1 000 000 de combinaciones. La protección real es el almacén de hardware, cuando el teléfono lo tiene, y el bloqueo creciente tras cada fallo (30 s, 1 min, 5 min, 15 min, 1 h). El PIN puede tener de 6 a 12 dígitos. Si no hay hardware, la clave queda en el almacén del sistema y la app lo avisa.
 
 Fecha de la revisión: 10 de noviembre de 2026 (America/Caracas). Rama `cursor/soberania-contratos-8e15`. Tras quitar el tope de 24 h del feed: Hardhat 306, Foundry 51. Credit: 21882 bytes, 2694 libres de 24576.

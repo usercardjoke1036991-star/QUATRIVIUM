@@ -73,7 +73,6 @@ describe('QuatriviumCredit - Liquidation', function () {
     const balBefore = await token.balanceOf(liquidator.address);
     await contract.connect(liquidator).liquidate(user.address, tokenAddr);
 
-    expect(await contract.collectedFees(tokenAddr)).to.equal(0n);
     expect(await contract.outstandingLoans(tokenAddr)).to.equal(outBefore - principal);
     const liqDelta = (await contract.totalLiquidity(tokenAddr)) - liqBefore;
     const fondoDelta = (await contract.fondoSeguro(tokenAddr)) - fondoBefore;

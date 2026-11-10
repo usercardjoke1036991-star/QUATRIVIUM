@@ -171,10 +171,7 @@ contract QuatriviumInvariantTest is Test {
         QuatriviumFamaCaja fama = new QuatriviumFamaCaja(address(token), predictedCredit, predictedAlta, predictedReserva);
         credit = new QuatriviumCreditHarness(
             address(token),
-            payable(owner),
-            500,
             admins,
-            1,
             address(fama),
             address(0)
         );
@@ -209,9 +206,8 @@ contract QuatriviumInvariantTest is Test {
         uint256 cash = token.balanceOf(address(credit));
         uint256 outstanding = credit.outstandingLoans(address(token));
         uint256 liquidity = credit.totalLiquidity(address(token));
-        uint256 fees = credit.collectedFees(address(token));
         uint256 fondo = credit.fondoSeguro(address(token));
-        assertEq(cash + outstanding, liquidity + fees + fondo, "NAV Credit");
+        assertEq(cash + outstanding, liquidity + fondo, "NAV Credit");
     }
 
     /// @notice Reserva es otra caja: saldo == bote + lo bloqueado. No es el pool de préstamos.
