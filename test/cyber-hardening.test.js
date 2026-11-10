@@ -281,7 +281,7 @@ describe('cyber hardening — PIN and secret box', function () {
     expect(slitherCfg).to.include('timestamp');
     const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
     expect(pkg.scripts['security:slither']).to.include('run-slither.mjs');
-    // underscore 1.13.6 llega por snarkjs con CVE-2026-27601; el override lo sube al parche.
+    // underscore queda pineado: la versión vieja traía CVE-2026-27601.
     expect(pkg.overrides.underscore).to.equal('^1.13.8');
     expect(pkg.overrides.compression).to.equal('1.8.2');
     const cyber = fs.readFileSync(
