@@ -1260,5 +1260,6 @@
   "fundsTxFee": "আনুমানিক নেটওয়ার্ক ফি: {fee}",
   "fundsConfirmAck": "নিশ্চিত",
   "fundsConfirmAckLead": "পরিমাণ, গন্তব্য ও ফি দেখুন। তহবিল সুরক্ষা বন্ধ, তাই PIN লাগবে না।",
-  "fundsConfirmBiometricFail": "আঙুলের ছাপ দিয়ে ওয়ালেট খোলেনি।"
+  "fundsConfirmBiometricFail": "আঙুলের ছাপ দিয়ে ওয়ালেট খোলেনি।",
+  "walletWrapSoftwareNote": "এই ফোনে হার্ডওয়্যার ভল্ট নেই। ওয়ালেটের চাবি সিস্টেমের নিরাপদ ভল্টে থাকে, পড়তে আঙুলের ছাপ লাগে না।"
 }

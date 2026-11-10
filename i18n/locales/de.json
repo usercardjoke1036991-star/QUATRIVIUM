@@ -1260,5 +1260,6 @@
   "fundsTxFee": "Geschätzte Netzwerkgebühr: {fee}",
   "fundsConfirmAck": "Bestätigen",
   "fundsConfirmAckLead": "Prüfen Sie Betrag, Ziel und Gebühr. Keine PIN, weil der Fundschutz aus ist.",
-  "fundsConfirmBiometricFail": "Der Fingerabdruck hat die Wallet nicht geöffnet."
+  "fundsConfirmBiometricFail": "Der Fingerabdruck hat die Wallet nicht geöffnet.",
+  "walletWrapSoftwareNote": "Dieses Telefon hat keinen Hardware-Tresor. Der Wallet-Schlüssel bleibt im Systemtresor, ohne Fingerabdruck beim Lesen."
 }

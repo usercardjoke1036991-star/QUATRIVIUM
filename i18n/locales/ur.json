@@ -1260,5 +1260,6 @@
   "fundsTxFee": "نیٹ ورک کی اندازاً فیس: {fee}",
   "fundsConfirmAck": "تصدیق",
   "fundsConfirmAckLead": "رقم، منزل اور فیس دیکھیں۔ فنڈ تحفظ بند ہے، اس لیے PIN نہیں چاہیے۔",
-  "fundsConfirmBiometricFail": "فنگر پرنٹ سے والیٹ نہیں کھلا۔"
+  "fundsConfirmBiometricFail": "فنگر پرنٹ سے والیٹ نہیں کھلا۔",
+  "walletWrapSoftwareNote": "اس فون میں ہارڈویئر اسٹور نہیں۔ والیٹ کی کلید سسٹم کے محفوظ اسٹور میں رہتی ہے، پڑھتے وقت فنگر پرنٹ نہیں مانگتی۔"
 }

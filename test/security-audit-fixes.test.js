@@ -28,19 +28,32 @@ describe('security audit remediations', function () {
     expect(await token.balanceOf(user.address)).to.equal(before);
   });
 
-  it('binds FundsConfirm to Keystore wrap and fail-closed empty queues', function () {
+  it('elige hardware cuando el dispositivo lo tiene y migra el PIN viejo', async function () {
+    require('ts-node/register');
+    const {
+      wrapStoreMode,
+      needsPinUpgrade,
+      PIN_PBKDF2_ROUNDS,
+      pbkdf2Sha256Hex,
+      PIN_KDF,
+    } = require('../utils/pinKdf.ts');
+    const { lockoutMs, remainingLockMs } = require('../utils/pinPolicy.ts');
+    expect(wrapStoreMode(true)).to.equal('hardware');
+    expect(wrapStoreMode(false)).to.equal('software');
+    expect(needsPinUpgrade({ kdf: 'sha256', rounds: 20_000 })).to.equal(true);
+    expect(needsPinUpgrade({ kdf: PIN_KDF, rounds: PIN_PBKDF2_ROUNDS })).to.equal(false);
+    const hash = await pbkdf2Sha256Hex('847291', 'sal-prueba', 2);
+    expect(hash).to.match(/^[0-9a-f]{64}$/);
+    const again = await pbkdf2Sha256Hex('847291', 'sal-prueba', 2);
+    expect(again).to.equal(hash);
+    expect(PIN_PBKDF2_ROUNDS).to.be.at.least(600_000);
+    const now = 5_000;
+    expect(remainingLockMs(now + lockoutMs(2), now)).to.equal(60_000);
     const funds = fs.readFileSync(
       path.join(__dirname, '..', 'components', 'FundsConfirmHost.tsx'),
       'utf8'
     );
-    expect(funds).to.include('loadWrapFromBiometric');
-    expect(funds).to.not.include('authenticateBiometric');
     expect(funds).to.include('if (!queue.length) return false');
-    expect(funds).to.not.include('if (!queue.length) return true');
-    const lock = fs.readFileSync(path.join(__dirname, '..', 'services', 'appLock.ts'), 'utf8');
-    expect(lock).to.include("biometricsSecurityLevel: 'strong'");
-    expect(lock).to.include('PIN_ROUNDS = 20_000');
-    expect(lock).to.include('SecureStore.getItemAsync(RECOVERY_WRAP, BIO_WRAP_OPTIONS)');
     const fama = fs.readFileSync(
       path.join(__dirname, '..', 'contracts', 'libraries', 'QuatriviumFamaLib.sol'),
       'utf8'

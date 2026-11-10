@@ -9,21 +9,6 @@ const {
   toUtf8String,
 } = require('ethers');
 
-function isWeakPin(pin) {
-  if (!/^\d{6}$/.test(pin)) return true;
-  if (/^(\d)\1{5}$/.test(pin)) return true;
-  if ('01234567890'.includes(pin) || '09876543210'.includes(pin)) return true;
-  if (new Set(pin.split('')).size <= 2) return true;
-  return ['123456', '654321', '123123', '121212', '112233'].includes(pin);
-}
-
-function lockoutMs(fails) {
-  if (fails < 5) return 0;
-  if (fails < 8) return 30_000;
-  if (fails < 12) return 5 * 60_000;
-  return 30 * 60_000;
-}
-
 function hmacSha256(key, data) {
   const block = 64;
   let keyBytes = getBytes(key);
@@ -124,6 +109,8 @@ function masterPasswordFromRandomBytes(bytes) {
 
 describe('cyber hardening — PIN and secret box', function () {
   it('rejects weak and sequential PINs', function () {
+    require('ts-node/register');
+    const { isWeakPin } = require('../utils/pinPolicy.ts');
     expect(isWeakPin('123456')).to.equal(true);
     expect(isWeakPin('000000')).to.equal(true);
     expect(isWeakPin('111222')).to.equal(true);
@@ -132,10 +119,16 @@ describe('cyber hardening — PIN and secret box', function () {
   });
 
   it('escalates lockout after repeated failures', function () {
-    expect(lockoutMs(4)).to.equal(0);
-    expect(lockoutMs(5)).to.equal(30_000);
-    expect(lockoutMs(8)).to.equal(5 * 60_000);
-    expect(lockoutMs(12)).to.equal(30 * 60_000);
+    require('ts-node/register');
+    const { lockoutMs, remainingLockMs } = require('../utils/pinPolicy.ts');
+    expect(lockoutMs(1)).to.equal(30_000);
+    expect(lockoutMs(2)).to.equal(60_000);
+    expect(lockoutMs(3)).to.equal(5 * 60_000);
+    expect(lockoutMs(4)).to.equal(15 * 60_000);
+    expect(lockoutMs(5)).to.equal(60 * 60_000);
+    const now = 1_700_000_000_000;
+    expect(remainingLockMs(now + lockoutMs(1), now)).to.equal(30_000);
+    expect(remainingLockMs(now, now + 1)).to.equal(0);
   });
 
   it('round-trips a sealed wallet blob and rejects a bad key', function () {

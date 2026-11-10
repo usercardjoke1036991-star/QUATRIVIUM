@@ -1260,5 +1260,6 @@
   "fundsTxFee": "Phí mạng ước tính: {fee}",
   "fundsConfirmAck": "Xác nhận",
   "fundsConfirmAckLead": "Kiểm tra số tiền, đích và phí. Không cần PIN vì bảo vệ quỹ đang tắt.",
-  "fundsConfirmBiometricFail": "Vân tay không mở được ví."
+  "fundsConfirmBiometricFail": "Vân tay không mở được ví.",
+  "walletWrapSoftwareNote": "Điện thoại này không có kho phần cứng. Khóa ví nằm trong kho an toàn của hệ thống, không hỏi vân tay khi đọc."
 }

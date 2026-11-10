@@ -141,7 +141,7 @@ export const FundsConfirmHost: React.FC<{ children: React.ReactNode }> = ({ chil
       return;
     }
     if (method === 'pin') {
-      if (pin.length !== 6) return;
+      if (pin.length < 6 || pin.length > 12) return;
       setBusy(true);
       const checked = await checkPin(pin);
       if (!checked.ok) {
@@ -210,7 +210,7 @@ export const FundsConfirmHost: React.FC<{ children: React.ReactNode }> = ({ chil
     : ackOnly || method === 'biometric'
       ? true
       : method === 'pin'
-        ? pin.length === 6
+        ? pin.length >= 6 && pin.length <= 12
         : method === 'authenticator'
           ? code.length === 6
           : Boolean(password);
@@ -250,9 +250,9 @@ export const FundsConfirmHost: React.FC<{ children: React.ReactNode }> = ({ chil
             {ackOnly || method === 'biometric' ? null : method === 'pin' ? (
               <SecretInput
                 value={pin}
-                onChangeText={(value) => setPin(value.replace(/\D/g, '').slice(0, 6))}
+                onChangeText={(value) => setPin(value.replace(/\D/g, '').slice(0, 12))}
                 keyboardType="number-pad"
-                maxLength={6}
+                maxLength={12}
                 placeholder="••••••"
               />
             ) : method === 'authenticator' ? (

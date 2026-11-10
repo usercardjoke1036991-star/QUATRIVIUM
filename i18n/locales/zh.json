@@ -1260,5 +1260,6 @@
   "fundsTxFee": "预计网络费用：{fee}",
   "fundsConfirmAck": "确认",
   "fundsConfirmAckLead": "请核对金额、目的地和费用。资金保护已关闭，因此不需要 PIN。",
-  "fundsConfirmBiometricFail": "指纹没有打开钱包。"
+  "fundsConfirmBiometricFail": "指纹没有打开钱包。",
+  "walletWrapSoftwareNote": "这台手机没有硬件保险库。钱包密钥留在系统安全存储中，读取时不要求指纹。"
 }

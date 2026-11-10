@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
-import { isWeakPin, lockoutMs, remainingLockMs } from '../utils/pinPolicy';
+import { isPinLengthOk, isWeakPin, lockoutMs, remainingLockMs } from '../utils/pinPolicy';
+import { PIN_KDF, PIN_PBKDF2_ROUNDS, pbkdf2Sha256Hex, wrapStoreMode } from '../utils/pinKdf';
 import { resolveBiometricAvailability, type BiometricAvailability } from '../utils/biometricStatus';
 import {
   isValidMasterPassword,
@@ -51,6 +52,7 @@ interface PinRecord {
   salt: string;
   hash: string;
   rounds?: number;
+  kdf?: string;
 }
 
 interface PasswordRecord {
@@ -84,7 +86,7 @@ function digestHex(value: string): string {
 }
 
 function isSixDigits(pin: string): boolean {
-  return /^\d{6}$/.test(pin);
+  return isPinLengthOk(pin);
 }
 
 async function readPinRecord(): Promise<PinRecord | null> {
@@ -272,7 +274,13 @@ async function activateSession(pin: string, record: PinRecord): Promise<string> 
 export async function persistWrapForBiometric(wrapKey = getWalletWrapKey()): Promise<boolean> {
   if (!wrapKey) return false;
   try {
-    await SecureStore.setItemAsync(WRAP_STORE, wrapKey, OPTIONS);
+    const status = await getBiometricStatus();
+    const mode = wrapStoreMode(status.hasHardware && status.enrolled);
+    await SecureStore.setItemAsync(
+      WRAP_STORE,
+      wrapKey,
+      mode === 'hardware' ? BIO_WRAP_OPTIONS : OPTIONS
+    );
     return true;
   } catch {
     return false;
@@ -378,8 +386,14 @@ export async function setPin(pin: string): Promise<string> {
     throw new Error('weak-pin');
   }
   const salt = Crypto.randomUUID();
-  const hash = await hashSecret(pin, salt, PIN_ROUNDS);
-  const record: PinRecord = { v: 2, salt, hash, rounds: PIN_ROUNDS };
+  const hash = await pbkdf2Sha256Hex(pin, salt, PIN_PBKDF2_ROUNDS);
+  const record: PinRecord = {
+    v: 3,
+    salt,
+    hash,
+    rounds: PIN_PBKDF2_ROUNDS,
+    kdf: PIN_KDF,
+  };
   await SecureStore.setItemAsync(PIN_KEY, JSON.stringify(record), OPTIONS);
   await setLockOnOpenEnabled(true);
   await writeGate({ fails: 0, until: 0 });
@@ -418,8 +432,10 @@ export async function checkPin(pin: string): Promise<PinCheck> {
   if (!record) {
     return { ok: false, remainingMs: 0, locked: false };
   }
-  const rounds = pinRoundsForRecord(record);
-  const hash = await hashSecret(pin, record.salt, rounds);
+  const legacy = record.kdf !== PIN_KDF;
+  const hash = legacy
+    ? await hashSecret(pin, record.salt, pinRoundsForRecord(record))
+    : await pbkdf2Sha256Hex(pin, record.salt, record.rounds || PIN_PBKDF2_ROUNDS);
   if (!timingSafeEqualHex(digestHex(hash), digestHex(record.hash))) {
     const gate = await readGate();
     const fails = gate.fails + 1;
@@ -427,7 +443,7 @@ export async function checkPin(pin: string): Promise<PinCheck> {
     await writeGate({ fails, until });
     return { ok: false, remainingMs: remainingLockMs(until), locked: remainingLockMs(until) > 0 };
   }
-  if (record.v !== 2) {
+  if (legacy || Number(record.rounds || 0) < PIN_PBKDF2_ROUNDS) {
     await setPin(pin);
   } else if (await isPasswordSet()) {
     const opened = await unlockWithPinWrap(pin, record);

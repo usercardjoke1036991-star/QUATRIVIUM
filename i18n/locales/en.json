@@ -1260,5 +1260,6 @@
   "fundsTxFee": "Estimated network fee: {fee}",
   "fundsConfirmAck": "Confirm",
   "fundsConfirmAckLead": "Check the amount, destination and fee. No PIN is required because fund protection is off.",
-  "fundsConfirmBiometricFail": "The fingerprint did not open the wallet."
+  "fundsConfirmBiometricFail": "The fingerprint did not open the wallet.",
+  "walletWrapSoftwareNote": "This phone has no hardware store. The wallet key stays in the system secure store and is not gated by a fingerprint on read."
 }

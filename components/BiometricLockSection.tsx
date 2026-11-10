@@ -149,6 +149,11 @@ export const BiometricLockSection: React.FC<{
       {reason === 'ok' ? null : (
         <AppText style={[styles.note, { color: colors.warnText }]}>{hint}</AppText>
       )}
+      {reason === 'no-hardware' ? (
+        <AppText style={[styles.note, { color: colors.warnText }]}>
+          {t('walletWrapSoftwareNote')}
+        </AppText>
+      ) : null}
       {available || bioOn ? (
         <>
           <View style={styles.switchRow}>

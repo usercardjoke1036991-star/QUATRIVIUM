@@ -1260,5 +1260,6 @@
   "fundsTxFee": "Comisión estimada de red: {fee}",
   "fundsConfirmAck": "Confirmar",
   "fundsConfirmAckLead": "Revise monto, destino y comisión. No hace falta PIN porque la protección de fondos está apagada.",
-  "fundsConfirmBiometricFail": "La huella no abrió la billetera."
+  "fundsConfirmBiometricFail": "La huella no abrió la billetera.",
+  "walletWrapSoftwareNote": "Este teléfono no tiene almacén de hardware. La clave de la billetera queda en el almacén seguro del sistema, sin pedir huella al leerla."
 }

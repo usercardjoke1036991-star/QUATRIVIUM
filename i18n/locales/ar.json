@@ -1260,5 +1260,6 @@
   "fundsTxFee": "رسوم الشبكة التقديرية: {fee}",
   "fundsConfirmAck": "تأكيد",
   "fundsConfirmAckLead": "راجعوا المبلغ والوجهة والرسوم. لا حاجة لرقم سري لأن حماية الأموال متوقفة.",
-  "fundsConfirmBiometricFail": "البصمة لم تفتح المحفظة."
+  "fundsConfirmBiometricFail": "البصمة لم تفتح المحفظة.",
+  "walletWrapSoftwareNote": "هذا الهاتف بلا مخزن عتاد. يبقى مفتاح المحفظة في مخزن النظام الآمن، دون بصمة عند القراءة."
 }

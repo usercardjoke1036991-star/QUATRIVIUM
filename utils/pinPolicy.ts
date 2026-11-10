@@ -31,20 +31,30 @@ const WEAK_PINS = new Set([
 const ASC = '01234567890';
 const DESC = '09876543210';
 
-export function isWeakPin(pin: string): boolean {
-  if (!/^\d{6}$/.test(pin)) return true;
-  if (WEAK_PINS.has(pin)) return true;
-  if (/^(\d)\1{5}$/.test(pin)) return true;
-  if (ASC.includes(pin) || DESC.includes(pin)) return true;
-  const unique = new Set(pin.split('')).size;
-  return unique <= 2;
+export const PIN_MIN_LENGTH = 6;
+export const PIN_MAX_LENGTH = 12;
+
+export function isPinLengthOk(pin: string): boolean {
+  return new RegExp(`^\\d{${PIN_MIN_LENGTH},${PIN_MAX_LENGTH}}$`).test(pin);
 }
 
+export function isWeakPin(pin: string): boolean {
+  if (!isPinLengthOk(pin)) return true;
+  if (/^(\d)\1+$/.test(pin)) return true;
+  if (pin.length === 6) {
+    if (WEAK_PINS.has(pin)) return true;
+    if (ASC.includes(pin) || DESC.includes(pin)) return true;
+    if (new Set(pin.split('')).size <= 2) return true;
+  }
+  return false;
+}
+
+const LOCK_STEPS_MS = [30_000, 60_000, 5 * 60_000, 15 * 60_000, 60 * 60_000];
+
 export function lockoutMs(fails: number): number {
-  if (fails < 5) return 0;
-  if (fails < 8) return 30_000;
-  if (fails < 12) return 5 * 60_000;
-  return 30 * 60_000;
+  if (fails <= 0) return 0;
+  const index = Math.min(fails, LOCK_STEPS_MS.length) - 1;
+  return LOCK_STEPS_MS[index];
 }
 
 export function remainingLockMs(until: number, now = Date.now()): number {

@@ -1260,5 +1260,6 @@
   "fundsTxFee": "Comissão estimada da rede: {fee}",
   "fundsConfirmAck": "Confirmar",
   "fundsConfirmAckLead": "Confira valor, destino e comissão. Sem PIN porque a proteção de fundos está desligada.",
-  "fundsConfirmBiometricFail": "A impressão digital não abriu a carteira."
+  "fundsConfirmBiometricFail": "A impressão digital não abriu a carteira.",
+  "walletWrapSoftwareNote": "Este telefone não tem armazenamento de hardware. A chave da carteira fica no cofre do sistema, sem impressão digital na leitura."
 }

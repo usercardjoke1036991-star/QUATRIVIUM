@@ -1260,5 +1260,6 @@
   "fundsTxFee": "推定ネットワーク手数料: {fee}",
   "fundsConfirmAck": "確認",
   "fundsConfirmAckLead": "金額、宛先、手数料を確認してください。資金保護がオフのため PIN は不要です。",
-  "fundsConfirmBiometricFail": "指紋でウォレットを開けませんでした。"
+  "fundsConfirmBiometricFail": "指紋でウォレットを開けませんでした。",
+  "walletWrapSoftwareNote": "この端末にはハードウェア保管庫がありません。ウォレットの鍵はシステムの安全な保管庫に残り、読み取り時に指紋は要りません。"
 }
