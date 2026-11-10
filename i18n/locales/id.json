@@ -1227,7 +1227,7 @@
   "otpPayFailed": "Tagihan tidak berhasil. Kode masih berlaku.",
   "emailRemoveFailed": "Tidak dapat memperbarui pengaturan lokal.",
   "fundsConfirmMovement": "Konfirmasi tindakan ini.",
-  "altaSplitNote": "Pembagian 4 LUSD: 1 LUSD untuk pendiri, 1 LUSD ke periuk cadangan, 1 LUSD disisihkan bagi yang mengundang, dan 1 LUSD sebagai segel ke pool. Lima persen segel itu tinggal di dana asuransi.",
+  "altaSplitNote": "Pembagian 4 LUSD: 1 LUSD untuk pendiri, 1 LUSD ke periuk cadangan, 1 LUSD disisihkan bagi yang mengundang, dan 1 LUSD sebagai segel ke pool. Lima persen segel itu tinggal di dana asuransi. Tanpa undangan, atau jika yang mengundang belum membayar masuk dan tingkat pertama, bagian yang disisihkan masuk ke pool saat tingkat pertama dibayar. Jika tingkat itu tidak dibayar dalam 7 hari, bagian itu juga masuk ke pool. Seseorang tidak dapat menamai dirinya.",
   "loanFounderShare": "15% bunga setiap pembayaran pergi ke pendiri.",
   "loanInsuranceShare": "5% dari yang masuk pool pergi ke dana asuransi dan tidak ada yang menariknya.",
   "loanSequencerGrace": "Likuidasi menunggu 48 jam. Jika Arbitrum berhenti, tidak ada yang dilikuidasi.",

@@ -13,12 +13,44 @@ El quinto punto grave del resumen (feed viejo) era **B-01, Medio**, no Alto. Tra
 | A-03 | Alto | Documentado, sin cambio de contrato. README, HANDOFF y `CONFIRM_FOUNDER_WALLET=yes` en el despliegue. La llave perdida sigue sin relevo dentro del contrato: es la decisión tomada. |
 | A-04 | Alto | Pendiente del dueño. La clave está en el historial, commits `10553d4` y `dc40f15`, archivo `.env.worker.example`. No afecta a la app. Hay que borrarla en la cuenta de Resend. El valor no se copia. El historial no se reescribe. |
 | B-01 | Medio | Arreglado. Una ronda con más de 24 h se trata como feed caído. Test en `test/sequencer-gracia.test.js`. |
-| B-02 | Medio | Arreglado en lo engañoso: el aviso sale con `encrypted: false`. Cifrar de verdad NIP-17/44 no se hizo: haría falta una librería y una decisión del dueño. La mora sigue bloqueada. |
+| B-02 | Medio | Arreglado en la superficie: `prepareNostrPayload` devuelve null en todos los caminos. No hay pantalla de mensaje privado. Cifrar NIP-17/44 sigue sin hacerse. La mora no se publica. |
 | B-03 | Medio | Requiere decisión. `npm audit` sigue con 1 crítica (`handlebars`, herramienta, no dependencia directa) y 11 altas. Actualizar el árbol a ciegas puede romper Expo. No se tocó. |
 | C-01 | Bajo | Arreglado. El comentario de `pagarVerificacion` ya no dice 0.50 LUSD. El comportamiento no cambió. |
 | C-02 | Bajo | Pendiente. Reescribir cada test que lee fuente sería un refactor. Los arreglos de esta ronda sí ejecutan el contrato. |
 | C-03 | Bajo | Arreglado. `web/invite/index.html` ya no muestra un hash inventado. |
 | C-04 | Informativo | Aplicado solo en texto. El alta sigue siendo 1 fundador, 1 Reserva, 1 padrino y 1 sello. README lo dice. |
+
+## Segunda auditoría
+
+Revisión de `60a9654` y `960f446`, más el comportamiento real del alta. No se cambió la lógica de los contratos.
+
+### Alta
+
+`QuatriviumAlta.pagarRegistro` (líneas 53-67) siempre aparta 1 LUSD, invite o no. `registrarHumanoConPadre` (Credit, líneas 441-449) convierte la invitación vacía en el fundador y rechaza una cuenta que se nombre a sí misma o un invitador que no esté registrado. Al pagar el primer nivel 1, `soltarPadrino` (Alta, líneas 70-84) entrega ese 1 a quien invitó si `cobradorListo` (Credit, líneas 1100-1101). Si no, lo mete al pool y el 5 % de esa entrada va al seguro (`ingresarAlPool`, líneas 1106-1110). Si pasan 7 días sin ese pago, `vencerPadrinoAlPool` (Alta, líneas 88-100) lo manda al pool. El 5 % de 1 LUSD es exacto: `1e18 * 500 / 10000 = 0.05e18`, sin polvo. La suma de saldos no cambia: el mock no crea tokens en el alta.
+
+| ID | Severidad | Qué pasa | Qué se hizo |
+| --- | --- | --- | --- |
+| S-01 | Bajo | Una segunda cuenta puede nombrar a la primera y, si esa ya pagó alta y nivel 1, cobrar el 1 apartado. El costo es los otros 3 LUSD del alta de la segunda cuenta, más el interés del nivel 1. No es ganancia. | Nada en el contrato. Quedó descrito en los textos y en `test/alta-invitacion.test.js`. No hace falta decisión. |
+| S-02 | Bajo | Si `soltarPadrino` recibiera padre cero o igual al deudor, devuelve sin soltar el 1 (Alta, línea 73). El registro normal no produce ese padre. | No se cambió. El camino de la app no lo alcanza. |
+
+### Lo revisado en los dos commits
+
+- Pausa: solo el contrato, tras 2 de 3 y `block.timestamp >= eta` (72 h justas sí valen, Credit líneas 364-372 y 385-389). A los 7 días justos el préstamo nuevo vuelve (`>= pausaPrestamosHasta`). El descanso usa `< pausaReposoHasta`, así que el instante exacto ya permite votar otra. `p.executed = true` va antes de la llamada interna; si esa llamada falla, toda la transacción revierte. No hay reentrada hacia fuera.
+- APK: solo el fundador publica. La huella del certificado queda fija en la primera versión. No hay borrado ni llamada externa.
+- Feed: más de 24 h con respuesta «arriba» pospone la liquidación (línea 893, `>`). A las 24 h justas todavía se acepta. La hora de margen usa `< startedAt + 1 h`, así que a la hora justa ya se puede liquidar. Préstamos y pagos no leen ese feed.
+- Nostr: `prepareNostrPayload` devuelve null siempre (`utils/sovereignSurface.ts`, línea 128). Ningún componente ni idioma ofrece mensaje privado. `nostrMayPublish` también es falso, incluida la mora.
+- Residuos: `scripts/check-external-services.mjs` pasa. Los nombres prohibidos viven en esa lista y en `scripts/run-full-cyber-audit.sh`, que sigue citando `Groth16Verifier` y `zk-contracts` como carpetas a excluir. Esas carpetas ya no existen. No se tocó el script porque los tests leen el resto del archivo.
+- Credit: 21891 bytes, 2685 libres de 24576.
+
+### Tests que aún leen texto y tocan dinero
+
+No se reescribieron en esta pasada.
+
+- `test/fase3-seguro-apk.test.js`: el rechazo de ETH lee el fuente y también envía ETH.
+- `test/cyber-hardening.test.js`: «gates Alta loans…» lee el fuente del alta. «offers canje…» y «reads alta and reserve rate…» leen textos de Reserva y fama. «blocks Solicitar in Real…» lee compuertas de alta. El del pool bloqueado ahora también llama a `retirarLiquidez`.
+- `test/security-audit-fixes.test.js`: lee `QuatriviumReserva.sol` para comprobar que no hay retiro del bote.
+- `test/screen-copy.test.js`: el splash y el alta vieja siguen leyendo texto. Pool y Reserva ya ejecutan el contrato.
+- `test/fase4-app.test.js`: el 15 %, el 5 %, la gracia y el aviso de Reserva leen textos. El alta ya ejecuta el contrato.
 
 ## Informe original
 
@@ -27,6 +59,8 @@ Solo lectura en su origen. Los arreglos posteriores están en la tabla de arriba
 No se compiló la app, no se generó un APK y no se desplegó nada. La interfaz se leyó en el código, no en un teléfono.
 
 ## Resumen ejecutivo
+
+Este texto es la primera pasada. La pausa de un solo admin, el hash del APK y el feed viejo ya están corregidos en la tabla de estado y en la segunda auditoría.
 
 El proyecto no está listo para dinero real. Los contratos de préstamo, el pool, la Reserva y el fondo de seguro coinciden con las reglas de dinero en lo esencial, y las pruebas automáticas pasan, pero falta una auditoría externa y el despliegue.
 

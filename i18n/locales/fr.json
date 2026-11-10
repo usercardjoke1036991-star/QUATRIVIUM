@@ -1227,7 +1227,7 @@
   "otpPayFailed": "Le prélèvement n’a pas abouti. Le code reste valable.",
   "emailRemoveFailed": "Impossible de mettre à jour le réglage local.",
   "fundsConfirmMovement": "Confirmez cette opération.",
-  "altaSplitNote": "Sur 4 LUSD : 1 LUSD au fondateur, 1 LUSD au pot de la Réserve, 1 LUSD mis de côté pour l’invitant et 1 LUSD de sceau vers le pool. Cinq pour cent de ce sceau restent au fonds de garantie.",
+  "altaSplitNote": "Sur 4 LUSD : 1 LUSD au fondateur, 1 LUSD au pot de la Réserve, 1 LUSD mis de côté pour l’invitant et 1 LUSD de sceau vers le pool. Cinq pour cent de ce sceau restent au fonds de garantie. Sans invitation, ou si l’invitant n’a pas payé l’accès et le premier niveau, cette part entre dans le pool au paiement du premier niveau 1. Si ce niveau n’est pas payé sous 7 jours, elle entre aussi dans le pool. On ne peut pas se nommer soi-même.",
   "loanFounderShare": "15 % des intérêts de chaque paiement vont au fondateur.",
   "loanInsuranceShare": "5 % de ce qui entre dans le pool va au fonds d'assurance et personne ne peut le retirer.",
   "loanSequencerGrace": "La liquidation attend 48 heures. Si Arbitrum tombe, personne n'est liquidé.",

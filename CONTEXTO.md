@@ -10,7 +10,7 @@ No hay servidor de la empresa. La billetera nace en el teléfono (`services/appW
 
 - Tres admins, votación fija 2 de 3, espera 72 h, sin caducidad. Solo votan su entrada o salida. `pausarPrestamosNuevos` lo llama un admin, dura 7 días y no frena pagos ni liquidaciones.
 - `retirarLiquidez` revierte. Nadie saca el pool.
-- Alta de 4 LUSD en `QuatriviumAlta.pagarRegistro`: 1 al fundador, 1 al bote de Reserva, 1 apartado para quien invitó y 1 de sello a Credit. De ese sello, el 5 % queda en el fondo de seguro y el resto en la liquidez. El fundador cobra además el 15 % del interés en la misma transacción. Solo él rota su billetera, con 72 h. No necesita alta ni L1.
+- Alta de 4 LUSD en `QuatriviumAlta.pagarRegistro`: 1 al fundador, 1 al bote de Reserva, 1 apartado para quien invitó y 1 de sello a Credit. De ese sello, el 5 % queda en el fondo de seguro y el 95 % en la liquidez. Entrar sin invitación cuelga del fundador. Ese 1 apartado no se queda bloqueado: al pagar el primer nivel 1 va a quien invitó si ya tiene alta y nivel 1, y si no, al pool. A los 7 días sin ese pago, entra al pool. Una misma cuenta no puede ser su propio invitador. El fundador cobra además el 15 % del interés en la misma transacción. Solo él rota su billetera, con 72 h. No necesita alta ni L1.
 - Fondo de seguro: 5 % de las entradas al pool. Solo paga el premio del impago.
 - Reserva: nivel ≥ 10, 30 días, tope 12 % anual del bote, principal siempre devuelto. Sin owner ni retiro del bote.
 - Liquidación: 48 h más el tiempo caído del sequencer y 1 h tras volver. Feed `0xFdB631F5EE196F0ed6FAa767959853A9F217697D`, obligatorio si chainId es 42161. Premio = el menor entre 5 % del principal restante y el interés que queda.

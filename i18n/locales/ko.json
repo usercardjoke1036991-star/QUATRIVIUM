@@ -1227,7 +1227,7 @@
   "otpPayFailed": "청구가 되지 않았습니다. 코드는 아직 유효합니다.",
   "emailRemoveFailed": "로컬 설정을 업데이트할 수 없습니다.",
   "fundsConfirmMovement": "이 작업을 확인하세요.",
-  "altaSplitNote": "4 LUSD 배분: 1 LUSD 는 창립자, 1 LUSD 는 적립금, 1 LUSD 는 초대한 사람을 위해 보관, 1 LUSD 는 봉인으로 풀에 들어갑니다. 그 봉인의 5% 는 보험 기금에 남습니다.",
+  "altaSplitNote": "4 LUSD 배분: 1 LUSD 는 창립자, 1 LUSD 는 적립금, 1 LUSD 는 초대한 사람을 위해 보관, 1 LUSD 는 봉인으로 풀에 들어갑니다. 그 봉인의 5% 는 보험 기금에 남습니다. 초대가 없거나, 초대한 사람이 가입과 첫 단계를 내지 않았다면 그 보관분은 첫 단계를 낼 때 풀로 들어갑니다. 7일 안에 그 단계를 내지 않아도 풀로 들어갑니다. 자신을 초대자로 적을 수 없습니다.",
   "loanFounderShare": "각 이자의 15% 는 창립자에게 갑니다.",
   "loanInsuranceShare": "풀에 들어오는 금액의 5% 는 보험 기금으로 가며 아무도 빼지 못합니다.",
   "loanSequencerGrace": "청산은 48시간을 기다립니다. Arbitrum 이 멈추면 아무도 청산되지 않습니다.",

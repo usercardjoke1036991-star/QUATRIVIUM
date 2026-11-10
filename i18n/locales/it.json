@@ -1227,7 +1227,7 @@
   "otpPayFailed": "L’addebito non è riuscito. Il codice è ancora valido.",
   "emailRemoveFailed": "Impossibile aggiornare l’impostazione locale.",
   "fundsConfirmMovement": "Confermi questo movimento.",
-  "altaSplitNote": "Dei 4 LUSD: 1 LUSD al fondatore, 1 LUSD al vaso della Riserva, 1 LUSD tenuto per chi ha invitato e 1 LUSD di sigillo nel pool. Il cinque per cento di quel sigillo resta nel fondo di garanzia.",
+  "altaSplitNote": "Dei 4 LUSD: 1 LUSD al fondatore, 1 LUSD al vaso della Riserva, 1 LUSD tenuto per chi ha invitato e 1 LUSD di sigillo nel pool. Il cinque per cento di quel sigillo resta nel fondo di garanzia. Senza invito, o se chi ha invitato non ha pagato l’accesso e il primo livello, quella quota entra nel pool al pagamento del primo livello 1. Se quel livello non si paga entro 7 giorni, entra comunque nel pool. Non ci si può nominare da soli.",
   "loanFounderShare": "Il 15 % degli interessi di ogni pagamento va al fondatore.",
   "loanInsuranceShare": "Il 5 % di ciò che entra nel pool va al fondo di garanzia e nessuno può prelevarlo.",
   "loanSequencerGrace": "La liquidazione attende 48 ore. Se Arbitrum cade, nessuno viene liquidato.",

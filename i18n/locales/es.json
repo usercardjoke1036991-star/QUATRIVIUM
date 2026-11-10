@@ -1227,7 +1227,7 @@
   "otpPayFailed": "No se pudo cobrar. El código sigue válido.",
   "emailRemoveFailed": "No se pudo actualizar el ajuste local.",
   "fundsConfirmMovement": "Confirme este movimiento.",
-  "altaSplitNote": "De los 4 LUSD: 1 LUSD al fundador, 1 LUSD al bote de Reserva, 1 LUSD apartado para quien invitó y 1 LUSD de sello al pool. El 5 % de ese sello queda en el fondo de seguro.",
+  "altaSplitNote": "De los 4 LUSD: 1 LUSD al fundador, 1 LUSD al bote de Reserva, 1 LUSD apartado para quien invitó y 1 LUSD de sello al pool. El 5 % de ese sello queda en el fondo de seguro. Sin invitación, o si quien invitó no tiene el alta y el primer nivel pagados, ese apartado entra al pool al pagar el primer nivel 1. Si ese nivel no se paga en 7 días, también entra al pool. No puede invitarse a sí mismo.",
   "loanFounderShare": "El 15 % del interés de cada pago va al fundador.",
   "loanInsuranceShare": "El 5 % de lo que entra al pool va al fondo de seguro y nadie puede retirarlo.",
   "loanSequencerGrace": "La liquidación espera 48 horas. Si Arbitrum se cae, no se liquida a nadie.",
