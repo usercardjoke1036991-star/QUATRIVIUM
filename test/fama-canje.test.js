@@ -90,20 +90,14 @@ describe('QuatriviumFamaCaja - fama de caja y canje', function () {
 
     const gift = ethers.parseUnits('5', 18);
     await contract.connect(user).donar(tokenAddr, gift);
-    expect(await fama.famaCaja(user.address)).to.equal(500n);
+    expect(await fama.famaVisible(user.address)).to.equal(500n);
+    expect(await fama.famaCaja(user.address)).to.equal(0n);
     expect(await fama.famaCanjeada(user.address)).to.equal(0n);
 
-    const beforeBal = await token.balanceOf(user.address);
     const liqBefore = await contract.totalLiquidity(tokenAddr);
-    await expect(fama.connect(user).canjearFama(250n))
-      .to.emit(fama, 'FamaCanjeada')
-      .withArgs(user.address, 250n, ethers.parseUnits('1', 18), tokenAddr);
-
-    expect(await fama.famaCaja(user.address)).to.equal(500n);
-    expect(await fama.famaCanjeada(user.address)).to.equal(250n);
-    expect(await fama.famaDisponible(user.address)).to.equal(250n);
-    expectAmt((await token.balanceOf(user.address)) - beforeBal, ethers.parseUnits('1', 18));
-    expectAmt(liqBefore - (await contract.totalLiquidity(tokenAddr)), ethers.parseUnits('1', 18));
+    await expect(fama.connect(user).canjearFama(250n)).to.be.revertedWithCustomError(fama, 'SinFama');
+    expect(await contract.totalLiquidity(tokenAddr)).to.equal(liqBefore);
+    expect(await fama.famaDisponible(user.address)).to.equal(0n);
     await assertNavInvariant(token, contract, tokenAddr, contractAddr);
   });
 
@@ -183,7 +177,7 @@ describe('QuatriviumFamaCaja - fama de caja y canje', function () {
     await ethers.provider.send('evm_mine');
     const now = (await ethers.provider.getBlock('latest')).timestamp;
     expect(now).to.be.lt(Number(info.vencimiento));
-    await expect(fama.connect(user).canjearFama(250n)).to.emit(fama, 'FamaCanjeada');
+    await expect(fama.connect(user).canjearFama(250n)).to.be.revertedWithCustomError(fama, 'SinFama');
     await assertNavInvariant(token, contract, tokenAddr, contractAddr);
   });
 
@@ -196,7 +190,8 @@ describe('QuatriviumFamaCaja - fama de caja y canje', function () {
     await token.connect(user).approve(contractAddr, gift);
     await contract.connect(user).donar(tokenAddr, gift);
     expect(await contract.donado(user.address)).to.equal(gift);
-    expect(await fama.famaCaja(user.address)).to.equal(200n);
+    expect(await fama.famaVisible(user.address)).to.equal(200n);
+    expect(await fama.famaCaja(user.address)).to.equal(0n);
   });
 
   it('credits 100 fame on the first full USDT even after dust', async () => {
@@ -206,11 +201,12 @@ describe('QuatriviumFamaCaja - fama de caja y canje', function () {
     await token.mint(user.address, ethers.parseUnits('3', 18));
     await token.connect(user).approve(contractAddr, ethers.MaxUint256);
     await contract.connect(user).donar(tokenAddr, 1n);
-    expect(await fama.famaCaja(user.address)).to.equal(0n);
+    expect(await fama.famaVisible(user.address)).to.equal(0n);
     await contract.connect(user).donar(tokenAddr, ethers.parseUnits('1', 18));
-    expect(await fama.famaCaja(user.address)).to.equal(100n);
+    expect(await fama.famaVisible(user.address)).to.equal(100n);
     await contract.connect(user).donar(tokenAddr, ethers.parseUnits('2', 18));
-    expect(await fama.famaCaja(user.address)).to.equal(300n);
+    expect(await fama.famaVisible(user.address)).to.equal(300n);
+    expect(await fama.famaDisponible(user.address)).to.equal(0n);
   });
 
   it('sends verification fees to the pool without fame', async () => {

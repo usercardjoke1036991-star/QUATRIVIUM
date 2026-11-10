@@ -66,6 +66,8 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
     address public immutable reserva;
 
     mapping(address => uint256) public famaCaja;
+    /// @notice Fama de donar o aportar. Se ve en el perfil y no se canjea.
+    mapping(address => uint256) public famaVisible;
     mapping(address => uint256) public famaRed;
     mapping(address => uint256) public famaRacha;
     mapping(address => uint256) public famaCanjeada;
@@ -126,7 +128,7 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
     }
 
     function famaPerfil(address usuario) public view returns (uint256) {
-        return famaCaja[usuario] + famaRed[usuario] + famaRacha[usuario];
+        return famaCaja[usuario] + famaVisible[usuario] + famaRed[usuario] + famaRacha[usuario];
     }
 
     function pagarDesdePool(address to, uint256 amount) external {
@@ -138,6 +140,13 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
     function acreditar(address who, uint256 pts) external onlyCredit {
         if (who == address(0) || pts == 0) return;
         famaCaja[who] += pts;
+        emit FamaAcreditada(who, pts);
+    }
+
+    /// @notice Reputación de donar o aportar. No entra en famaDisponible.
+    function acreditarVisible(address who, uint256 pts) external onlyCredit {
+        if (who == address(0) || pts == 0) return;
+        famaVisible[who] += pts;
         emit FamaAcreditada(who, pts);
     }
 
@@ -172,6 +181,7 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
 
     function wipe(address who) external onlyCredit {
         famaCaja[who] = 0;
+        famaVisible[who] = 0;
         famaRed[who] = 0;
         famaRacha[who] = 0;
         famaCanjeada[who] = 0;

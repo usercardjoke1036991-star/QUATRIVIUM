@@ -74,7 +74,7 @@ Todas en `cursor/soberania-contratos-8e15`. PR: https://github.com/usercardjoke1
 
 ## 5. Números
 
-Tras la liquidación con seguro: Hardhat 306 pasando, Foundry 52 pasando. `QuatriviumCredit`: 21655 bytes, 2921 libres de 24576.
+Tras separar la fama que no se canjea: Hardhat 310 pasando, Foundry 52 pasando. `QuatriviumCredit`: 21655 bytes, 2921 libres de 24576.
 
 ## 6. Simulación de impago
 

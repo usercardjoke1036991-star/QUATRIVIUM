@@ -77,22 +77,23 @@ contract QuatriviumAuditForgeTest is Test {
     function test_donate_from_first_usdt_gives_100_fame() public {
         _onboard(user);
         _donate(user, 2 ether);
-        assertEq(fama.famaCaja(user), 200);
+        assertEq(fama.famaVisible(user), 200);
+        assertEq(fama.famaCaja(user), 0);
         assertEq(credit.donado(user), 2 ether);
     }
 
     function test_donate_dust_gives_zero_then_first_usdt_100() public {
         _onboard(user);
         _donate(user, 1);
-        assertEq(fama.famaCaja(user), 0);
+        assertEq(fama.famaVisible(user), 0);
         _donate(user, 1 ether);
-        assertEq(fama.famaCaja(user), 100);
+        assertEq(fama.famaVisible(user), 100);
     }
 
     function test_donate_three_credits_300_fame() public {
         _onboard(user);
         _donate(user, 3 ether);
-        assertEq(fama.famaCaja(user), 300);
+        assertEq(fama.famaVisible(user), 300);
     }
 
     function testFuzz_donate_100_fame_per_usdt(uint96 aRaw, uint96 bRaw) public {
@@ -102,7 +103,7 @@ contract QuatriviumAuditForgeTest is Test {
         _donate(user, a);
         _donate(user, b);
         uint256 expected = QuatriviumFamaLib.ptsDonacion(0, a) + QuatriviumFamaLib.ptsDonacion(a, b);
-        assertEq(fama.famaCaja(user), expected);
+        assertEq(fama.famaVisible(user), expected);
     }
 
     function test_self_liquidate_reverts() public {
@@ -231,11 +232,12 @@ contract QuatriviumAuditForgeTest is Test {
         vm.prank(user, user);
         credit.pagarPrestamo(address(token), total);
         _donate(user, 5 ether);
-        assertEq(fama.famaCaja(user), 500);
-        // Pool is 500; 20% floor = 100. Redeem 250 fame = 1 USDT, allowed.
+        assertEq(fama.famaVisible(user), 500);
+        assertEq(fama.famaDisponible(user), 0);
         vm.prank(user, user);
+        vm.expectRevert(QuatriviumFamaCaja.SinFama.selector);
         fama.canjearFama(250);
-        assertEq(fama.famaCanjeada(user), 250);
+        assertEq(fama.famaCanjeada(user), 0);
         _assertNav();
     }
 

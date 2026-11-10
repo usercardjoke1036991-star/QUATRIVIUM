@@ -230,6 +230,7 @@ library QuatriviumFamaLib {
     );
     event BonoActivacionPagado(address indexed padre, address indexed referido, uint256 monto, address indexed token);
     event InteresRetenidoPool(address indexed token, uint256 monto);
+    event ReservaBoostFallido(address indexed reserva, address indexed beneficiario, uint256 monto);
 
     /// @notice Donar y aportar: 100 fama por cada 1 USDT, desde el primero.
     function ptsDonacion(uint256, uint256 amount) external pure returns (uint256) {
@@ -274,7 +275,7 @@ library QuatriviumFamaLib {
             IQuatriviumFamaCaja(hermano).wipe(who);
             return;
         }
-        IQuatriviumFamaCaja(hermano).acreditar(who, pts);
+        IQuatriviumFamaCaja(hermano).acreditarVisible(who, pts);
     }
 
     function onCierre(address hermano, address deudor, address padre) external {
@@ -459,7 +460,7 @@ library QuatriviumFamaLib {
                 salt
             )
         );
-        ok;
+        if (!ok) emit ReservaBoostFallido(reserva, beneficiario, monto);
     }
 
     function alimentarPool(
