@@ -35,15 +35,53 @@ export function nextPublicRpc(urls: readonly string[], failed: string): string |
   return list[index + 1] ?? null;
 }
 
+/** Relés públicos. Nadie los configura; una lista avanzada solo sustituye esta si trae cinco o más. */
+export const PUBLIC_NOSTR_RELAYS = [
+  'wss://relay.damus.io',
+  'wss://nos.lol',
+  'wss://relay.nostr.band',
+  'wss://nostr.mom',
+  'wss://relay.primal.net',
+  'wss://offchain.pub',
+] as const;
+
+export function nostrRelays(advanced?: readonly string[]): string[] {
+  const extra = (advanced || []).map((url) => url.trim()).filter((url) => url.startsWith('wss://'));
+  return extra.length >= 5 ? [...extra] : [...PUBLIC_NOSTR_RELAYS];
+}
+
+/** Si un relé falla, el siguiente. El último no inventa otro. */
+export function nextNostrRelay(failed: string, advanced?: readonly string[]): string | null {
+  const list = nostrRelays(advanced);
+  if (list.length === 0) return null;
+  const index = list.indexOf(failed.trim());
+  if (index < 0) return list[0];
+  return list[index + 1] ?? null;
+}
+
+export type ApkCheck = 'match' | 'mismatch' | 'unverified';
+
+/** Registro vacío o sin respuesta: no verificada. Hash distinto: no coincide. */
+export function apkCheck(input: {
+  registryEmpty?: boolean;
+  readFailed?: boolean;
+  localHash?: string;
+  publishedHash?: string;
+}): ApkCheck {
+  if (input.readFailed || input.registryEmpty) return 'unverified';
+  const published = normalizeSha256(input.publishedHash || '');
+  if (!published) return 'unverified';
+  const local = normalizeSha256(input.localHash || '');
+  if (!local || local !== published) return 'mismatch';
+  return 'match';
+}
+
 export function apkIntegrity(
   localHash: string,
   publishedHash: string
 ): 'unpublished' | 'match' | 'mismatch' {
-  const local = normalizeSha256(localHash);
-  const published = normalizeSha256(publishedHash);
-  if (!published) return 'unpublished';
-  if (!local || local !== published) return 'mismatch';
-  return 'match';
+  const status = apkCheck({ localHash, publishedHash });
+  return status === 'unverified' ? 'unpublished' : status;
 }
 
 /** La mora no sale de la cadena. Nostr solo admite avisos y mensajes cifrados. */

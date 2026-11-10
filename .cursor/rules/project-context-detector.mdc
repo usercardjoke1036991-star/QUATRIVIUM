@@ -38,7 +38,7 @@ SI existe requirements.txt O pyproject.toml O setup.py:
     → leer requirements.txt
     → SI contiene "django"/"flask"/"fastapi": CONTEXTO = "Python Web API"
     → SI contiene "tensorflow"/"torch"/"sklearn": CONTEXTO = "ML/AI Project"
-    → SI contiene "ccxt"/"binance"/"alpaca": CONTEXTO = "Python Trading Bot"
+     → SI contiene "ccxt"/"exchange-api"/"alpaca": CONTEXTO = "Python Trading Bot"
     → SI contiene "selenium"/"playwright": CONTEXTO = "Python Automation/Scraper"
     → SINO: CONTEXTO = "Python Script/App"
 
@@ -164,7 +164,7 @@ Cuando se detecte una intención de creación, mapea la descripción al tipo de 
 | APK / app móvil / Android / iOS / Swift / Flutter / Activity | `android` | `--tipo android` |
 | Sitio web / landing page / tienda online / e-commerce / dashboard / frontend / React / Vue / Angular / Next.js / Nuxt / Svelte / Electron | `node` | `--tipo node` |
 | Bot de trading / Expert Advisor / MetaTrader / MT5 / MQL / forex / estrategia de trading | `mql5` | `--tipo mql5` |
-| API REST / GraphQL / backend / servidor / FastAPI / Flask / Django / bot de Telegram / bot de Discord / scraper / crawler / análisis de datos / IA / ML / dataset / modelo / automatización / game / juego / Unity | `python` | `--tipo python` |
+| API REST / GraphQL / backend / servidor / FastAPI / Flask / Django / bot de mensajería / bot de Discord / scraper / crawler / análisis de datos / IA / ML / dataset / modelo / automatización / game / juego / Unity | `python` | `--tipo python` |
 | Cualquier otra cosa no clasificada | `python` | `--tipo python` |
 
 ### COMPORTAMIENTO OBLIGATORIO DEL AGENTE

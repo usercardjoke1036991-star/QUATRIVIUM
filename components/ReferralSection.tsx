@@ -21,7 +21,6 @@ import {
 } from '../constants/commissions';
 import { REFERRAL_BONUS_THRESHOLD, REFERRAL_REPUTATION_POINTS } from '../constants/reputation';
 import { formatUSD } from '../utils/formatters';
-import { openSafeUrl } from '../utils/safeOpenUrl';
 import { AppSubsection } from './AppSection';
 import { AppText } from './AppText';
 import { copyText } from '../utils/copyText';
@@ -194,17 +193,6 @@ export const ReferralSection: React.FC<ReferralSectionProps> = ({
     }
   };
 
-  const handleWhatsApp = async () => {
-    if (!guardShare()) return;
-    const url = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
-    try {
-      const opened = await openSafeUrl(url);
-      if (!opened) await handleShare();
-    } catch {
-      await handleShare();
-    }
-  };
-
   return (
     <View style={styles.stack}>
       {isRestricted ? <AppText style={styles.warn}>{t('moraBlocked')}</AppText> : null}
@@ -349,16 +337,6 @@ export const ReferralSection: React.FC<ReferralSectionProps> = ({
             <AppIcon name="share" size={16} color={colors.onPrimary} />
             <AppText style={[styles.actionText, { color: colors.onPrimary }]}>
               {t('shareInvite')}
-            </AppText>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.action, styles.whatsapp, isRestricted && styles.shareDisabled]}
-            onPress={handleWhatsApp}
-            disabled={!myCode || isRestricted}
-          >
-            <AppIcon name="whatsapp" size={16} color="#fff" />
-            <AppText style={[styles.actionText, { color: '#fff' }]}>
-              {t('shareInviteWhatsApp')}
             </AppText>
           </TouchableOpacity>
         </View>
@@ -609,7 +587,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   actionText: { fontWeight: '600', fontSize: 15 },
-  whatsapp: { backgroundColor: '#128C7E' },
   shareDisabled: { opacity: 0.45 },
   meta: { borderRadius: 8, borderWidth: 1, padding: 10 },
   invitedBy: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },

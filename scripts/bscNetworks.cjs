@@ -32,8 +32,6 @@ const BSC_TESTNET = {
     'https://bsc-testnet.publicnode.com',
     'https://bsc-testnet.drpc.org',
     'https://bsc-testnet.bnbchain.org',
-    'https://data-seed-prebsc-1-s1.binance.org:8545/',
-    'https://data-seed-prebsc-2-s1.binance.org:8545/',
   ],
 };
 

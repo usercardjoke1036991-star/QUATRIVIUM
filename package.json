@@ -11,7 +11,7 @@
     "test": "hardhat --config hardhat.config.cjs test",
     "test:forge": "wsl -d Ubuntu-24.04 -u root -- bash -lc \"export PATH=/root/.foundry/bin:\\$PATH && forge test --fuzz-runs 256\"",
     "test:coverage": "hardhat --config hardhat.config.cjs coverage",
-    "typecheck": "node scripts/check-i18n.mjs && tsc --noEmit",
+    "typecheck": "node scripts/check-i18n.mjs && node scripts/check-external-services.mjs && tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format:check": "prettier --check .",

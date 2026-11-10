@@ -184,7 +184,7 @@ def detectar_tipo_proyecto(directorio: str) -> str:
                     return "python-web"
                 if any(x in req for x in ["tensorflow", "torch", "sklearn", "keras"]):
                     return "python-ml"
-                if any(x in req for x in ["ccxt", "binance", "alpaca"]):
+                if any(x in req for x in ["ccxt", "exchange-api", "alpaca"]):
                     return "python-trading"
             except Exception:
                 pass

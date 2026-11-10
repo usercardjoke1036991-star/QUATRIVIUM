@@ -7,6 +7,7 @@ import {
   getProviderWithFallback,
   isContractConfigured,
 } from '../constants/rpcConfig';
+import { rosterFromSignupEvents } from '../utils/fameRoster';
 import { attachCombinedScores, type FamePlayer } from '../utils/fameRankings';
 
 const CHUNK = 4000;
@@ -153,6 +154,7 @@ function cacheKey(): string {
   return `${getContractAddress().toLowerCase()}`;
 }
 
+/** Mismo orden para cualquier lector: los altas de la cadena, por bloque. */
 export function peekFameLeaderboard(): FameLeaderboardSnapshot | null {
   if (!isContractConfigured()) return EMPTY;
   return cache.get(cacheKey()) || null;
@@ -235,22 +237,19 @@ export async function loadFameLeaderboard(viewerAddress = ''): Promise<FameLeade
     order.push(address);
   };
 
-  const signupEvents = [...signups.events].sort((left, right) => {
-    const block = (left.blockNumber || 0) - (right.blockNumber || 0);
-    if (block !== 0) return block;
-    return (left.index || 0) - (right.index || 0);
-  });
-  for (const event of signupEvents) {
-    const args = eventArgs(event);
-    const usuario = normalizeAddress(asText(argValue(args, 'usuario', 0)));
-    const padre = normalizeAddress(asText(argValue(args, 'padre', 1)));
-    if (!usuario) continue;
-    remember(usuario);
-    if (padre && padre !== ZERO && padre.toLowerCase() !== usuario.toLowerCase()) {
-      remember(padre);
-      referrals.set(padre.toLowerCase(), (referrals.get(padre.toLowerCase()) || 0) + 1);
-    }
-  }
+  const fromSignups = rosterFromSignupEvents(
+    signups.events.map((event) => {
+      const args = eventArgs(event);
+      return {
+        blockNumber: event.blockNumber,
+        index: event.index,
+        usuario: asText(argValue(args, 'usuario', 0)),
+        padre: asText(argValue(args, 'padre', 1)),
+      };
+    })
+  );
+  for (const address of fromSignups.order) remember(address);
+  for (const [padre, count] of fromSignups.referrals) referrals.set(padre, count);
 
   const requested = new Map<string, number>();
   for (const event of issued.events) {

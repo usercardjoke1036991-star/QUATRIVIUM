@@ -29,7 +29,7 @@ ignore:
         expires: 2027-09-28T00:00:00.000Z
   SNYK-JS-NODEFORGE-19635204:
     - '*':
-        reason: node-forge via expo-updates 29 / Expo 54; sin parche compatible
+        reason: node-forge via Expo 54; sin parche compatible
         expires: 2027-09-28T00:00:00.000Z
   SNYK-JS-INFLIGHT-6095116:
     - '*':

@@ -547,7 +547,7 @@ def imprimir_reporte(reporte: ReporteSalud, formato_json: bool) -> None:
     if reporte.criticos:
         estado = "🚨 HAY ENGRANAJES ROTOS"
     elif reporte.advertencias:
-        estado = "⚠️  FUNCIONAL CON AVISOS (mainnet/Twilio son del fundador)"
+        estado = "⚠️  FUNCIONAL CON AVISOS (mainnet es del fundador)"
     else:
         estado = "✅ GRAFO CONECTADO"
     print(f"  {estado}")

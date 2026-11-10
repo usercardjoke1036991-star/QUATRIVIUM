@@ -12,7 +12,6 @@
 
 Este documento certifica la transformación de la base de código de microcréditos descentralizados hacia una arquitectura **100% soberana, autónoma e imparable**, eliminando por diseño:
 1. Todos los kill switches administrativos (pausas de emergencia y listas negras de billeteras).
-2. Toda dependencia de servidores off-chain, workers de backend, bots de Telegram y atestaciones centralizadas.
 3. Todas las fricciones Web2 (KYC de terceros, verificación de SMS/correo, vinculación forzada de dispositivos).
 4. El canal de actualizaciones OTA (Over-The-Air) para garantizar ejecutables APK firmados e inalterables.
 
@@ -58,14 +57,11 @@ Todos los contratos compilados se sitúan holgadamente por debajo del límite es
 ### 3.2 Eliminación de Backend y Candados Web2
 - **Archivos de servidor eliminados**:
   - `scripts/notify-worker.mjs`
-  - `render.yaml`, `fly.toml`, `Dockerfile.notify`, `deploy/hetzner/`
-  - `scripts/deploy-notify.mjs`, `scripts/deploy-hetzner.mjs`
   - `services/notifyClient.ts`
 - **Servicios y pantallas de KYC/OTP eliminados**:
   - `services/kycProvider.ts`, `services/kycDeclaration.ts`, `components/KycSection.tsx`
   - `services/accountEmail.ts`, `components/EmailOtpSection.tsx`
   - `services/accountPhone.ts`, `components/PhoneOtpSection.tsx`
-  - `services/telegramBot.ts`
   - `services/accountIdentity.ts`, `services/emailOtp.ts`, `services/phoneOtp.ts`, `services/demoIdentity.ts`
 - **Puertas en UI**: `utils/creditGates.ts`, `hooks/useHomeHandlers.ts`, `app/index.tsx` y `components/AccountOnboarding.tsx` fueron depurados de verificaciones de correo, SMS, KYC, device match o registro centralizado de apodos.
 
@@ -79,7 +75,6 @@ Todos los contratos compilados se sitúan holgadamente por debajo del límite es
 ### 3.4 Coexistencia Android y Desactivación de OTA
 - **ID de paquete Android**: `com.quatrivium.sovereign` (permite instalarla de forma independiente en dispositivos que ya tengan instalada la versión Magno `com.quatrivium.credit`).
 - **Esquema de deep linking**: `quatrivium-sovereign://`.
-- **Desactivación de Expo Updates**: Eliminado `expo-updates` de `app.json`, `eas.json` y `package.json` para evitar descargas remotas no consentidas. Distribución exclusivamente por binarios APK firmados.
 
 ---
 
@@ -87,8 +82,6 @@ Todos los contratos compilados se sitúan holgadamente por debajo del límite es
 
 ### 4.1 Actualización Integral de los 17 Idiomas (`i18n/locales/`) y Textos de UI
 - **Reemplazo sistemático de token y red**:
-  - Reemplazadas todas las menciones visibles de `USDT` o `Binance-Peg USDT` por `LUSD`.
-  - Reemplazadas todas las menciones a `BSC`, `BNB Smart Chain` o `Binance Smart Chain` por `Arbitrum One` (y testnet por `Arbitrum Sepolia`).
   - Reemplazadas todas las referencias al token de gas `BNB` por `ETH` (ajustando montos mínimos de gas a `0.0001 ETH`).
 - **Eliminación total de copys Web2**:
   - Eliminadas las instrucciones y alertas sobre "verificar correo", "código SMS / OTP", "KYC / documento de identidad" y "servidor de notificaciones".
@@ -102,18 +95,15 @@ Todos los contratos compilados se sitúan holgadamente por debajo del límite es
 
 ### 4.2 Portal Web de Invitación (`web/invite/index.html`) y Web Principal (`web/index.html`)
 - Actualizado el deep-link al esquema oficial soberano `quatrivium-sovereign://invite?c=...` y el paquete `com.quatrivium.sovereign`.
-- Eliminados de la web y de toda la documentación los enlaces a Google Play Store, endpoints de notificación centralizados (`notify.quatriviumcredit.app`) y servidores Web2.
 - Configurada sección de descarga directa del APK soberano (`quatrivium-sovereign.apk`) junto con un bloque visual interactivo para mostrar y copiar su hash SHA-256 (`dfefccd00039725eb73aa67db0e77e910ae7464dee8df2748654e21da73ed24a`), con comandos de verificación para Linux/macOS (`sha256sum`) y Windows (`Get-FileHash`).
 - Actualizados `README.md` y `CONTEXTO.md` reflejando la arquitectura en Arbitrum One (`chainId: 42161`) con LUSD (`0x93b346b6BC2548dA6A1E7d98E9a421B42541425b`) y oráculo Chainlink LUSD/USD (`0x0411D28c94d85A36bC72Cb0f875dfA8371D8fFfF`).
 
 ### 4.3 Limpieza y Blindaje de Scripts y Pipeline CI
 - **`package.json`**:
   - Añadidos scripts `"deploy:arbitrum"` y `"deploy:arbitrum:sepolia"`.
-  - Eliminados o actualizados scripts y dependencias obsoletas hacia el worker o Hetzner.
 - **`.github/workflows/ci.yml`**:
   - Actualizado el paso de chequeo de repositorio para validar producción en Arbitrum One (`chainId: 42161`) y modo soberano sin secretos Web2.
 - **Scripts de auditoría y verificación local**:
-  - `scripts/check-production.mjs`: Adaptado para Arbitrum One (`42161`), LUSD y contratos inmutables sin dependencias de SMS, Twilio, Resend o atestadores.
   - `scripts/security-check.mjs`: Valida el repositorio y entorno sin perfiles remotos ni servidores off-chain.
   - `scripts/prepare-production-local.mjs`: Prepara variables de desarrollo locales sin generar `.env.worker` ni enlaces a tiendas Web2.
 

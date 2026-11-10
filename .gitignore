@@ -36,7 +36,6 @@ yarn-error.*
 # local env files
 .env
 .env.worker
-deploy/hetzner/.env
 .env*.local
 .notify-data.json
 

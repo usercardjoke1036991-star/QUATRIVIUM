@@ -62,6 +62,9 @@ jobs:
       - name: Format
         run: npm run format:check
 
+      - name: No external services
+        run: node scripts/check-external-services.mjs
+
       - name: Production repo check
         # Verificación 100% soberana del repo sin variables de entorno ni servidores Web2.
         # Comprueba eas.json production: APP_ENV=production, chain 42161 (Arbitrum One),

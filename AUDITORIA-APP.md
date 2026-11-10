@@ -63,7 +63,6 @@ Revisión estática, sin explotar nada.
 
 - No hay una clave privada de 64 hex en el código de la app. `PRIVATE_KEY` y `ATTESTER_PRIVATE_KEY` salen del entorno del worker y de Hardhat, no del cliente.
 - El sobre de Cuenta Real sigue fuera de AsyncStorage. AsyncStorage aparece en modo de app, tema, idioma, invitación pendiente y sesión de AppKit. Eso coincide con las decisiones ya tomadas.
-- `scripts/notify-worker.mjs`: `/health`, `/` y `/telegram/bot` son públicos. El nombre del bot no es un secreto. El resto de rutas revisadas (`/profile`, `/profiles`, `/telegram/accept`, `/telegram/reject`, `/password/recovery-store`, `/auto-fund`, `/demo-identity`) exigen firma o, en fondeo y demo, rechazan mainnet. `/auto-fund` solo envía BNB de prueba a la billetera que firmó.
 - No se auditó línea a línea reentrancy, quorum ni EIP-170 de los cuatro contratos en esta pasada. No se propone borrar `cobrarBonoHito`, `_assertPeg` ni `_pagarBonosRed`.
 
 No hay hallazgo de vulnerabilidad con evidencia suficiente para entrar en la tabla.

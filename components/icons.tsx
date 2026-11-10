@@ -14,7 +14,6 @@ export type IconName =
   | 'history'
   | 'shield'
   | 'share'
-  | 'whatsapp'
   | 'plug'
   | 'unplug'
   | 'deposit'
@@ -28,7 +27,6 @@ export type IconName =
   | 'pay'
   | 'refresh'
   | 'save'
-  | 'telegram'
   | 'phone'
   | 'withdraw'
   | 'star'
@@ -146,16 +144,6 @@ export const AppIcon: React.FC<AppIconProps> = ({ name, size = 22, color = '#146
           <Path d="M8.5 11.2l6.2-3.4M8.6 12.9l6.1 3.3" {...s} />
         </Svg>
       );
-    case 'whatsapp':
-      return (
-        <Svg width={size} height={size} viewBox="0 0 24 24">
-          <Path d="M12 4.5A7.5 7.5 0 006.2 17.2L5 19.6l2.5-.7A7.5 7.5 0 1012 4.5z" {...s} />
-          <Path
-            d="M9.4 9.3c.2-.5.4-.5.7-.5h.5c.2 0 .4.1.5.4l.5 1.2c.1.2 0 .4-.1.6l-.4.5c.6 1.1 1.5 2 2.7 2.6l.5-.4c.2-.2.4-.2.6-.1l1.2.5c.3.1.4.3.4.5v.5c0 .3 0 .5-.5.7-1.1.5-3.2.5-5.8-2.1-2.1-2.1-2.5-3.9-2.3-5z"
-            {...s}
-          />
-        </Svg>
-      );
     case 'plug':
       return (
         <Svg width={size} height={size} viewBox="0 0 24 24">
@@ -255,13 +243,6 @@ export const AppIcon: React.FC<AppIconProps> = ({ name, size = 22, color = '#146
         <Svg width={size} height={size} viewBox="0 0 24 24">
           <Path d="M5 5h11.5L19 7.5V19H5V5z" {...s} />
           <Path d="M8 5v5h8V5M8 19v-6h8v6" {...s} />
-        </Svg>
-      );
-    case 'telegram':
-      return (
-        <Svg width={size} height={size} viewBox="0 0 24 24">
-          <Path d="M20 5L4.8 10.6l5.2 1.8 1.9 5.8 3.1-3.3 4.2 3.1L20 5z" {...s} />
-          <Path d="M10 12.4l9.2-6.6" {...s} />
         </Svg>
       );
     case 'phone':

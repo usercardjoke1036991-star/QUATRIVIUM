@@ -7,7 +7,6 @@ export interface CompatibleWallet {
 export const COMPATIBLE_WALLETS: CompatibleWallet[] = [
   { id: 'metamask', name: 'MetaMask', color: '#F6851B' },
   { id: 'trust', name: 'Trust Wallet', color: '#3375BB' },
-  { id: 'binance', name: 'Binance Web3', color: '#F0B90B' },
   { id: 'okx', name: 'OKX Wallet', color: '#111111' },
   { id: 'safepal', name: 'SafePal', color: '#4C6FFF' },
   { id: 'tokenpocket', name: 'TokenPocket', color: '#2980FE' },

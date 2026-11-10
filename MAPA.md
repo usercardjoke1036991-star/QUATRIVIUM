@@ -251,7 +251,6 @@ Conexión = análisis estático. No afirma ejecución 100% en runtime.
 - `constants/altaConfig.ts` — módulo JS/TS
   - Funciones/clases: ALTA_ABI, CREDIT_ALTA_USDT, CREDIT_SELLO_USDT, getAltaAddress, isAltaConfigured
 - `constants/appLinks.ts` — módulo JS/TS
-  - Funciones/clases: PLAY_STORE_URL, INVITE_WEB_BASE, INVITE_APP_SCHEME, TELEGRAM_BOT, NOTIFY_API, notifyApiBases
 - `constants/brand.ts` — módulo JS/TS
   - Funciones/clases: APP_DISPLAY_NAME
 - `constants/bsc.ts` — módulo JS/TS
@@ -339,7 +338,6 @@ Conexión = análisis estático. No afirma ejecución 100% en runtime.
 - `scripts/bscNetworks.cjs` — módulo JS/TS
 - `scripts/check-i18n.mjs` — módulo JS/TS
 - `scripts/check-production.mjs` — módulo JS/TS
-- `scripts/deploy-hetzner.mjs` — módulo JS/TS
 - `scripts/deploy-mainnet-nuevo.cjs` — módulo JS/TS
   - Funciones/clases: DEPLOYED_MAINNET
 - `scripts/deploy-notify.mjs` — módulo JS/TS
@@ -377,14 +375,11 @@ Conexión = análisis estático. No afirma ejecución 100% en runtime.
   - Funciones/clases: DEPLOYED_TESTNET
 - `scripts/seed-testnet.cjs` — módulo JS/TS
 - `scripts/sentinel.py` — módulo Python
-  - Funciones/clases: load_dotenv, env_addr, telegram_send, read_nav, read_reserva, check_once, parse_args, main
 - `scripts/set-sms-keys.mjs` — módulo JS/TS
 - `scripts/setup-safe-admin.cjs` — módulo JS/TS
 - `scripts/simulateTx.js` — módulo JS/TS
 - `scripts/spawnEnv.mjs` — módulo JS/TS
   - Funciones/clases: spawnPath, spawnEnv, binDocker, binWsl, stripTrailSlash, binNpx
-- `scripts/telegramBotName.cjs` — módulo JS/TS
-- `scripts/textbeltSms.cjs` — módulo JS/TS
 - `scripts/verify-totp.mjs` — módulo JS/TS
 - `scripts/_gen_loan_tiers.py` — módulo Python
   - Funciones/clases: nice_amount, installments, build, assert_order, write_ts, write_sol_seed
@@ -432,7 +427,6 @@ Conexión = análisis estático. No afirma ejecución 100% en runtime.
 - `services/kycDeclaration.ts` — módulo JS/TS
   - Funciones/clases: normalizeLegalName, normalizeCountry, normalizeCity, isValidLegalName, isValidKyc, kycIdentitySource, kycIdentityFingerprint, formatKycFingerprint, loadKycDeclaration, loadBoundLegalName, saveKycDeclaration, bindLegalIdentity, clearKycDeclaration, loadKycDocPhoto, isKycPhotoLocked, lockKycDocPhoto, persistKycDocPhoto
 - `services/kycProvider.ts` — módulo JS/TS
-  - Funciones/clases: isSumsubHttps, notifyKycProviderReady, openKycProvider
 - `services/linkedWallet.ts` — módulo JS/TS
   - Funciones/clases: WALLET_LINK_SKIPPED, linkedWalletStorageKey, hasLinkedExternalWallet, hasCompletedWalletLink, loadLinkedExternalWallet, saveLinkedExternalWallet, proveAndSaveLinkedWallet, skipLinkedExternalWallet, loadRequiredExternalWallet
 - `services/movementHistory.ts` — módulo JS/TS
@@ -461,8 +455,6 @@ Conexión = análisis estático. No afirma ejecución 100% en runtime.
   - Funciones/clases: SecureStorageService
 - `services/sponsorLock.ts` — módulo JS/TS
   - Funciones/clases: loadLockedSponsor, lockSponsorOnce
-- `services/telegramBot.ts` — módulo JS/TS
-  - Funciones/clases: envTelegramBot, resolveTelegramBot
 - `services/userProfile.ts` — módulo JS/TS
   - Funciones/clases: PUBLIC_PROFILE_BATCH, AVATAR_PRESETS, EMPTY_PROFILE, PUBLIC_PHOTO_MAX, clampAvatarId, hasLockedPublicIdentity, isPublicIdentityLocked, sanitizePublicPhoto, canSubmitPublicIdentity, publicPhotoFromAsset, normalizeDisplayName, isValidDisplayName, persistPickedPhoto, initialsFromName, avatarColorForWallet, labelForProfile, loadOwnProfile, saveOwnProfile, clearOwnProfile, loadProfileDirectory, rememberProfiles, rememberProfile, publishOwnProfile, fetchPublicProfiles
 - `services/verificationFeeReceipt.ts` — módulo JS/TS
@@ -485,7 +477,6 @@ Conexión = análisis estático. No afirma ejecución 100% en runtime.
 - `test/alta-registro.test.js` — módulo JS/TS
 - `test/attest2of2.test.js` — módulo JS/TS
 - `test/audit-fixes.test.js` — módulo JS/TS
-  - Funciones/clases: isSumsubHttps
 - `test/brand-splash.test.js` — módulo JS/TS
 - `test/circuitBreaker.test.js` — módulo JS/TS
 - `test/commission-levels.test.js` — módulo JS/TS
@@ -502,7 +493,6 @@ Conexión = análisis estático. No afirma ejecución 100% en runtime.
 - `test/hardening-security.test.js` — módulo JS/TS
 - `test/hardening.test.js` — módulo JS/TS
 - `test/helpers.cjs` — módulo JS/TS
-- `test/hetzner-notify.test.js` — módulo JS/TS
 - `test/identity.test.js` — módulo JS/TS
 - `test/invite-code.test.js` — módulo JS/TS
 - `test/kyc.test.js` — módulo JS/TS
@@ -518,7 +508,6 @@ Conexión = análisis estático. No afirma ejecución 100% en runtime.
 - `test/racha.test.js` — módulo JS/TS
 - `test/referral-earnings.test.js` — módulo JS/TS
   - Funciones/clases: creditDirectWei
-- `test/render-notify.test.js` — módulo JS/TS
 - `test/reserva.test.js` — módulo JS/TS
 - `test/save-changes.test.js` — módulo JS/TS
   - Funciones/clases: hasUnsavedChanges
@@ -527,9 +516,6 @@ Conexión = análisis estático. No afirma ejecución 100% en runtime.
 - `test/security-hardening.test.js` — módulo JS/TS
 - `test/security.test.js` — módulo JS/TS
 - `test/sponsor-lock.test.js` — módulo JS/TS
-- `test/telegram-alerts-only.test.js` — módulo JS/TS
-- `test/telegram-bot-name.test.js` — módulo JS/TS
-- `test/textbelt-notify.test.js` — módulo JS/TS
 - `test/wallet-link-reject.test.js` — módulo JS/TS
 - `test/wallet-link-sign.test.js` — módulo JS/TS
 - `theme/androidText.ts` — módulo JS/TS
@@ -619,7 +605,6 @@ Conexión = análisis estático. No afirma ejecución 100% en runtime.
   - Funciones/clases: SPONSOR_LOCK_PREFIX, sponsorLockKey, resolveSponsorInput, parseLockedSponsor, buildLockedSponsor, keepFirstLock
 - `utils/storeSlot.ts` — módulo JS/TS
   - Funciones/clases: storeSlot
-- `utils/telegramBotName.cjs` — módulo JS/TS
 - `utils/totp.ts` — módulo JS/TS
   - Funciones/clases: bytesToBase32, base32ToBytes, totpAt, verifyTotp, otpauthUrl
 - `utils/txErrors.ts` — módulo JS/TS

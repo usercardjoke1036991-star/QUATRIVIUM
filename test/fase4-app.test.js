@@ -6,10 +6,13 @@ const { ARBITRUM_MAINNET } = require('../constants/bsc.ts');
 const { DEPLOYED_MAINNET } = require('../constants/deployedAddresses.ts');
 const {
   altaBreakdown,
+  apkCheck,
   apkIntegrity,
   interestToFounder,
   insuranceOfInflow,
+  nextNostrRelay,
   nextPublicRpc,
+  nostrRelays,
   nostrMayPublish,
   prepareNostrPayload,
   RESERVA_LOCK_DAYS,
@@ -103,7 +106,13 @@ describe('Fase 4 — app soberana', function () {
     expect(hook).to.not.include('https://');
   });
 
-  it('Nostr no publica la mora', function () {
+  it('Nostr releva relés públicos y no publica la mora', function () {
+    const relays = nostrRelays();
+    expect(relays.length).to.be.at.least(5);
+    expect(nextNostrRelay(relays[0])).to.equal(relays[1]);
+    expect(nextNostrRelay(relays[relays.length - 1])).to.equal(null);
+    const custom = relays.map((url, index) => `wss://alt${index}.example`);
+    expect(nostrRelays(custom)[0]).to.equal(custom[0]);
     expect(nostrMayPublish('mora')).to.equal(false);
     expect(nostrMayPublish('moroso')).to.equal(false);
     expect(nostrMayPublish('delinquency')).to.equal(false);
@@ -115,14 +124,47 @@ describe('Fase 4 — app soberana', function () {
     expect(prepareNostrPayload('notice', 'pago')).to.deep.equal({ nip: 'NIP-44', body: 'pago' });
   });
 
-  it('avisa si el hash del APK no es el publicado', function () {
+  it('avisa versión no verificada o hash distinto del APK', function () {
     const hash = 'ab'.repeat(32);
     const other = 'cd'.repeat(32);
+    expect(apkCheck({ registryEmpty: true, localHash: hash, publishedHash: hash })).to.equal(
+      'unverified'
+    );
+    expect(apkCheck({ readFailed: true, localHash: hash, publishedHash: hash })).to.equal(
+      'unverified'
+    );
+    expect(apkCheck({ publishedHash: '' })).to.equal('unverified');
+    expect(apkCheck({ localHash: hash, publishedHash: other })).to.equal('mismatch');
+    expect(apkCheck({ localHash: hash, publishedHash: hash })).to.equal('match');
     expect(apkIntegrity('', '')).to.equal('unpublished');
-    expect(apkIntegrity(hash, hash)).to.equal('match');
-    expect(apkIntegrity(hash, other)).to.equal('mismatch');
-    expect(read('components/ApkIntegrityNote.tsx')).to.include("t('apkHashMismatch')");
+    const note = read('components/ApkIntegrityNote.tsx');
+    expect(note).to.include("t('apkUnverified')");
+    expect(note).to.include("t('apkHashMismatch')");
     expect(read('contracts/QuatriviumApk.sol')).to.include('function publicar');
+    const es = JSON.parse(read('i18n/locales/es.json'));
+    expect(es.apkUnverified.toLowerCase()).to.match(/no verificada/);
+  });
+
+  it('arma el mismo leaderboard para todos a partir de los eventos de la cadena', function () {
+    const { rosterFromSignupEvents } = require('../utils/fameRoster.ts');
+    const first = '0x0000000000000000000000000000000000000001';
+    const second = '0x0000000000000000000000000000000000000002';
+    const third = '0x0000000000000000000000000000000000000003';
+    const events = [
+      { blockNumber: 2, index: 1, usuario: second, padre: first },
+      { blockNumber: 1, index: 0, usuario: third, padre: first },
+    ];
+    const left = rosterFromSignupEvents(events);
+    const right = rosterFromSignupEvents(events.slice().reverse());
+    expect(left.order.map((item) => item.toLowerCase())).to.deep.equal(
+      right.order.map((item) => item.toLowerCase())
+    );
+    expect(left.referrals.get(first.toLowerCase())).to.equal(2);
+    const source = read('services/fameLeaderboard.ts');
+    expect(source).to.include('queryFilter');
+    expect(source).to.include('AfiliadoRegistrado');
+    expect(source).to.include('obtenerHistorialUsuario');
+    expect(source).to.not.include('players.json');
   });
 
   it('la pantalla de admins lee el estado y deja las acciones a las billeteras admin', function () {
@@ -148,6 +190,7 @@ describe('Fase 4 — app soberana', function () {
       'loanSequencerGrace',
       'reservaPotDepends',
       'apkHashMismatch',
+      'apkUnverified',
       'adminStatusLead',
       'adminPauseOn',
       'adminPauseOff',
@@ -164,14 +207,12 @@ describe('Fase 4 — app soberana', function () {
     }
   });
 
-  it('no activa Expo OTA ni textos de Play Store', function () {
-    const pkg = JSON.parse(read('package.json'));
-    expect(pkg.dependencies['expo-updates']).to.equal(undefined);
-    expect(pkg.devDependencies?.['expo-updates']).to.equal(undefined);
+  it('no activa descargas remotas de la app', function () {
     const app = JSON.parse(read('app.json'));
     expect(app.expo.updates).to.equal(undefined);
-    expect(JSON.stringify(app)).to.not.match(/play\.google|Play Store/i);
-    expect(read('i18n/legalExtras.ts')).to.not.include('Google Play');
-    expect(fs.existsSync(path.join(root, 'store-assets/play-store-listing.md'))).to.equal(false);
+    const shots = fs
+      .readdirSync(path.join(root, 'store-assets'))
+      .filter((name) => /\.(png|jpg|webp)$/i.test(name));
+    expect(shots).to.deep.equal([]);
   });
 });

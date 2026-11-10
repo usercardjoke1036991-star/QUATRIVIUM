@@ -28,7 +28,7 @@ const langs = [
 
 const FORCE = [
   'configWarn',
-  'telegramNeedApi',
+  'localNoticeNeed',
   'referralHistoryPartial',
   'reservaFounderNote',
   'tokenNotEnabled',
@@ -37,7 +37,7 @@ const FORCE = [
 const PACK = {
   de: {
     configWarn: 'Vertrag nicht konfiguriert.',
-    telegramNeedApi: 'Der Benachrichtigungsdienst ist derzeit nicht verfügbar.',
+    localNoticeNeed: 'Der Benachrichtigungsdienst ist derzeit nicht verfügbar.',
     referralHistoryPartial: 'Aktueller Verlauf. Ältere Provisionen können fehlen.',
     reservaFounderNote: 'Ein Teil des Extras fließt in den Betrieb der Plattform, je nach Tranche.',
     tokenNotEnabled: 'Token nicht aktiviert. Nur für Administratorinnen.',
@@ -197,7 +197,7 @@ const PACK = {
   },
   fr: {
     configWarn: 'Contrat non configuré.',
-    telegramNeedApi: 'Le service de notifications n’est pas disponible pour le moment.',
+    localNoticeNeed: 'Le service de notifications n’est pas disponible pour le moment.',
     referralHistoryPartial: 'Historique récent. D’anciennes commissions peuvent manquer.',
     reservaFounderNote:
       'Une part de l’extra est affectée au fonctionnement de la plateforme, selon le palier.',
@@ -353,7 +353,7 @@ const PACK = {
   },
   it: {
     configWarn: 'Contratto non configurato.',
-    telegramNeedApi: 'Il servizio di notifiche non è disponibile in questo momento.',
+    localNoticeNeed: 'Il servizio di notifiche non è disponibile in questo momento.',
     referralHistoryPartial: 'Cronologia recente. Potrebbero mancare commissioni precedenti.',
     reservaFounderNote:
       'Una parte dell’extra è destinata al funzionamento della piattaforma, secondo lo scaglione.',
@@ -510,7 +510,7 @@ const PACK = {
   },
   pt: {
     configWarn: 'Contrato não configurado.',
-    telegramNeedApi: 'O serviço de avisos não está disponível neste momento.',
+    localNoticeNeed: 'O serviço de avisos não está disponível neste momento.',
     referralHistoryPartial: 'Histórico recente. Podem faltar comissões antigas.',
     reservaFounderNote: 'Uma parte do extra destina-se à operação da plataforma, conforme o tramo.',
     tokenNotEnabled: 'Token não habilitado. Só para administradoras.',

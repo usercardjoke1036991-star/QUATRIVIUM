@@ -54,9 +54,7 @@ trivy fs --skip-db-update \
   --severity HIGH,CRITICAL,MEDIUM \
   --format table \
   --output "$OUT/trivy.txt" \
-  "$MAGNO/package-lock.json" "$MAGNO/package.json" "$MAGNO/Dockerfile.notify" \
-  "$MAGNO/fly.toml" "$MAGNO/render.yaml" "$MAGNO/scripts" "$MAGNO/contracts" \
-  "$MAGNO/deploy" \
+  "$MAGNO/package-lock.json" "$MAGNO/package.json" "$MAGNO/scripts" "$MAGNO/contracts" \
   && echo TRIVY_OK | tee -a "$OUT/progress.txt" \
   || echo TRIVY_FAIL | tee -a "$OUT/progress.txt"
 sed -n '1,160p' "$OUT/trivy.txt" | tee "$OUT/trivy-head.txt"

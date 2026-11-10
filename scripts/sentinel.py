@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Centinela de cuentas Quatrivium: solo bloques ya minados, solo lectura.
 
-Si se rompe el NAV de Credit o la caja de Reserva, avisa por Telegram.
+Si se rompe el NAV de Credit o la caja de Reserva, lo escribe en la salida local.
 No firma, no pausa, no usa la mempool. La llave de admin no entra aqui.
 """
 
@@ -12,8 +12,6 @@ import json
 import os
 import sys
 import time
-import urllib.error
-import urllib.request
 from pathlib import Path
 
 try:
@@ -92,24 +90,8 @@ def env_addr(name: str, fallback: str = "") -> str:
     return Web3.to_checksum_address(raw)
 
 
-def telegram_send(text: str) -> None:
-    token = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip()
-    chat = (os.environ.get("TELEGRAM_ADMIN_CHAT_ID") or os.environ.get("SENTINEL_CHAT_ID") or "").strip()
-    if not token or not chat:
-        print("ALERTA (sin Telegram configurado):", text, file=sys.stderr)
-        return
-    body = json.dumps({"chat_id": chat, "text": text, "disable_web_page_preview": True}).encode("utf-8")
-    req = urllib.request.Request(
-        f"https://api.telegram.org/bot{token}/sendMessage",
-        data=body,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=20) as resp:
-            resp.read()
-    except (urllib.error.URLError, TimeoutError) as exc:
-        print(f"Telegram fallo: {exc}", file=sys.stderr)
+def local_alert(text: str) -> None:
+    print("ALERTA:", text, file=sys.stderr)
 
 
 def read_nav(w3: Web3, credit_addr: str, token_addr: str) -> dict:
@@ -216,7 +198,7 @@ def main() -> int:
                 text = "QUATRIVIUM ALERTA ROJA\n" + "\n".join(broken)
                 print(text, file=sys.stderr)
                 if text != last_alert:
-                    telegram_send(text)
+                    local_alert(text)
                     last_alert = text
                 if args.once:
                     return 1

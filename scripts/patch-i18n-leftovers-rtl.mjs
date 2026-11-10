@@ -2,7 +2,7 @@
 export const PACK_RTL = {
   hi: {
     configWarn: 'अनुबंध कॉन्फ़िगर नहीं है।',
-    telegramNeedApi: 'सूचना सेवा अभी उपलब्ध नहीं है।',
+    localNoticeNeed: 'सूचना सेवा अभी उपलब्ध नहीं है।',
     referralHistoryPartial: 'हाल का इतिहास। पुराने कमीशन छूट सकते हैं।',
     reservaFounderNote: 'अतिरिक्त का एक भाग स्तर के अनुसार प्लेटफ़ॉर्म संचालन में जाता है।',
     tokenNotEnabled: 'टोकन सक्षम नहीं है। केवल प्रशासकों के लिए।',
@@ -157,7 +157,7 @@ export const PACK_RTL = {
   },
   ar: {
     configWarn: 'العقد غير مهيأ.',
-    telegramNeedApi: 'خدمة الإشعارات غير متاحة الآن.',
+    localNoticeNeed: 'خدمة الإشعارات غير متاحة الآن.',
     referralHistoryPartial: 'سجل حديث. قد لا تظهر عمولات أقدم.',
     reservaFounderNote: 'يُخصص جزء من الزيادة لتشغيل المنصة بحسب الشريحة.',
     tokenNotEnabled: 'الرمز غير مفعّل. للمسؤولات فقط.',
@@ -311,7 +311,7 @@ export const PACK_RTL = {
   },
   bn: {
     configWarn: 'চুক্তি কনফিগার করা নেই।',
-    telegramNeedApi: 'বিজ্ঞপ্তি সেবা এই মুহূর্তে পাওয়া যাচ্ছে না।',
+    localNoticeNeed: 'বিজ্ঞপ্তি সেবা এই মুহূর্তে পাওয়া যাচ্ছে না।',
     referralHistoryPartial: 'সাম্প্রতিক ইতিহাস। পুরোনো কমিশন বাদ যেতে পারে।',
     reservaFounderNote: 'অতিরিক্তের একটি অংশ স্তর অনুযায়ী প্ল্যাটফর্ম পরিচালনায় যায়।',
     tokenNotEnabled: 'টোকেন চালু নেই। শুধু প্রশাসকদের জন্য।',
@@ -466,7 +466,7 @@ export const PACK_RTL = {
   },
   ur: {
     configWarn: 'معاہدہ ترتیب نہیں دیا گیا۔',
-    telegramNeedApi: 'اطلاعات کی خدمت اس وقت دستیاب نہیں۔',
+    localNoticeNeed: 'اطلاعات کی خدمت اس وقت دستیاب نہیں۔',
     referralHistoryPartial: 'حالیہ تاریخ۔ پرانے کمیشن غائب ہو سکتے ہیں۔',
     reservaFounderNote: 'اضافی کا ایک حصہ درجے کے مطابق پلیٹ فارم کے عمل میں جاتا ہے۔',
     tokenNotEnabled: 'ٹوکن فعال نہیں۔ صرف منتظمین کے لیے۔',
