@@ -66,17 +66,11 @@ Todas en `cursor/soberania-contratos-8e15`. PR: https://github.com/usercardjoke1
 | 3 | `54821d6` | Fee de liquidación al pool. Fondo de seguro 5 %. `QuatriviumApk`. Feed obligatorio en 42161. Simulación de 100 préstamos L1. | `test/fase3-seguro-apk.test.js`, `forge-test/QuatriviumFase3.t.sol` |
 | 4 | `45153f2` | La app muestra el reparto del alta, el 15 % y el 5 %, la gracia, el aviso de Reserva, avisos locales, Nostr sin mora, ranking y lectura de admins. Sin Expo OTA. | `test/fase4-app.test.js`, `test/screen-copy.test.js` |
 | 5 | `6c42f4d` | Seis relés públicos con relevo. APK vacío o caído = «versión no verificada»; hash distinto = aviso fuerte. Capturas de tienda borradas. Ranking determinista desde eventos. Servicios prohibidos fuera del árbol. Escáner en CI. | `test/fase4-app.test.js`, `scripts/check-external-services.mjs` (también dentro de `npm run typecheck`) |
+| 6 | el commit que reescribe `README.md` y `CONTEXTO.md` | Fuera el meta-tooling de README, conectores y `.cursor/`. Docs viejas que hablaban de otra app o de un oráculo de precio, borradas. `HANDOFF.md` no lo escanea el detector de servicios: es la lista de lo prohibido. | La misma suite. No hay tests nuevos. |
 
-## 5. Números en `6c42f4d`
+## 5. Números
 
-Medidos en este árbol, sin cambiar contratos:
-
-- Hardhat: 294 tests (`it(` en `test/`). La última corrida completa pasó 294/294.
-- Foundry: la última corrida pasó 51/51 (`forge test --fuzz-runs 32`; los invariantes corrieron 256).
-- `QuatriviumCredit` deployed bytecode (artifact Hardhat): **21769 bytes**. Límite EIP-170: 24576. Libres: **2807**.
-- `npm run typecheck`, `npm run lint` (0 errores y 0 avisos) y `npm run format:check`: verdes en esa corrida.
-
-No volver a medirlos hasta que cambie el código. La fase 6, si se hace, corre la suite una sola vez y actualiza esta sección.
+La fase 6 no toca contratos. Credit sigue en 21769 bytes (2807 libres de 24576). Corrida única de esta fase: Hardhat 294/294, Foundry 51/51, `typecheck` verde, `eslint . --max-warnings 0` sin avisos, `format:check` verde.
 
 ## 6. Simulación de impago
 
@@ -100,7 +94,7 @@ Eso es el interés que se queda en el sistema, en LUSD. El test lo exige con `as
 
 Orden de prioridad:
 
-1. **Fase 6, si Jose la pide y este archivo aún dice que no está hecha.** Borrar el meta-tooling que no es el producto: `actualizar_readme.py`, `actualizar_contexto.py`, `mapa_proyecto.py`, `memoria_proyecto.py`, `vision_proyecto.py`, `qa_autonomo.py`, `verificar_conectores.py`, `detectar_logica.py`, `detectar_lenguaje.py`, `crear_proyecto.py` si aparece, `aprender_error.py`, `reestructurar_peticion.py`, `salud_proyecto.py` y las reglas de `.cursor/`. Reescribir `README.md` y `CONTEXTO.md` para que describan este protocolo, no una plantilla. Si un script duda (lo usa un test o CI), se deja y se lista.
+1. **Fase 6: hecha en este árbol.** Se borraron los generadores de README, contexto, mapa, visión, memoria y QA, y la carpeta `.cursor/`. `README.md` y `CONTEXTO.md` describen este protocolo. Se dejó, porque un test lo lee y fallaría la suite, este arnés: `scripts/run-full-cyber-audit.sh`, `scripts/zap-health-wsl.sh`, `scripts/fetch-wallet-logos.py`, `scripts/run-slither.mjs`, `scripts/run-slither-wsl.sh`, `scripts/run-snyk.mjs`, `scripts/run-sonar.mjs`, `scripts/scan-mobile.mjs`, `scripts/trivy-lock.sh`, `trivy.yaml`, `.trivyignore`, `slither.config.json`, `sonar-project.properties` (la clave de Sonar sigue nombrando el proyecto viejo), `scripts/patch-i18n-leftovers*.mjs` (el test exige al menos cuatro) y `scripts/linkCredit.cjs`. También se dejaron el despliegue, `web/`, `zk-contracts/` y `contracts/Groth16Verifier.sol`.
 2. **Pendiente hasta que Jose lo diga, y no antes:**
    - Compilar el APK firmado y calcular su SHA-256.
    - Desplegar en Arbitrum One y rellenar `constants/deployedAddresses.ts` (`contract`, `reserva`, `fama`, `alta`). No inventar direcciones.
@@ -110,8 +104,8 @@ Orden de prioridad:
    - Nostr no abre un websocket. Hay lista de 6 relés y `nextNostrRelay`. La mora sigue bloqueada en `prepareNostrPayload`.
    - El hash del APK instalado no se calcula en el teléfono. Sin registro, la UI dice «versión no verificada».
    - Credit tiene 2807 bytes libres. Cualquier lógica nueva en ese contrato puede no caber. Preferir un contrato hermano, como ya se hizo con Apk, Leveling y LoanLadder.
-4. Revisión humana de textos viejos: alta de 1 o 2 USDT, restos de Magno, oráculo de precio en docs generadas (el `README.md` actual todavía cita un feed LUSD/USD de Chainlink; el contrato ya no lo usa).
-5. Auditoría externa de los contratos antes de dinero real. Los informes `AUDITORIA-*.md` y `contracts/SECURITY_AUDIT_REPORT.md` no sustituyen esa auditoría.
+4. Revisión humana de textos que aún digan alta de 1 o 2 USDT, o el nombre del proyecto anterior, dentro de la app y de los tests. Las docs sueltas que lo decían ya no están. `sonar-project.properties` conserva el id viejo porque `test/cyber-hardening.test.js` lo exige.
+5. Auditoría externa de los contratos antes de dinero real. El informe viejo de agosto de 2026 se borró: hablaba de otro contrato y de Solidity 0.8.17. No lo reemplaza este archivo.
 6. Revocar en Resend la clave que quedó en el historial de git, commits `10553d4` y `dc40f15`. No reescribir historia. No copiar el valor de la clave en ningún documento. Twilio, Textbelt y Sumsub aparecen como nombres de variable, no como secretos asignados. El token con forma de bot de Telegram que hay en la historia es un fixture de tests.
 
 ## 8. Riesgos

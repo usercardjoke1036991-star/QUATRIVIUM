@@ -31,10 +31,7 @@
     "deploy:reserva": "hardhat run scripts/deploy-reserva.cjs --network arbitrumSepolia",
     "production:check": "node scripts/check-production.mjs",
     "production:check:ci": "node scripts/check-production.mjs --ci",
-    "production:prepare": "node scripts/prepare-production-local.mjs",
-    "salud": "python salud_proyecto.py",
-    "salud:watch": "python salud_proyecto.py --watch",
-    "salud:tests": "python salud_proyecto.py --tests"
+    "production:prepare": "node scripts/prepare-production-local.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",

@@ -55,7 +55,13 @@ function walk(dir) {
       walk(full);
       continue;
     }
-    if (entry.name === 'package-lock.json' || entry.name === selfName) continue;
+    if (
+      entry.name === 'package-lock.json' ||
+      entry.name === selfName ||
+      entry.name === 'HANDOFF.md'
+    ) {
+      continue;
+    }
     const rel = path.relative(root, full);
     if (needles.some((needle) => entry.name.toLowerCase().includes(needle))) {
       hits.push(`${rel}: nombre de archivo`);
