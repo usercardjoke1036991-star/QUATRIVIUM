@@ -6,6 +6,15 @@
 const { deploySovereign, SEQUENCER_ARBITRUM_ONE } = require('./deploySovereign.cjs');
 const { ethers, network } = require('hardhat');
 
+const LUSD_ARBITRUM_ONE = '0x93b346b6BC2548dA6A1E7d98E9a421B42541425b';
+
+function assertOfficialLusd(chainId, lusd) {
+  if (Number(chainId) !== 42161) return;
+  if (String(lusd || '').toLowerCase() !== LUSD_ARBITRUM_ONE.toLowerCase()) {
+    throw new Error('Arbitrum One exige el LUSD oficial.');
+  }
+}
+
 async function main() {
   const chainId = Number((await ethers.provider.getNetwork()).chainId);
   if (chainId === 42161 && process.env.CONFIRM_MAINNET !== 'yes') {
@@ -14,6 +23,7 @@ async function main() {
   if (chainId === 42161 && process.env.CONFIRM_FOUNDER_WALLET !== 'yes') {
     throw new Error('Arbitrum One exige CONFIRM_FOUNDER_WALLET=yes.');
   }
+  assertOfficialLusd(chainId, process.env.LUSD_ADDRESS);
   const [deployer] = await ethers.getSigners();
   const founder = process.env.FOUNDER_ADDRESS || deployer.address;
   const admins = (process.env.ADMINS || '')
@@ -42,5 +52,5 @@ if (require.main === module) {
   });
 }
 
-module.exports = { main };
+module.exports = { main, assertOfficialLusd, LUSD_ARBITRUM_ONE };
 void network;

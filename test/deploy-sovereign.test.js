@@ -1,6 +1,10 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const { assertDeployConfig, deploySovereign, ZERO } = require('../scripts/deploySovereign.cjs');
+const {
+  assertOfficialLusd,
+  LUSD_ARBITRUM_ONE,
+} = require('../scripts/deploy-arbitrum-sovereign.cjs');
 
 describe('Despliegue soberano local', function () {
   it('en 42161 no sigue sin la confirmación del fundador ni sin el feed', function () {
@@ -30,6 +34,14 @@ describe('Despliegue soberano local', function () {
         token: '0x93b346b6BC2548dA6A1E7d98E9a421B42541425b',
       })
     ).to.throw(/feed/);
+  });
+
+  it('en 42161 aborta si el LUSD no es el oficial', function () {
+    expect(() => assertOfficialLusd(42161, '0x0000000000000000000000000000000000000001')).to.throw(
+      /LUSD oficial/
+    );
+    assertOfficialLusd(42161, LUSD_ARBITRUM_ONE);
+    assertOfficialLusd(421614, '0x0000000000000000000000000000000000000001');
   });
 
   it('despliega en local con el fundador distinto de quien despliega y todo enlazado', async () => {

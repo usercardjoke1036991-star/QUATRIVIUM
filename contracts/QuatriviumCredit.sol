@@ -222,7 +222,6 @@ contract QuatriviumCredit is ReentrancyGuard {
     error PausaEnReposo();
     event PrestamosPausados(uint256 hasta);
     event SecurityParamsUpdated(uint256 maxOriginations, uint256 maxUtilizationBps);
-    event FeeCollectorUpdated(address indexed newCollector);
 
     modifier onlyAdmin() {
         require(admins[msg.sender], "only admin");

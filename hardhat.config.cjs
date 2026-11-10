@@ -31,7 +31,7 @@ module.exports = {
   },
   networks: {
     hardhat: {
-      allowUnlimitedContractSize: true,
+      allowUnlimitedContractSize: false,
       blockGasLimit: 100_000_000,
     },
     arbitrumOne: {
