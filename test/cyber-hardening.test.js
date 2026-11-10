@@ -1758,18 +1758,10 @@ describe('account entry — password, email and session', () => {
       return !busy && !paused && contractReady !== false;
     }
     function roomFromAppUrl(url) {
-      try {
-        const parsed = new URL(url);
-        if (parsed.protocol !== 'quatrivium:') return '';
-        const host = String(parsed.hostname || '').toLowerCase();
-        const path = String(parsed.pathname || '')
-          .replace(/^\/+|\/+$/g, '')
-          .toLowerCase();
-        if (host === 'room') return path.split('/')[0] || '';
-        return host;
-      } catch {
-        return '';
-      }
+      const { loadTs } = require('./loadTsApp.cjs');
+      const deep = loadTs(path.join(__dirname, '..', 'utils', 'appDeepLink.ts'));
+      const parsed = deep.parseAppDeepLink(url);
+      return parsed && parsed.kind === 'room' ? parsed.room : '';
     }
     expect(referralBoardVisible({ isLoading: true, error: null })).to.equal(true);
     expect(referralBoardVisible({ isLoading: false, error: null })).to.equal(true);
@@ -1856,10 +1848,11 @@ describe('account entry — password, email and session', () => {
       'utf8'
     );
     expect(transferUi).to.include('ensureExternalWalletOnAppChain');
-    expect(roomFromAppUrl('quatrivium://room/credit?n=1730000000')).to.equal('credit');
-    expect(roomFromAppUrl('quatrivium://room/history')).to.equal('history');
-    expect(roomFromAppUrl('quatrivium://room/network')).to.equal('network');
-    expect(roomFromAppUrl('quatrivium://room/people')).to.equal('people');
+    expect(roomFromAppUrl('quatrivium-sovereign://room/credit?n=1730000000')).to.equal('credit');
+    expect(roomFromAppUrl('quatrivium-sovereign://room/history')).to.equal('history');
+    expect(roomFromAppUrl('quatrivium-sovereign://room/network')).to.equal('network');
+    expect(roomFromAppUrl('quatrivium-sovereign://room/people')).to.equal('people');
+    expect(roomFromAppUrl('quatrivium://room/credit')).to.equal('');
     const deep = fs.readFileSync(path.join(__dirname, '..', 'utils', 'appDeepLink.ts'), 'utf8');
     expect(deep).to.include("token === 'privacy'");
     expect(deep).to.include("kind: 'mode'");
@@ -2186,6 +2179,7 @@ describe('account entry — password, email and session', () => {
       'utf8'
     );
     const deep = fs.readFileSync(path.join(__dirname, '..', 'utils', 'appDeepLink.ts'), 'utf8');
+    const links = fs.readFileSync(path.join(__dirname, '..', 'constants', 'appLinks.ts'), 'utf8');
     const transfer = fs.readFileSync(
       path.join(__dirname, '..', 'components', 'TransferWalletsModal.tsx'),
       'utf8'
@@ -2196,7 +2190,8 @@ describe('account entry — password, email and session', () => {
     expect(famaLib).to.not.include('blacklist');
     expect(deep).to.include("token === 'admin'");
     expect(deep).to.include('isAllowedAppUrl');
-    expect(deep).to.include('quatriviumcredit.app');
+    expect(deep).to.include('PUBLIC_APP_HOST');
+    expect(links).to.include('quatriviumcredit.app');
     expect(deep).to.not.include("if (host && host !== 'expo-development-client') return host");
     expect(transfer).to.include('if (busy) return');
   });
