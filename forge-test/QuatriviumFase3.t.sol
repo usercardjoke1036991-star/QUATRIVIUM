@@ -131,18 +131,17 @@ contract QuatriviumFase3Test is Test {
 
         uint256 liq1 = credit.totalLiquidity(address(token));
         uint256 fondo1 = credit.fondoSeguro(address(token));
-        uint256 sistema = (liq1 + fondo1) - (liq0 + fondo0);
+        int256 sistema = int256(liq1 + fondo1) - int256(liq0 + fondo0);
         uint256 corte = (interes * 1500) / 10000;
         uint256 bueno = interes - corte;
-        uint256 fee = (interes * 500) / 10000;
-        uint256 topePremio = interes > fee ? interes - fee : 0;
         uint256 premio = 0.05 ether;
-        if (premio > topePremio) premio = topePremio;
-        uint256 malo = interes - premio;
-        uint256 esperado = buenos * (2 ether + bueno) + malos * (1 ether + malo);
-        int256 ganancia = int256(sistema) - int256(n * 1 ether + buenos * 1 ether);
-        uint256 fondoDelta = fondo1 - fondo0;
-        uint256 poolDelta = liq1 - liq0;
+        if (premio > interes) premio = interes;
+        // El 1 del padrino que entra al pool y el principal que el seguro absorbe se anulan.
+        // El premio sale del sistema. El principal no vuelve en tokens.
+        int256 esperado = int256(buenos * (2 ether + bueno)) - int256(malos * premio);
+        int256 ganancia = sistema - int256(n * 1 ether + buenos * 1 ether);
+        int256 fondoDelta = int256(fondo1) - int256(fondo0);
+        int256 poolDelta = int256(liq1) - int256(liq0);
 
         console2.log("impago", malos);
         console2.log("ganancia antes (pool+fondo)", ganancia);
@@ -152,7 +151,7 @@ contract QuatriviumFase3Test is Test {
 
         assertEq(credit.collectedFees(address(token)), 0, "fee atascado");
         assertEq(sistema, esperado, "sistema");
-        assertEq(credit.totalImpagoCubierto(), malos * premio, "cobertura");
+        assertEq(credit.totalImpagoCubierto(), malos * 1 ether, "cobertura");
         assertGt(int256(ganancia), int256(-2175) * int256(1e16), "mejor que -21.75");
         assertEq(credit.outstandingLoans(address(token)), 0);
     }
@@ -196,5 +195,67 @@ contract QuatriviumFase3Test is Test {
         );
         alta = new QuatriviumAlta(address(token), predictedCredit, predictedReserva);
         require(address(credit) == predictedCredit, "pred");
+    }
+
+    function test_liquidacion_l1_conserva_saldos() public {
+        vm.chainId(31337);
+        vm.warp(1_700_000_000);
+        (QuatriviumCredit credit, QuatriviumAlta alta, ERC20Mock token, QuatriviumReserva reserva,) =
+            _stack(address(0));
+        token.mint(address(this), 1000 ether);
+        token.approve(address(credit), type(uint256).max);
+        vm.prank(address(this), address(this));
+        credit.depositarLiquidez(address(token), 100 ether);
+
+        address deudor = address(0xD00D);
+        vm.prank(deudor, deudor);
+        credit.registrarHumanoConPadre(address(0));
+        token.mint(deudor, 10 ether);
+        vm.prank(deudor);
+        token.approve(address(alta), type(uint256).max);
+        vm.prank(deudor, deudor);
+        alta.pagarRegistro();
+        vm.prank(deudor, deudor);
+        credit.solicitarPrestamo(address(token), 1);
+
+        (, uint256 principal, uint256 vencimiento,,,) = credit.usuarios(deudor);
+        (, uint256 interes,,) = credit.obtenerDeuda(deudor);
+        vm.warp(vencimiento + 48 hours + 2 hours);
+
+        address liq = address(0x1111);
+        uint256 premio = (principal * 5) / 100;
+        if (premio > interes) premio = interes;
+        uint256 suma = _caja(token, credit, alta, reserva, deudor, liq);
+        uint256 fondoAntes = credit.fondoSeguro(address(token));
+
+        vm.prank(liq, liq);
+        credit.liquidate(deudor, address(token));
+
+        assertEq(token.balanceOf(liq), premio);
+        assertGt(premio, 0);
+        assertEq(credit.outstandingLoans(address(token)), 0);
+        assertEq(_caja(token, credit, alta, reserva, deudor, liq), suma);
+        assertEq(
+            token.balanceOf(address(credit)) + credit.outstandingLoans(address(token)),
+            credit.totalLiquidity(address(token)) + credit.fondoSeguro(address(token)) + credit.collectedFees(address(token))
+        );
+        assertLe(credit.fondoSeguro(address(token)), fondoAntes);
+        assertEq(token.balanceOf(address(reserva)), reserva.bote() + reserva.totalBloqueado());
+        (bool ok,) = address(credit).call(
+            abi.encodeWithSignature("retirarLiquidez(address,uint256)", address(token), 1 ether)
+        );
+        assertFalse(ok);
+    }
+
+    function _caja(
+        ERC20Mock token,
+        QuatriviumCredit credit,
+        QuatriviumAlta alta,
+        QuatriviumReserva reserva,
+        address deudor,
+        address liq
+    ) internal view returns (uint256) {
+        return token.balanceOf(address(credit)) + token.balanceOf(address(alta)) + token.balanceOf(address(reserva))
+            + token.balanceOf(deudor) + token.balanceOf(liq) + token.balanceOf(credit.fundador());
     }
 }

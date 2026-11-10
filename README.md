@@ -4,11 +4,11 @@ App de microcrédito descentralizada en Arbitrum One (`chainId` 42161) con LUSD 
 
 El alta son 4 LUSD: 1 al fundador, 1 al bote de Reserva, 1 apartado para quien invitó y 1 de sello al pool. De ese sello, el 5 % queda en el fondo de seguro. Sin invitación, o si quien invitó no tiene el alta y el primer nivel pagados, ese 1 apartado entra al pool al pagar el primer nivel 1. Si ese nivel no se paga en 7 días, también entra al pool. No se puede uno invitar a sí mismo. El fundador cobra ese 1 LUSD y el 15 % del interés en la misma transacción. El pool no se puede retirar. Tres admins votan 2 de 3, con 72 h de espera y sin caducidad. La pausa de préstamos nuevos usa esa misma votación, se levanta sola a los 7 días y no puede repetirse hasta pasar otros 7 días. Pagos, liquidaciones y Reserva no se pausan.
 
-Reserva: nivel 10 o más, bloqueo de 30 días, tope del 12 % anual pagado del bote, capital siempre devuelto. El fondo de seguro es el 5 % de lo que entra al pool y solo cubre el premio de un impago. La liquidación espera 48 h más la caída que muestra el feed del sequencer y 1 h después de que vuelve. Una ronda vieja con el sequencer arriba no frena la liquidación. Para cobrar unilevel, padrino, fama o racha hay que tener el alta y el L1 pagados.
+Reserva: nivel 10 o más, bloqueo de 30 días, tope del 12 % anual pagado del bote, capital siempre devuelto. El fondo de seguro es el 5 % de lo que entra al pool y cubre la deuda de un impago. Si no alcanza, esa pérdida baja la liquidez del pool. La liquidación espera 48 h más la caída que muestra el feed del sequencer y 1 h después de que vuelve. El liquidador no pone el principal. Para cobrar unilevel, padrino, fama o racha hay que tener el alta y el L1 pagados.
 
 Sin Rust y sin pruebas de conocimiento cero. Sin servidor y sin tienda de aplicaciones. El mensaje privado por Nostr está oculto: no hay cifrado NIP-17/44.
 
-El detalle cerrado, el mapa y lo que falta están en `HANDOFF.md`. Hardhat 306, Foundry 51. Credit: 21882 bytes, 2694 libres de 24576.
+El detalle cerrado, el mapa y lo que falta están en `HANDOFF.md`. Hardhat 306, Foundry 52. Credit: 21655 bytes, 2921 libres de 24576.
 
 ## Probar
 

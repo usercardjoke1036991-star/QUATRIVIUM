@@ -13,7 +13,7 @@ No hay servidor de la empresa. La billetera nace en el teléfono (`services/appW
 - Alta de 4 LUSD en `QuatriviumAlta.pagarRegistro`: 1 al fundador, 1 al bote de Reserva, 1 apartado para quien invitó y 1 de sello a Credit. De ese sello, el 5 % queda en el fondo de seguro y el 95 % en la liquidez. Entrar sin invitación cuelga del fundador. Ese 1 apartado no se queda bloqueado: al pagar el primer nivel 1 va a quien invitó si ya tiene alta y nivel 1, y si no, al pool. A los 7 días sin ese pago, entra al pool. Una misma cuenta no puede ser su propio invitador. El fundador cobra además el 15 % del interés en la misma transacción. Solo él rota su billetera, con 72 h. No necesita alta ni L1.
 - Fondo de seguro: 5 % de las entradas al pool. Solo paga el premio del impago.
 - Reserva: nivel ≥ 10, 30 días, tope 12 % anual del bote, principal siempre devuelto. Sin owner ni retiro del bote.
-- Liquidación: 48 h más la caída leída de la ronda anterior del feed y 1 h tras volver. `answer == 0` es sequencer arriba aunque la ronda tenga meses. Si el feed falla o `startedAt` es cero, se pospone la liquidación. Feed `0xFdB631F5EE196F0ed6FAa767959853A9F217697D`, obligatorio si chainId es 42161. Premio = el menor entre 5 % del principal restante y el interés que queda.
+- Liquidación: 48 h más la caída leída de la ronda anterior del feed y 1 h tras volver. `answer == 0` es sequencer arriba aunque la ronda tenga meses. Si el feed falla o `startedAt` es cero, se pospone la liquidación. El liquidador no pone el principal: el seguro absorbe la deuda y el premio (el menor entre 5 % y el interés) sale del contrato. Feed `0xFdB631F5EE196F0ed6FAa767959853A9F217697D`, obligatorio si chainId es 42161.
 - Unilevel, padrino, fama y racha exigen alta y L1 (`cobradorListo`). Si no, esa parte entra al pool. La racha solo cuenta nivel ≥ 2 pagado a tiempo.
 - Avisos locales. No hay mensaje privado por Nostr: el cifrado NIP-17/44 no está hecho y `prepareNostrPayload` devuelve null. La mora no se publica. Ranking leído de eventos de la cadena.
 - Sin Rust y sin pruebas de conocimiento cero. Sin servidor y sin tienda de aplicaciones. La lista de nombres prohibidos está en `HANDOFF.md`.
@@ -25,7 +25,7 @@ La escalera de 1000 niveles y los porcentajes de arriba no se tocan sin una orde
 
 | Archivo | Rol |
 | --- | --- |
-| `contracts/QuatriviumCredit.sol` | Préstamos, pool, interés, liquidación, admins, sequencer, fondo. 21882 bytes. Libres: 2694 de 24576. |
+| `contracts/QuatriviumCredit.sol` | Préstamos, pool, interés, liquidación, admins, sequencer, fondo. 21655 bytes. Libres: 2921 de 24576. |
 | `contracts/QuatriviumAlta.sol` | Alta de 4 LUSD. |
 | `contracts/QuatriviumReserva.sol` | Bloqueos y bote. |
 | `contracts/QuatriviumFamaCaja.sol` | Fama, canje y racha. |

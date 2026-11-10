@@ -207,7 +207,8 @@ contract QuatriviumAuditForgeTest is Test {
         vm.prank(liquidator, liquidator);
         credit.liquidate(user, address(token));
         uint256 trasFee = credit.totalLiquidity(address(token)) + credit.fondoSeguro(address(token));
-        assertGt(trasFee, antes);
+        assertLt(trasFee, antes);
+        assertEq(credit.outstandingLoans(address(token)), 0);
         assertEq(credit.collectedFees(address(token)), 0);
 
         vm.prank(credit.ownerList(1));

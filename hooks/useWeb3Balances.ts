@@ -30,7 +30,7 @@ import { readLoanFullyPaidAt } from '../utils/loanPaidMark';
 const logErr = __DEV__ ? console.log.bind(console) : () => {};
 const logWarn = __DEV__ ? console.warn.bind(console) : () => {};
 
-/** Si el crédito pendiente no se lee, solo se actualiza el NAV. El efectivo anterior se queda. */
+/** El fondo mostrado es la liquidez contable menos préstamos aún abiertos. La deuda ya dada por perdida no está en ninguno de los dos. */
 function poolFigures(
   nav: bigint,
   outstanding: bigint | null,

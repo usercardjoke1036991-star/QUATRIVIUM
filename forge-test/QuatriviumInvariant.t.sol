@@ -106,6 +106,17 @@ contract QuatriviumMoneyHandler is Test {
         try reserva.bloquear(amount) {} catch {}
     }
 
+    function liquidateLoan(uint256 actorSeed) public {
+        address actor = _actor(actorSeed);
+        (, uint256 activo, uint256 vencimiento,,,) = credit.usuarios(actor);
+        if (activo == 0 || vencimiento == 0) return;
+        if (block.timestamp <= vencimiento + 48 hours + 1 hours) {
+            vm.warp(vencimiento + 48 hours + 1 hours + 1);
+        }
+        vm.prank(address(0x1111), address(0x1111));
+        try credit.liquidate(actor, address(token)) {} catch {}
+    }
+
     function reservaDesbloquear(uint256 actorSeed) public {
         address actor = _actor(actorSeed);
         (, uint256 desde, bool activa,) = reserva.posiciones(actor);
@@ -178,7 +189,7 @@ contract QuatriviumInvariantTest is Test {
 
         handler = new QuatriviumMoneyHandler(credit, reserva, alta, token, owner, ownerPk);
 
-        bytes4[] memory selectors = new bytes4[](9);
+        bytes4[] memory selectors = new bytes4[](10);
         selectors[0] = QuatriviumMoneyHandler.deposit.selector;
         selectors[1] = QuatriviumMoneyHandler.donate.selector;
         selectors[2] = QuatriviumMoneyHandler.verifyStamp.selector;
@@ -188,6 +199,7 @@ contract QuatriviumInvariantTest is Test {
         selectors[6] = QuatriviumMoneyHandler.reservaAportar.selector;
         selectors[7] = QuatriviumMoneyHandler.reservaBloquear.selector;
         selectors[8] = QuatriviumMoneyHandler.reservaDesbloquear.selector;
+        selectors[9] = QuatriviumMoneyHandler.liquidateLoan.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: selectors}));
         targetContract(address(handler));
     }

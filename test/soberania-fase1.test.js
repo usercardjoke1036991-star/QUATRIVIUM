@@ -131,18 +131,23 @@ describe('Fase 1 — soberanía de cobros, racha, alta, liquidación y oráculo'
     await contract.forceNivel(user.address, 1000);
     await contract.connect(user).solicitarPrestamo(tokenAddr, 1000);
     const info = await contract.usuarios(user.address);
-    const liqBefore = await contract.totalLiquidity(tokenAddr);
+    const debt = await contract.obtenerDeuda(user.address);
+    let reward = (debt.principal * 5n) / 100n;
+    if (reward > debt.interes) reward = debt.interes;
     await ethers.provider.send('evm_setNextBlockTimestamp', [Number(info.vencimiento) + 10]);
     await ethers.provider.send('evm_mine');
-    await token.mint(liquidator.address, ethers.parseUnits('1200000', 18));
+    const minted = ethers.parseUnits('1200000', 18);
+    await token.mint(liquidator.address, minted);
     await token.connect(liquidator).approve(contractAddr, ethers.MaxUint256);
-    await expect(contract.connect(liquidator).liquidate(user.address, tokenAddr)).to.be.reverted;
+    await expect(contract.connect(liquidator).liquidate(user.address, tokenAddr))
+      .to.be.revertedWithCustomError(contract, 'GraciaLiquidacion');
     await ethers.provider.send('evm_setNextBlockTimestamp', [
       Number(info.vencimiento) + 48 * 60 * 60 + 10,
     ]);
     await ethers.provider.send('evm_mine');
     await contract.connect(liquidator).liquidate(user.address, tokenAddr);
-    const liqAfter = await contract.totalLiquidity(tokenAddr);
-    expect(liqAfter).to.be.gte(liqBefore);
+    expect(await token.balanceOf(liquidator.address)).to.equal(minted + reward);
+    expect(await contract.outstandingLoans(tokenAddr)).to.equal(0n);
+    expect(reward).to.equal(debt.interes);
   });
 });

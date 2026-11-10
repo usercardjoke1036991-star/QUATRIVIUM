@@ -225,6 +225,7 @@ contract QuatriviumCredit is ReentrancyGuard {
     error SequencerFeedRequerido();
     error SequencerNoListo();
     error GraciaLiquidacion();
+    error PerdidaPool();
     error PausaEnReposo();
     event PrestamosPausados(uint256 hasta);
     event SecurityParamsUpdated(uint256 maxOriginations, uint256 maxUtilizationBps);
@@ -921,33 +922,30 @@ contract QuatriviumCredit is ReentrancyGuard {
         uint256 interestRestante = (interest * restante) / totalDue;
         uint256 principalRestante = principal - ((principal * pagado) / totalDue);
 
-        stableTokens[tokenAddress].safeTransferFrom(msg.sender, address(this), restante);
-
-        uint256 fee = (interest * restante * feeBasisPoints) / (totalDue * 10000);
-        if (fee > interestRestante) fee = interestRestante;
-
-        // 5 % del principal, nunca más que el interés que queda tras el fee: el pool no pierde.
-        // El fee se queda en el pool en esta misma transacción. No hay saldo sin dueño.
+        // El liquidador no aporta el principal. Solo el gas puede dejarlo en negativo:
+        // el premio sale del contrato y él no transfiere LUSD.
         uint256 reward = (principalRestante * 5) / 100;
-        uint256 topePremio = interestRestante - fee;
-        if (reward > topePremio) reward = topePremio;
+        if (reward > interestRestante) reward = interestRestante;
 
-        _ajustarLiquidezPorInteres(tokenAddress, interestRestante, reward);
-        uint256 entro = interestRestante > reward ? interestRestante - reward : 0;
-        QuatriviumFamaLib.apartarSeguro(totalLiquidity, fondoSeguro, tokenAddress, entro);
-        if (reward > 0) {
-            totalImpagoCubierto += QuatriviumFamaLib.cubrirImpago(
-                totalLiquidity,
-                fondoSeguro,
-                tokenAddress,
-                reward
-            );
+        uint256 fondo = fondoSeguro[tokenAddress];
+        uint256 cubierto = principalRestante <= fondo ? principalRestante : fondo;
+        if (cubierto > 0) {
+            fondoSeguro[tokenAddress] = fondo - cubierto;
+            totalImpagoCubierto += cubierto;
         }
+        uint256 perdida = principalRestante - cubierto;
+        if (perdida > 0) {
+            if (totalLiquidity[tokenAddress] < perdida) revert PerdidaPool();
+            totalLiquidity[tokenAddress] -= perdida;
+        }
+        _reducirOutstanding(tokenAddress, principalRestante);
 
-        if (outstandingLoans[tokenAddress] <= principalRestante) {
-            outstandingLoans[tokenAddress] = 0;
-        } else {
-            outstandingLoans[tokenAddress] -= principalRestante;
+        uint256 caja = stableTokens[tokenAddress].balanceOf(address(this));
+        if (reward > totalLiquidity[tokenAddress]) reward = totalLiquidity[tokenAddress];
+        if (reward > caja) reward = caja;
+        if (reward > 0) {
+            totalLiquidity[tokenAddress] -= reward;
+            stableTokens[tokenAddress].safeTransfer(msg.sender, reward);
         }
 
         cierreNivel[deudor] = usuarios[deudor].nivelActual;
@@ -972,10 +970,6 @@ contract QuatriviumCredit is ReentrancyGuard {
                 reputacion[deudor] = 0;
             }
             emit ReputationUpdated(deudor, reputacion[deudor]);
-        }
-
-        if (reward > 0) {
-            stableTokens[tokenAddress].safeTransfer(msg.sender, reward);
         }
 
         emit LiquidationExecuted(msg.sender, deudor, tokenAddress, restante, reward);

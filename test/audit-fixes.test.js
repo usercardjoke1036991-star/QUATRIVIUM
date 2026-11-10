@@ -48,8 +48,9 @@ describe('audit fixes', function () {
     expect(es.bonusPending).to.not.match(/pool|fondo|bolsa/i);
     expect(es.referralEarnFirst).to.include('{bonus}');
     expect(es.referralEarnFirst).to.match(/apartado en el alta/i);
-    expect(es.liquidarLead).to.match(/5% del principal/i);
-    expect(es.liquidarConfirm).to.match(/5% del principal/i);
+    expect(es.liquidarLead).to.match(/menor entre el 5% y el interés/i);
+    expect(es.liquidarLead).to.match(/no paga el principal/i);
+    expect(es.liquidarConfirm).to.match(/no transferirá el principal/i);
     expect(es.settingsAdminLead).to.match(/cofundador/i);
     const en = JSON.parse(read('i18n/locales/en.json'));
     expect(en.settingsAdminLead).to.match(/cofounder/i);
