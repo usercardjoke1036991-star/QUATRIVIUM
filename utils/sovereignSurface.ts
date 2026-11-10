@@ -92,6 +92,23 @@ export function apkCheck(input: {
 }
 
 /** Huella del certificado de firma: vacío o sin lectura = no verificada. */
+/** Sin dirección de registro: no verificada. Con huellas, coincide o no. */
+export function apkRegistryStatus(input: {
+  registryAddress?: string;
+  publishedCert?: string;
+  localCert?: string;
+  readFailed?: boolean;
+}): ApkCheck {
+  const address = String(input.registryAddress || '').trim().toLowerCase();
+  if (!address || address === '0x0000000000000000000000000000000000000000') return 'unverified';
+  return apkCertCheck({
+    registryEmpty: !normalizeSha256(input.publishedCert || ''),
+    readFailed: input.readFailed,
+    localCert: input.localCert,
+    publishedCert: input.publishedCert,
+  });
+}
+
 export function apkCertCheck(input: {
   registryEmpty?: boolean;
   readFailed?: boolean;

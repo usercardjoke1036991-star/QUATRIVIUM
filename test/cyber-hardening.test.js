@@ -244,15 +244,16 @@ describe('cyber hardening — PIN and secret box', function () {
     const fs = require('fs');
     const path = require('path');
     const script = fs.readFileSync(
-      path.join(__dirname, '..', 'scripts', 'deploy-mainnet-nuevo.cjs'),
+      path.join(__dirname, '..', 'scripts', 'deploy-arbitrum-sovereign.cjs'),
       'utf8'
     );
     const nets = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'bscNetworks.cjs'), 'utf8');
     expect(script).to.include("process.env.CONFIRM_MAINNET !== 'yes'");
-    expect(script).to.include('chainId !== 42161');
-    expect(script).to.include('QuatriviumReserva');
-    expect(script).to.include('QuatriviumAlta');
-    expect(script).to.include('setAltaFuente');
+    expect(script).to.include('CONFIRM_FOUNDER_WALLET');
+    expect(script).to.include('chainId === 42161');
+    expect(script).to.not.include('setAltaFuente');
+    expect(script).to.not.include('setAlta(');
+    expect(script).to.not.include('setReserva(');
     expect(script).to.not.include('mint(');
     expect(script).to.not.include('EXPO_PUBLIC_CHAIN_ID');
     expect(nets).to.include('0x0411D28c94d85A36bC72Cb0f875dfA8371D8fFfF');

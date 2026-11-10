@@ -291,11 +291,18 @@ contract QuatriviumReserva is ReentrancyGuard {
         p.confirms += 1;
     }
 
+    function _votosVigentes(uint256 id) internal view returns (uint256 n) {
+        uint256 len = adminList.length;
+        for (uint256 i; i < len; ++i) {
+            if (confirmed[id][adminList[i]]) n += 1;
+        }
+    }
+
     function ejecutarAdmin(uint256 id) external onlyAdmin {
         AdminProposal storage p = proposals[id];
         if (p.eta == 0 || p.executed || p.cancelled) revert NadaQueMover();
         if (block.timestamp < p.eta) revert EsperaTimelock();
-        if (p.confirms < 2) revert Quorum();
+        if (_votosVigentes(id) < 2) revert Quorum();
         if (!allowedAdminSelector[bytes4(p.data)]) revert NoAutorizado();
         p.executed = true;
         (bool ok,) = address(this).call(p.data);

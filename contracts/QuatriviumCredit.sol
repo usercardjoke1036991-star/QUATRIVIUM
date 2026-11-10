@@ -11,18 +11,16 @@ import {QuatriviumFamaLib} from "./libraries/QuatriviumFamaLib.sol";
 
 /**
  * @title Quatrivium Finance (Sovereign / LUSD)
- * @notice Microcredito sin colateral + red Unilevel de flujo estrictamente ascendente.
- *         El principal vuelve integro al pool. El interes se reparte (red + pool) con suma cero.
- *         LUSD = 1 USD fijo (sin feed) y admin con timelock + confirmaciones.
- *         Sin pausa, sin lista negra, sin KYC ni attester off-chain.
+ * @notice Microcredito sin colateral en Arbitrum One con LUSD a la par, sin oráculo de precio.
+ *         Tres admins votan 2 de 3 con 72 h. Solo pueden pausar préstamos nuevos.
+ *         La pausa se levanta a los 7 días y luego hay 7 de descanso.
  *
- * Escala: 1000 niveles, $1 a $1 000 000. 1-100 en LoanTierSeed; 101-1000 por formula en _tier.
- * Nivel 1 = 1e18 (1 LUSD). Alta Real: 4 LUSD (1 fundador, 1 Reserva, 1 sello, 1 padrino
- * apartado). El padrino cobra ese 1 al pagar el primer L1; el interés se parte en comisiones.
- * El fundador cobra un recorte fijo de cada interes. Si una llave se compromete,
- * las otras fundadoras pueden reasignar fundador y owner (timelock + confirmaciones).
- * Las comisiones de red recorren toda la linea hacia arriba (no se cortan a 5).
- * Fama de caja: donar/aportar 100 por LUSD desde el primero (mínimo 1 LUSD).
+ * Escala: 1000 niveles, 1 LUSD a 1 000 000 LUSD. 1-100 en LoanTierSeed; 101-1000 en _tier.
+ * Nivel 1 = 1e18. Alta: 4 LUSD (1 fundador, 1 Reserva, 1 apartado del invitador, 1 sello).
+ * El invitador cobra ese 1 al pagar el primer L1. El fundador cobra el 15 % del interés
+ * en la misma transacción. Solo él propone el relevo de su billetera, con 72 h.
+ * Donar o aportar da fama visible y no canjeable. La fama canjeable sale de intereses pagados.
+ * Las comisiones recorren hasta 40 generaciones.
  *
  * EIP-170: ESTE archivo no puede pasar de 24576 bytes (limite de Ethereum, no nuestro).
  * El protocolo no se recorta: cada pieza nueva vive en un hermano o libreria
@@ -226,6 +224,7 @@ contract QuatriviumCredit is ReentrancyGuard {
     error SequencerNoListo();
     error GraciaLiquidacion();
     error PerdidaPool();
+    error VotosInsuficientes();
     error PausaEnReposo();
     event PrestamosPausados(uint256 hasta);
     event SecurityParamsUpdated(uint256 maxOriginations, uint256 maxUtilizationBps);
@@ -323,6 +322,13 @@ contract QuatriviumCredit is ReentrancyGuard {
         return 2;
     }
 
+    function _votosVigentes(uint256 id) internal view returns (uint256 n) {
+        uint256 len = ownerList.length;
+        for (uint256 i; i < len; ++i) {
+            if (confirmed[id][ownerList[i]]) n += 1;
+        }
+    }
+
     function proposeAdminAction(bytes calldata data) external onlyAdmin returns (uint256 id) {
         require(data.length >= 4, "bad data");
         bytes4 sel = bytes4(data);
@@ -364,7 +370,7 @@ contract QuatriviumCredit is ReentrancyGuard {
         AdminProposal storage p = proposals[id];
         require(p.eta != 0 && !p.executed && !p.cancelled, "closed");
         require(block.timestamp >= p.eta, "timelock");
-        require(p.confirms >= _requiredConfirms(), "confirmations");
+        if (_votosVigentes(id) < _requiredConfirms()) revert VotosInsuficientes();
         bytes4 sel = bytes4(p.data);
         require(allowedAdminSelector[sel], "selector not allowed");
         p.executed = true;
@@ -410,6 +416,16 @@ contract QuatriviumCredit is ReentrancyGuard {
         fundador = fundadorPendiente;
         fundadorPendiente = address(0);
         fundadorEta = 0;
+        if (!humanosVerificados[fundador]) {
+            humanosVerificados[fundador] = true;
+            redGenealogica[fundador] = Usuario({ padre: address(0), bonoActivacionCobrado: true });
+            if (progresoUsuarios[fundador].nivelActual == 0) {
+                progresoUsuarios[fundador].nivelActual = 1;
+            }
+            if (reputacion[fundador] == 0) reputacion[fundador] = REPUTACION_INICIAL;
+            emit HumanoVerificado(fundador);
+            emit AfiliadoRegistrado(fundador, address(0));
+        }
         emit FundadorUpdated(previous, fundador);
     }
 

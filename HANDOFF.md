@@ -74,7 +74,7 @@ Todas en `cursor/soberania-contratos-8e15`. PR: https://github.com/usercardjoke1
 
 ## 5. Números
 
-Tras separar la fama que no se canjea: Hardhat 310 pasando, Foundry 52 pasando. `QuatriviumCredit`: 21655 bytes, 2921 libres de 24576.
+Tras el despliegue local, el relevo del fundador y los votos vigentes: Hardhat 317 pasando, Foundry 52 pasando. `QuatriviumCredit`: 22003 bytes, 2573 libres de 24576.
 
 ## 6. Simulación de impago
 
@@ -113,7 +113,7 @@ Orden de prioridad:
 ## 8. Riesgos
 
 - 2685 bytes libres en Credit. No añadir funciones ahí sin medir `deployedBytecode`.
-- Hardhat tiene `allowUnlimitedContractSize: true`. Un test verde no prueba el límite. El tamaño real es el del artifact (21655).
+- Hardhat tiene `allowUnlimitedContractSize: true`. Un test verde no prueba el límite. El tamaño real es el del artifact (22003).
 - Los `require` de texto se borran del bytecode (`revertStrings: strip`). Los tests no pueden usar `revertedWith("mensaje")` para esos revert. Los errores con nombre (`SequencerFeedRequerido`, `SoloFundador`) sí se distinguen.
 - La pausa de préstamos nuevos exige 2 de 3 y 72 h. Se levanta sola a los 7 días y luego hay 7 de descanso. No frena pagos ni liquidaciones.
 - El pool y el fondo de seguro no tienen retiro. Un error en el reparto no se «arregla» sacando el dinero.
