@@ -24,7 +24,7 @@ import { ensureExternalWalletOnAppChain } from '../utils/walletChain';
 import { ALTA_ABI, getAltaAddress, isAltaConfigured } from '../constants/altaConfig';
 import { cachedProtocolCaps, QuatriviumCreditService } from './quatriviumCreditService';
 import { recordMovement } from './movementHistory';
-import { quoteNetworkFee } from '../utils/fundsConfirmGate';
+import { approveFollows, quoteNetworkFee } from '../utils/fundsConfirmGate';
 import type { TranslationKey } from '../i18n/translations';
 
 async function movementFee(
@@ -60,7 +60,13 @@ export type FounderChargeContext = {
   openExternalWallet?: () => void;
   confirmFunds: (
     purpose?: 'movement' | 'transfer',
-    details?: { amount: string; symbol: string; destination: string; fee: string }
+    details?: {
+      amount: string;
+      symbol: string;
+      destination: string;
+      fee: string;
+      twoSignatures?: boolean;
+    }
   ) => Promise<boolean>;
   t: Translate;
   refetch?: () => void;
@@ -247,12 +253,19 @@ export async function chargeFounderUsdt(
     alertUser(ctx, ctx.t('amount'), ctx.t('invalidAmount'));
     return 'failed';
   }
+  const signupSpender = isAltaConfigured() ? getAltaAddress() : getContractAddress();
+  const signupRequired = isAltaConfigured() ? 4n * 10n ** 18n : BigInt(amountWei);
+  const signupApprove = await approveFollows(async () => {
+    const token = new Contract(ctx.token.address, ERC20_ABI, getProviderWithFallback());
+    return BigInt(await token.allowance(ctx.walletAddress, signupSpender));
+  }, signupRequired);
   if (
     !ctx.silent &&
     !(await ctx.confirmFunds('movement', {
       amount: human,
       symbol: 'LUSD',
       destination: ctx.founderAddress || ctx.token.address,
+      twoSignatures: signupApprove,
       fee: isAltaConfigured()
         ? await movementFee('pagarRegistro', [], ALTA_ABI, getAltaAddress(), ctx.walletAddress)
         : await movementFee(
@@ -323,12 +336,17 @@ export async function chargePoolUsdt(
     alertUser(ctx, ctx.t('amount'), ctx.t('invalidAmount'));
     return 'failed';
   }
+  const verifyApprove = await approveFollows(async () => {
+    const token = new Contract(ctx.token.address, ERC20_ABI, getProviderWithFallback());
+    return BigInt(await token.allowance(ctx.walletAddress, getContractAddress()));
+  }, BigInt(amountWei));
   if (
     !ctx.silent &&
     !(await ctx.confirmFunds('movement', {
       amount: human,
       symbol: 'LUSD',
       destination: ctx.token.address,
+      twoSignatures: verifyApprove,
       fee: await movementFee(
         'pagarVerificacion',
         [ctx.token.address, amountWei],

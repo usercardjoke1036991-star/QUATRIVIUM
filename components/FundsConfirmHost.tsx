@@ -14,6 +14,7 @@ import {
 import { listSecurityConfirmMethods, type FundsConfirmPurpose } from '../services/fundsConfirm';
 import {
   addressEdges,
+  adminConfirmPlan,
   fundsConfirmPlan,
   fundsDetailsComplete,
   type FundsTxDetails,
@@ -68,6 +69,13 @@ export const FundsConfirmHost: React.FC<{ children: React.ReactNode }> = ({ chil
     async (nextPurpose: FundsConfirmPurpose = 'transfer', details?: FundsTxDetails) => {
       if (inflight.current) return inflight.current;
       const run = (async () => {
+        if (nextPurpose === 'admin') {
+          setPurpose('admin');
+          setTx(details ?? null);
+          setAckOnly(true);
+          if (!adminConfirmPlan(details).canApprove) return false;
+          return askSecret('password');
+        }
         if (nextPurpose === 'security') {
           setPurpose('security');
           setTx(null);
@@ -117,6 +125,7 @@ export const FundsConfirmHost: React.FC<{ children: React.ReactNode }> = ({ chil
     if (busy) return;
     if (
       purpose !== 'security' &&
+      purpose !== 'admin' &&
       !fundsConfirmPlan({
         movesFunds: true,
         protectionOn: !ackOnly,
@@ -196,14 +205,18 @@ export const FundsConfirmHost: React.FC<{ children: React.ReactNode }> = ({ chil
           ? 'securityConfirmTitle'
           : purpose === 'movement'
             ? 'fundsConfirmMovement'
-            : 'fundsConfirmTitle';
+            : purpose === 'admin'
+              ? 'adminConfirmTitle'
+              : 'fundsConfirmTitle';
   const prompt =
     method === 'pin'
       ? t('fundsConfirmPrompt')
       : method === 'authenticator'
         ? t('fundsConfirmPromptAuth')
         : t('fundsConfirmPromptPassword');
-  const moneyOk = purpose === 'security' || fundsDetailsComplete(tx);
+  const moneyOk =
+    purpose === 'security' ||
+    (purpose === 'admin' ? adminConfirmPlan(tx).canApprove : fundsDetailsComplete(tx));
   const edges = tx ? addressEdges(tx.destination) : null;
   const canSubmit = !moneyOk
     ? false
@@ -222,7 +235,12 @@ export const FundsConfirmHost: React.FC<{ children: React.ReactNode }> = ({ chil
         <View style={styles.backdrop}>
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <AppText style={[styles.title, { color: colors.text }]}>{t(titleKey)}</AppText>
-            {tx ? (
+            {purpose === 'admin' && tx ? (
+              <View style={styles.tx}>
+                <AppText style={{ color: colors.text }}>{tx.action}</AppText>
+                <AppText style={{ color: colors.text }}>{tx.target}</AppText>
+              </View>
+            ) : tx ? (
               <View style={styles.tx}>
                 <AppText style={{ color: colors.text }}>
                   {t('fundsTxAmount', { amount: tx.amount, symbol: tx.symbol })}
@@ -242,6 +260,9 @@ export const FundsConfirmHost: React.FC<{ children: React.ReactNode }> = ({ chil
                 <AppText style={{ color: colors.textMuted }}>
                   {t('fundsTxFee', { fee: tx.fee })}
                 </AppText>
+                {tx.twoSignatures ? (
+                  <AppText style={{ color: colors.text }}>{t('fundsTwoSignatures')}</AppText>
+                ) : null}
               </View>
             ) : null}
             <AppText style={[styles.lead, { color: colors.textMuted }]}>

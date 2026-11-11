@@ -8,6 +8,7 @@ import { AppIcon } from './icons';
 import { formatAddress } from '../utils/formatters';
 import type { OpenAdminProposal } from '../utils/adminProposal';
 import { AppText, AppTextInput } from './AppText';
+import { useFundsConfirm } from './FundsConfirmHost';
 
 interface AdminPanelProps {
   isOwner: boolean;
@@ -55,6 +56,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 }) => {
   const { t } = useI18n();
   const { colors } = useTheme();
+  const { confirmFunds } = useFundsConfirm();
   const [draft, setDraft] = useState('');
   const [debtorDraft, setDebtorDraft] = useState('');
   const [reservaPot, setReservaPot] = useState('100');
@@ -82,25 +84,32 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   }, [isOwner, isAdmin, tokenAddress, isLoading]);
   if (!isOwner && !isAdmin) return null;
 
-  const confirmToggle = (next: boolean, apply: (value: boolean) => void) => {
-    Alert.alert(t('admin'), t('adminTimelockConfirm'), [
-      { text: t('cancel'), style: 'cancel' },
-      { text: t('ready'), onPress: () => apply(next) },
-    ]);
-  };
-
   const trimmed = draft.trim();
 
-  const proposeWithAddress = (fn?: (address: string) => void) => {
+  const askAdmin = async (action: string, target: string) =>
+    confirmFunds('admin', {
+      amount: '',
+      symbol: '',
+      destination: target,
+      fee: '',
+      action,
+      target,
+    });
+
+  const proposeWithAddress = async (action: string, fn?: (address: string) => void) => {
     if (!fn) return;
     if (!isAddress(trimmed)) {
       Alert.alert(t('admin'), t('adminInvalidAddress'));
       return;
     }
-    confirmToggle(true, () => {
-      fn(trimmed);
-      setDraft('');
-    });
+    if (!(await askAdmin(action, trimmed))) return;
+    fn(trimmed);
+    setDraft('');
+  };
+
+  const runProposal = async (action: string) => {
+    if (!openProposal) return false;
+    return askAdmin(action, `${openProposal.id} ${openProposal.selector}`);
   };
 
   return (
@@ -163,7 +172,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       {onProposeAddAdmin && adminRoster.length < 3 ? (
         <TouchableOpacity
           disabled={isLoading}
-          onPress={() => proposeWithAddress(onProposeAddAdmin)}
+          onPress={() => void proposeWithAddress(t('adminAdd'), onProposeAddAdmin)}
           style={[styles.button, { backgroundColor: colors.chip }]}
         >
           <AppText style={[styles.buttonText, { color: colors.text }]}>{t('adminAdd')}</AppText>
@@ -172,7 +181,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       {onProposeRemoveAdmin ? (
         <TouchableOpacity
           disabled={isLoading}
-          onPress={() => proposeWithAddress(onProposeRemoveAdmin)}
+          onPress={() => void proposeWithAddress(t('adminRemove'), onProposeRemoveAdmin)}
           style={[styles.button, { backgroundColor: colors.chip }]}
         >
           <AppText style={[styles.buttonText, { color: colors.text }]}>{t('adminRemove')}</AppText>
@@ -181,7 +190,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       {onProposeFundador ? (
         <TouchableOpacity
           disabled={isLoading}
-          onPress={() => proposeWithAddress(onProposeFundador)}
+          onPress={() => void proposeWithAddress(t('adminSetFundador'), onProposeFundador)}
           style={[styles.button, { backgroundColor: colors.chip }]}
         >
           <AppText style={[styles.buttonText, { color: colors.text }]}>
@@ -212,7 +221,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       {isAdmin && onConfirmProposal && openProposal ? (
         <TouchableOpacity
           disabled={isLoading}
-          onPress={() => onConfirmProposal(openProposal.id)}
+          onPress={() =>
+            void runProposal(t('confirmAdminProposal')).then((ok) => {
+              if (ok) onConfirmProposal(openProposal.id);
+            })
+          }
           style={[styles.button, { backgroundColor: colors.chip }]}
         >
           <AppText style={[styles.buttonText, { color: colors.text }]}>
@@ -223,7 +236,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       {isAdmin && onExecuteProposal && openProposal ? (
         <TouchableOpacity
           disabled={isLoading}
-          onPress={() => onExecuteProposal(openProposal.id)}
+          onPress={() =>
+            void runProposal(t('executeAdminProposal')).then((ok) => {
+              if (ok) onExecuteProposal(openProposal.id);
+            })
+          }
           style={[styles.button, { backgroundColor: colors.chip }]}
         >
           {isLoading ? (
@@ -238,7 +255,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       {isAdmin && onCancelProposal && openProposal ? (
         <TouchableOpacity
           disabled={isLoading}
-          onPress={() => onCancelProposal(openProposal.id)}
+          onPress={() =>
+            void runProposal(t('cancelAdminProposal')).then((ok) => {
+              if (ok) onCancelProposal(openProposal.id);
+            })
+          }
           style={[styles.button, { backgroundColor: colors.chip }]}
         >
           <AppText style={[styles.buttonText, { color: colors.text }]}>

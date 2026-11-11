@@ -1231,6 +1231,8 @@
   "otpPayFailed": "The charge did not go through. The code is still valid.",
   "emailRemoveFailed": "Could not update the local setting.",
   "fundsConfirmMovement": "Confirm this movement.",
+  "fundsTwoSignatures": "Two signatures come next.",
+  "adminConfirmTitle": "Confirm the action and its target.",
   "altaSplitNote": "Of the 4 LUSD: 1 LUSD to the founder, 1 LUSD to the Reserve pot, 1 LUSD held for the inviter, and 1 LUSD sealed into the pool. Five percent of that seal stays in the insurance fund. With no inviter, or if the inviter has not paid the access and the first level, that set-aside enters the pool when the first level is paid. If that level is not paid within 7 days, it enters the pool too. A person cannot name themselves.",
   "loanFounderShare": "15% of the interest on each payment goes to the founder.",
   "loanInsuranceShare": "5% of what enters the pool goes to the insurance fund and nobody can withdraw it.",

@@ -1231,6 +1231,8 @@
   "otpPayFailed": "未能完成扣款。验证码仍然有效。",
   "emailRemoveFailed": "无法更新本地设置。",
   "fundsConfirmMovement": "请确认此操作。",
+  "fundsTwoSignatures": "接下来要签两次。",
+  "adminConfirmTitle": "请确认操作及其对象。",
   "altaSplitNote": "4 LUSD 的分配：1 LUSD 给创始人，1 LUSD 进入储备金库，1 LUSD 暂留给邀请人，1 LUSD 作为封印进入资金池。该封印的 5% 留在保险基金。 若没有邀请人，或邀请人尚未支付开通和第一级，这笔暂留在支付第一级时进入资金池。若 7 天内未支付该级，也同样进入资金池。不能把自己填为邀请人。",
   "loanFounderShare": "每笔利息的 15% 付给创始人。",
   "loanInsuranceShare": "进入资金池的 5% 进入保险金，无人可提取。",

@@ -81,7 +81,7 @@ contract QuatriviumCredit is ReentrancyGuard {
 
     mapping(address => bool) public admins;
     address[] public ownerList;
-    uint256 public requiredConfirmations;
+    uint256 public constant requiredConfirmations = 2;
     mapping(bytes4 => bool) public allowedAdminSelector;
 
     struct AdminProposal {
@@ -256,7 +256,6 @@ contract QuatriviumCredit is ReentrancyGuard {
 
         stableTokens[_usdtAddress] = IERC20(_usdtAddress);
         supportedToken[_usdtAddress] = true;
-        requiredConfirmations = 2;
 
         fundador = _initialAdmins[0];
         humanosVerificados[fundador] = true;
@@ -273,7 +272,6 @@ contract QuatriviumCredit is ReentrancyGuard {
             admins[admin] = true;
             ownerList.push(admin);
         }
-        _syncQuorum();
 
         (uint16[100] memory usd, uint16[100] memory bps, uint8[100] memory dias) = LoanTierSeed.tables();
         for (uint256 i = 0; i < LoanTierSeed.MAX_NIVEL; i++) {
@@ -302,10 +300,6 @@ contract QuatriviumCredit is ReentrancyGuard {
         allowedAdminSelector[this.pausarPrestamosNuevos.selector] = true;
         famaHermano = _famaHermano;
         sequencerFeed = AggregatorV3Interface(_sequencerFeed);
-    }
-
-    function _syncQuorum() internal {
-        requiredConfirmations = 2;
     }
 
     function _requiredConfirms() internal pure returns (uint256) {
@@ -425,7 +419,6 @@ contract QuatriviumCredit is ReentrancyGuard {
         require(ownerList.length < MAX_ADMINS, "max owners reached");
         admins[newAdmin] = true;
         ownerList.push(newAdmin);
-        _syncQuorum();
         emit AdminAdded(newAdmin);
     }
 

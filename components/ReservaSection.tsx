@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from 'react-native';
 import type { Signer } from 'ethers';
-import { formatUnits, Interface, parseUnits } from 'ethers';
+import { Contract, formatUnits, Interface, parseUnits } from 'ethers';
 import { useI18n } from '../i18n/LanguageContext';
 import { useTheme } from '../theme/ThemeContext';
 import {
@@ -27,7 +27,13 @@ import {
   type ReservaPreview,
 } from '../services/reservaService';
 import { useFundsConfirm } from './FundsConfirmHost';
-import { fundsTx, quoteNetworkFee, reservaConfirmAmount } from '../utils/fundsConfirmGate';
+import {
+  approveFollows,
+  fundsTx,
+  quoteNetworkFee,
+  reservaConfirmAmount,
+} from '../utils/fundsConfirmGate';
+import { ERC20_ABI, getUsdtAddress } from '../constants/contractConfig';
 import { getProviderWithFallback } from '../constants/rpcConfig';
 import { getReservaAddress, RESERVA_ABI } from '../constants/reservaConfig';
 import { AppSubsection } from './AppSection';
@@ -167,7 +173,17 @@ export function ReservaSection({
     } catch {
       fee = 'no disponible';
     }
-    return confirmFunds('movement', fundsTx(amount, destination, fee));
+    let twoSignatures = false;
+    if (kind === 'lock' && walletAddress) {
+      twoSignatures = await approveFollows(
+        async () => {
+          const token = new Contract(getUsdtAddress(), ERC20_ABI, getProviderWithFallback());
+          return BigInt(await token.allowance(walletAddress, getReservaAddress()));
+        },
+        parseUnits(amount, 18)
+      );
+    }
+    return confirmFunds('movement', { ...fundsTx(amount, destination, fee), twoSignatures });
   }
 
   async function run(

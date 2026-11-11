@@ -52,7 +52,7 @@ import { FAMA_ABI } from '../constants/famaConfig';
 import { useI18n } from '../i18n/LanguageContext';
 import { humanizeTxError, networkFailureError } from '../utils/txErrors';
 import type { FundsConfirmPurpose } from '../services/fundsConfirm';
-import { fundsTx, quoteNetworkFee } from '../utils/fundsConfirmGate';
+import { approveFollows, fundsTx, quoteNetworkFee } from '../utils/fundsConfirmGate';
 import { getReservaAddress, RESERVA_ABI } from '../constants/reservaConfig';
 import { getRealDonationWallet } from '../constants/deployedAddresses';
 import type { LoanTier, UserInfo } from './useWeb3Balances';
@@ -65,11 +65,12 @@ async function quotedFunds(
   amount: string,
   destination: string,
   call?: { to: string; abi: string[]; method: string; args?: unknown[] },
-  from?: string | null
+  from?: string | null,
+  approve?: { token: string; spender: string; amount: bigint } | null
 ) {
   let fee = 'no disponible';
+  const provider = getProviderWithFallback();
   try {
-    const provider = getProviderWithFallback();
     const data = call
       ? new Interface(call.abi).encodeFunctionData(call.method, call.args ?? [])
       : '0x';
@@ -77,7 +78,14 @@ async function quotedFunds(
   } catch {
     fee = 'no disponible';
   }
-  return fundsTx(amount, destination, fee);
+  const twoSignatures =
+    approve && from
+      ? await approveFollows(async () => {
+          const token = new Contract(approve.token, ERC20_ABI, provider);
+          return BigInt(await token.allowance(from, approve.spender));
+        }, approve.amount)
+      : false;
+  return { ...fundsTx(amount, destination, fee), twoSignatures };
 }
 
 async function famaContract(): Promise<string | null> {
@@ -426,7 +434,12 @@ export const useHomeHandlers = ({
             method: 'solicitarPrestamo',
             args: [selectedToken.address, tier.id],
           },
-          walletAddress
+          walletAddress,
+          {
+            token: selectedToken.address,
+            spender: getContractAddress(),
+            amount: parseUnits(String(tier.usdAmount), 18),
+          }
         )
       ))
     )
@@ -687,7 +700,14 @@ export const useHomeHandlers = ({
               userInfo.activeLoan.remainingWei || userInfo.activeLoan.totalDueWei,
             ],
           },
-          walletAddress
+          walletAddress,
+          {
+            token: userInfo.activeLoan.token,
+            spender: getContractAddress(),
+            amount: BigInt(
+              userInfo.activeLoan.remainingWei || userInfo.activeLoan.totalDueWei || '0'
+            ),
+          }
         )
       ))
     )
@@ -810,7 +830,12 @@ export const useHomeHandlers = ({
             method: 'depositarLiquidez',
             args: [selectedToken.address, parseUnits(parsed, selectedToken.decimals)],
           },
-          walletAddress
+          walletAddress,
+          {
+            token: selectedToken.address,
+            spender: getContractAddress(),
+            amount: parseUnits(parsed, selectedToken.decimals),
+          }
         )
       ))
     )
@@ -881,7 +906,12 @@ export const useHomeHandlers = ({
               method: isAltaConfigured() ? 'pagarRegistro' : 'pagarVerificacion',
               args: isAltaConfigured() ? [] : [selectedToken.address, amountWei],
             },
-            walletAddress
+            walletAddress,
+            {
+              token: selectedToken.address,
+              spender: isAltaConfigured() ? getAltaAddress() : getContractAddress(),
+              amount: isAltaConfigured() ? 4n * 10n ** 18n : BigInt(amountWei),
+            }
           )
         ))
       )
@@ -935,7 +965,12 @@ export const useHomeHandlers = ({
             method: 'aportarBote',
             args: [parseUnits(parsed, 18)],
           },
-          walletAddress
+          walletAddress,
+          {
+            token: selectedToken.address,
+            spender: getReservaAddress(),
+            amount: parseUnits(parsed, 18),
+          }
         )
       ))
     )
@@ -996,7 +1031,12 @@ export const useHomeHandlers = ({
             method: 'donar',
             args: [selectedToken.address, parseUnits(parsed, selectedToken.decimals)],
           },
-          walletAddress
+          walletAddress,
+          {
+            token: selectedToken.address,
+            spender: getContractAddress(),
+            amount: parseUnits(parsed, selectedToken.decimals),
+          }
         )
       ))
     )

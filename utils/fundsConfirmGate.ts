@@ -52,7 +52,31 @@ export type FundsTxDetails = {
   symbol: string;
   destination: string;
   fee: string;
+  action?: string;
+  target?: string;
+  twoSignatures?: boolean;
 };
+
+export function adminConfirmPlan(details?: Partial<FundsTxDetails> | null): {
+  showScreen: boolean;
+  canApprove: boolean;
+} {
+  const action = String(details?.action || '').trim();
+  const target = String(details?.target || '').trim();
+  return { showScreen: true, canApprove: Boolean(action && target) };
+}
+
+/** Si la lectura falla, se avisa: un approve oculto serían dos firmas. */
+export async function approveFollows(
+  readAllowance: () => Promise<bigint>,
+  required: bigint
+): Promise<boolean> {
+  try {
+    return (await readAllowance()) < required;
+  } catch {
+    return true;
+  }
+}
 
 export function fundsTx(amount: string, destination: string, fee: string): FundsTxDetails {
   return {

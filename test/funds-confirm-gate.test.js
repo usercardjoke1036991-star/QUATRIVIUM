@@ -2,6 +2,8 @@ const { expect } = require('chai');
 require('ts-node/register');
 const {
   addressEdges,
+  adminConfirmPlan,
+  approveFollows,
   fundsConfirmPlan,
   fundsDetailsComplete,
   fundsTx,
@@ -84,5 +86,18 @@ describe('Pantalla de confirmación de fondos', function () {
     expect(plan.showScreen).to.equal(true);
     expect(plan.mode).to.equal('secret');
     expect(plan.canApprove).to.equal(true);
+  });
+
+  it('la accion de admin no pide monto y un approve pendiente avisa', async function () {
+    expect(adminConfirmPlan({ action: 'Quitar', target: '0xabc' }).canApprove).to.equal(true);
+    expect(adminConfirmPlan({ action: 'Quitar', target: '' }).canApprove).to.equal(false);
+    expect(adminConfirmPlan({ action: '', target: '3' }).canApprove).to.equal(false);
+    expect(await approveFollows(async () => 1n, 2n)).to.equal(true);
+    expect(await approveFollows(async () => 5n, 2n)).to.equal(false);
+    expect(
+      await approveFollows(async () => {
+        throw new Error('rpc');
+      }, 1n)
+    ).to.equal(true);
   });
 });

@@ -1231,6 +1231,8 @@
   "otpPayFailed": "Não foi possível cobrar. O código continua válido.",
   "emailRemoveFailed": "Não foi possível atualizar o ajuste local.",
   "fundsConfirmMovement": "Confirme este movimento.",
+  "fundsTwoSignatures": "Virao duas assinaturas.",
+  "adminConfirmTitle": "Confirme a acao e o alvo.",
   "altaSplitNote": "Dos 4 LUSD: 1 LUSD ao fundador, 1 LUSD ao pote da Reserva, 1 LUSD reservado a quem convidou e 1 LUSD de selo ao pool. Cinco por cento desse selo fica no fundo de seguro. Sem convite, ou se quem convidou não pagou a adesão e o primeiro nível, essa reserva entra no pool ao pagar o primeiro nível 1. Se esse nível não for pago em 7 dias, também entra no pool. Ninguém pode nomear a si mesmo.",
   "loanFounderShare": "15 % dos juros de cada pagamento vão ao fundador.",
   "loanInsuranceShare": "5 % do que entra no pool vai ao fundo de seguro e ninguém pode retirá-lo.",
