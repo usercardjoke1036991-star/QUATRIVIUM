@@ -32,6 +32,10 @@ export function isSplitKdf(record: { kdf?: string; split?: number }): boolean {
   return record.kdf === PIN_KDF && record.split === PIN_SPLIT;
 }
 
+export function isWideKdf(record: { kdf?: string; split?: number }): boolean {
+  return record.kdf === PIN_KDF && record.split === 1;
+}
+
 /** La vuelta única era el registro que no era v:2. Solo sirve para abrir el sello viejo. */
 export function legacyPinWrapRounds(record: { v?: number; rounds?: number }): number {
   if (record.v !== 2) return 1;
@@ -43,20 +47,23 @@ export function assertSessionBeforePinWrite(passwordSet: boolean, wrap: string |
   if (passwordSet && !wrap) throw new Error('locked');
 }
 
-export async function wrapKeyFromPbkdf2(secret: string, salt: string): Promise<string> {
-  const hex = await pbkdf2Sha256Hex(secret, `${salt}:wrap`, PIN_PBKDF2_ROUNDS);
+/** El formato sin HKDF guardaba sus propias vueltas. No usa la cifra nueva. */
+export async function wrapKeyFromPbkdf2(
+  secret: string,
+  salt: string,
+  rounds = 600_000
+): Promise<string> {
+  const hex = await pbkdf2Sha256Hex(secret, `${salt}:wrap`, rounds);
   return `0x${hex}`;
 }
 
 export async function pinVerifier(pin: string, record: PinLike): Promise<string> {
+  if (record.kdf !== PIN_KDF) return '';
+  const rounds = record.rounds || (isSplitKdf(record) ? PIN_PBKDF2_ROUNDS : 600_000);
   if (isSplitKdf(record)) {
-    const material = await derivePinMaterial(pin, record.salt, record.rounds || PIN_PBKDF2_ROUNDS);
-    return material.verifier;
+    return (await derivePinMaterial(pin, record.salt, rounds)).verifier;
   }
-  if (record.kdf === PIN_KDF) {
-    return pbkdf2Sha256Hex(pin, record.salt, record.rounds || PIN_PBKDF2_ROUNDS);
-  }
-  return '';
+  return pbkdf2Sha256Hex(pin, record.salt, rounds);
 }
 
 export function verifierMatches(actual: string, expected: string): boolean {

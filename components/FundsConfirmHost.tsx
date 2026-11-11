@@ -300,7 +300,10 @@ export const FundsConfirmHost: React.FC<{ children: React.ReactNode }> = ({ chil
               style={[styles.button, { backgroundColor: colors.connect }]}
             >
               {busy ? (
-                <ActivityIndicator color="#111" />
+                <>
+                  <ActivityIndicator color="#111" />
+                  <AppText style={styles.buttonText}>{t('lockKdfWait')}</AppText>
+                </>
               ) : (
                 <AppText style={styles.buttonText}>
                   {ackOnly ? t('fundsConfirmAck') : t('ready')}

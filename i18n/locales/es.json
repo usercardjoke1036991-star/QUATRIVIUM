@@ -341,6 +341,7 @@
   "lockPinWrong": "PIN incorrecto.",
   "lockPinWeak": "PIN demasiado fácil. Evite repeticiones y secuencias.",
   "lockKdfMissing": "Este telefono no puede armar la clave del candado. No hay una derivacion debil.",
+  "lockKdfWait": "Puede tardar unos segundos.",
   "lockCooldown": "Demasiados intentos. Espere {seconds} s.",
   "lockPinChanged": "PIN actualizado.",
   "lockBiometric": "Acceder con huella",

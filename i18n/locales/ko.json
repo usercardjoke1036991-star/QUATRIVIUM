@@ -341,6 +341,7 @@
   "lockPinWrong": "PIN이 틀렸습니다.",
   "lockPinWeak": "그 PIN은 너무 쉽습니다. 반복, 연속, 뻔한 날짜는 쓰지 마세요.",
   "lockKdfMissing": "이 전화는 잠금 키를 만들지 못합니다. 약한 방식은 쓰지 않습니다.",
+  "lockKdfWait": "몇 초 걸릴 수 있습니다.",
   "lockCooldown": "시도가 너무 많습니다. {seconds}초 기다리세요.",
   "lockPinChanged": "PIN이 업데이트되었습니다.",
   "lockBiometric": "지문으로 잠금 해제",

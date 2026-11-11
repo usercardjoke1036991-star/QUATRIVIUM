@@ -341,6 +341,7 @@
   "lockPinWrong": "Wrong PIN.",
   "lockPinWeak": "PIN too easy. Avoid repeats and sequences.",
   "lockKdfMissing": "This phone cannot build the lock key. Derivation stays unavailable.",
+  "lockKdfWait": "This can take a few seconds.",
   "lockCooldown": "Too many attempts. Wait {seconds} s.",
   "lockPinChanged": "PIN updated.",
   "lockBiometric": "Unlock with fingerprint",

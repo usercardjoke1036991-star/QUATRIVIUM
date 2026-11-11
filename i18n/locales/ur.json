@@ -341,6 +341,7 @@
   "lockPinWrong": "غلط PIN۔",
   "lockPinWeak": "وہ PIN بہت آسان ہے۔ تکرار، ترتیب یا واضح تاریخیں استعمال نہ کریں۔",
   "lockKdfMissing": "یہ فون تالے کی کلید نہیں بناتا۔ کمزور راستہ بند ہے۔",
+  "lockKdfWait": "اس میں چند سیکنڈ لگ سکتے ہیں۔",
   "lockCooldown": "بہت کوششیں۔ {seconds} سیکنڈ انتظار کریں۔",
   "lockPinChanged": "PIN اپ ڈیٹ ہو گیا۔",
   "lockBiometric": "فنگر پرنٹ سے کھولیں",

@@ -341,6 +341,7 @@
   "lockPinWrong": "PIN errato.",
   "lockPinWeak": "Quel PIN è troppo facile. Non usare ripetizioni, sequenze o date ovvie.",
   "lockKdfMissing": "Questo telefono non costruisce la chiave del lucchetto. Nessuna via debole.",
+  "lockKdfWait": "Può richiedere alcuni secondi.",
   "lockCooldown": "Troppi tentativi. Attendi {seconds} s.",
   "lockPinChanged": "PIN aggiornato.",
   "lockBiometric": "Sblocca con l’impronta",

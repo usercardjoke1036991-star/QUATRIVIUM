@@ -1117,6 +1117,11 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
             {error ? (
               <AppText style={[styles.error, { color: colors.danger }]}>{error}</AppText>
             ) : null}
+            {busy ? (
+              <AppText style={[styles.error, { color: colors.textMuted }]}>
+                {t('lockKdfWait')}
+              </AppText>
+            ) : null}
           </View>
 
           {welcomeStage ? (
@@ -1223,7 +1228,10 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
                 style={[styles.primary, { backgroundColor: colors.connect }]}
               >
                 {busy ? (
-                  <ActivityIndicator color="#111" />
+                  <>
+                    <ActivityIndicator color="#111" />
+                    <AppText style={styles.primaryText}>{t('lockKdfWait')}</AppText>
+                  </>
                 ) : (
                   <AppText style={styles.primaryText}>{t('signIn')}</AppText>
                 )}
@@ -1364,7 +1372,10 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
                 ]}
               >
                 {busy ? (
-                  <ActivityIndicator color="#111" />
+                  <>
+                    <ActivityIndicator color="#111" />
+                    <AppText style={styles.primaryText}>{t('lockKdfWait')}</AppText>
+                  </>
                 ) : (
                   <AppText style={styles.primaryText}>
                     {t(signInOnDevice ? 'signIn' : 'seedRestoreAction')}
@@ -1521,7 +1532,10 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
                 ]}
               >
                 {busy ? (
-                  <ActivityIndicator color="#111" />
+                  <>
+                    <ActivityIndicator color="#111" />
+                    <AppText style={styles.primaryText}>{t('lockKdfWait')}</AppText>
+                  </>
                 ) : (
                   <AppText style={styles.primaryText}>{t('createContinue')}</AppText>
                 )}
@@ -1642,7 +1656,10 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
                     ]}
                   >
                     {busy ? (
-                      <ActivityIndicator color="#111" />
+                      <>
+                        <ActivityIndicator color="#111" />
+                        <AppText style={styles.primaryText}>{t('lockKdfWait')}</AppText>
+                      </>
                     ) : (
                       <AppText style={styles.primaryText}>{t('saveSession')}</AppText>
                     )}
@@ -1687,7 +1704,10 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
                 style={[styles.primary, { backgroundColor: colors.connect }]}
               >
                 {busy ? (
-                  <ActivityIndicator color="#111" />
+                  <>
+                    <ActivityIndicator color="#111" />
+                    <AppText style={styles.primaryText}>{t('lockKdfWait')}</AppText>
+                  </>
                 ) : (
                   <AppText style={styles.primaryText}>{t('lockUnlock')}</AppText>
                 )}
@@ -1716,7 +1736,10 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
                 style={[styles.primary, { backgroundColor: colors.connect }]}
               >
                 {busy ? (
-                  <ActivityIndicator color="#111" />
+                  <>
+                    <ActivityIndicator color="#111" />
+                    <AppText style={styles.primaryText}>{t('lockKdfWait')}</AppText>
+                  </>
                 ) : (
                   <AppText style={styles.primaryText}>{t('lockUnlock')}</AppText>
                 )}

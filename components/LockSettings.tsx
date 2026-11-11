@@ -227,7 +227,10 @@ export const LockSettings: React.FC<{
         ]}
       >
         {busy ? (
-          <ActivityIndicator color="#111" />
+          <>
+            <ActivityIndicator color="#111" />
+            <AppText style={styles.buttonText}>{t('lockKdfWait')}</AppText>
+          </>
         ) : (
           <AppText style={styles.buttonText}>{t('settingsSave')}</AppText>
         )}
@@ -305,7 +308,10 @@ export const LockSettings: React.FC<{
         style={[styles.button, { backgroundColor: colors.connect }]}
       >
         {passwordBusy ? (
-          <ActivityIndicator color="#111" />
+          <>
+            <ActivityIndicator color="#111" />
+            <AppText style={styles.buttonText}>{t('lockKdfWait')}</AppText>
+          </>
         ) : (
           <AppText style={styles.buttonText}>{t('settingsSave')}</AppText>
         )}

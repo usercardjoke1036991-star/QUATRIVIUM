@@ -341,6 +341,7 @@
   "lockPinWrong": "Falsche PIN.",
   "lockPinWeak": "Diese PIN ist zu einfach. Keine Wiederholungen, Folgen oder offensichtliche Daten.",
   "lockKdfMissing": "Dieses Telefon baut den Schluessel nicht. Kein schwacher Weg.",
+  "lockKdfWait": "Das kann ein paar Sekunden dauern.",
   "lockCooldown": "Zu viele Versuche. {seconds} s warten.",
   "lockPinChanged": "PIN aktualisiert.",
   "lockBiometric": "Mit Fingerabdruck entsperren",

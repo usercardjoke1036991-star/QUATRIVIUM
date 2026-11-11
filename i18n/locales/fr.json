@@ -341,6 +341,7 @@
   "lockPinWrong": "PIN incorrect.",
   "lockPinWeak": "Ce PIN est trop simple. N’utilisez pas de répétitions, de suites ni de dates évidentes.",
   "lockKdfMissing": "Ce telephone ne construit pas la cle du cadenas. Aucune voie faible.",
+  "lockKdfWait": "Cela peut prendre quelques secondes.",
   "lockCooldown": "Trop de tentatives. Attendez {seconds} s.",
   "lockPinChanged": "PIN mis à jour.",
   "lockBiometric": "Déverrouiller avec l’empreinte",

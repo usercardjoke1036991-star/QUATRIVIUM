@@ -341,6 +341,7 @@
   "lockPinWrong": "Yanlış PIN.",
   "lockPinWeak": "Bu PIN çok kolay. Tekrar, dizi veya bariz tarihler kullanmayın.",
   "lockKdfMissing": "Bu telefon kilit anahtarini kuramiyor. Zayif yol kapali.",
+  "lockKdfWait": "Bu birkaç saniye sürebilir.",
   "lockCooldown": "Çok fazla deneme. {seconds} sn bekleyin.",
   "lockPinChanged": "PIN güncellendi.",
   "lockBiometric": "Parmak izi ile aç",

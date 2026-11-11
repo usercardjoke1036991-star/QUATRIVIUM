@@ -341,6 +341,7 @@
   "lockPinWrong": "Sai PIN.",
   "lockPinWeak": "PIN đó quá dễ. Đừng dùng lặp, dãy số hoặc ngày rõ ràng.",
   "lockKdfMissing": "Dien thoai nay khong tao duoc khoa khoa. Khong dung cach yeu.",
+  "lockKdfWait": "Viec nay co the mat vai giay.",
   "lockCooldown": "Quá nhiều lần thử. Đợi {seconds} giây.",
   "lockPinChanged": "Đã cập nhật PIN.",
   "lockBiometric": "Mở khóa bằng vân tay",

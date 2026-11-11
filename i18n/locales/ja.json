@@ -341,6 +341,7 @@
   "lockPinWrong": "PIN が違います。",
   "lockPinWeak": "その PIN は簡単すぎます。繰り返し、連続、分かりやすい日付は使わないでください。",
   "lockKdfMissing": "この端末は錠の鍵を作れません。弱い方式には落ちません。",
+  "lockKdfWait": "数秒かかることがあります。",
   "lockCooldown": "試行が多すぎます。{seconds} 秒お待ちください。",
   "lockPinChanged": "PIN を更新しました。",
   "lockBiometric": "指紋でロック解除",
