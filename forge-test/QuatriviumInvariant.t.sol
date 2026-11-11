@@ -8,8 +8,6 @@ import {QuatriviumFamaCaja} from "../contracts/QuatriviumFamaCaja.sol";
 import {QuatriviumReserva} from "../contracts/QuatriviumReserva.sol";
 import {QuatriviumAlta} from "../contracts/QuatriviumAlta.sol";
 import {ERC20Mock} from "../contracts/mocks/ERC20Mock.sol";
-import {MockV3Aggregator} from "../contracts/mocks/MockV3Aggregator.sol";
-
 /// @dev Mezcla depósito, crédito, donar, Alta y Reserva. No se despliega.
 contract QuatriviumMoneyHandler is Test {
     QuatriviumCreditHarness public credit;
@@ -194,7 +192,6 @@ contract QuatriviumInvariantTest is Test {
         uint256 ownerPk = 0xA11CE;
         address owner = vm.addr(ownerPk);
         token = new ERC20Mock();
-        MockV3Aggregator feed = new MockV3Aggregator(8, 100000000);
         address[] memory admins = new address[](3);
         admins[0] = owner;
         admins[1] = makeAddr("admin-b");

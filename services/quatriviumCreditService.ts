@@ -682,6 +682,8 @@ export const QuatriviumCreditService = {
     const credit = contractWith(signer);
     await credit.pagarPrestamo.staticCall(tokenAddress, amountInWei);
     await cobrarComisionIntermediario(signer, true);
+    // Sin gasLimit fijo. ethers estima el gas: el aviso a la Reserva revierte el pago
+    // si el límite no cubre el mínimo, y la estimación incluye las 40 generaciones.
     const tx = await credit.pagarPrestamo(tokenAddress, amountInWei);
     const receipt = await waitMined(tx);
     await QuatriviumCreditService.notificarRacha(userAddress);

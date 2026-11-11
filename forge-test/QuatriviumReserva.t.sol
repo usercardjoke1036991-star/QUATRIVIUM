@@ -37,6 +37,7 @@ contract ReservaHandler is Test {
         (, , bool activa,) = reserva.posiciones(actor);
         if (activa) return;
         amount = uint96(bound(amount, 1 ether, 200 ether));
+        if (token.balanceOf(actor) < amount) token.mint(actor, amount);
         vm.prank(actor, actor);
         reserva.bloquear(amount);
         ghostLocked += amount;
@@ -44,6 +45,7 @@ contract ReservaHandler is Test {
 
     function aportar(uint96 amount) public {
         amount = uint96(bound(amount, 1 ether, 50 ether));
+        if (token.balanceOf(founder) < amount) token.mint(founder, amount);
         vm.prank(founder, founder);
         reserva.aportarBote(amount);
     }

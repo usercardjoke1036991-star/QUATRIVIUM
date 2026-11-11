@@ -96,6 +96,8 @@ jobs:
           version: 1.9.0
 
       - name: Test
+        env:
+          FOUNDRY_PROFILE: ci
         run: forge test --fuzz-runs 256
 
   slither:
