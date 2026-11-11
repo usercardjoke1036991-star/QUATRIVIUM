@@ -1,7 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
-import { isPinLengthOk, isWeakPin, lockoutMs, remainingLockMs } from '../utils/pinPolicy';
+import {
+  advanceWait,
+  isPinLengthOk,
+  isWeakPin,
+  startWait,
+  type WaitClock,
+} from '../utils/pinPolicy';
 import {
   PIN_DEVICE,
   PIN_KDF,
@@ -13,7 +19,17 @@ import {
   pbkdf2Sha256Hex,
   wrapStoreMode,
 } from '../utils/pinKdf';
-import { ackDeviceRepair, ensureDeviceSecret, loadDeviceSecret } from '../utils/deviceSecret';
+import {
+  ackDeviceRepair,
+  commitStagedDeviceSecret,
+  ensureDeviceSecret,
+  loadDeviceSecret,
+  phoneHasScreenLock,
+  readDeviceGuard,
+  readStagedDeviceSecret,
+  stageNewDeviceSecret,
+  takeDeviceRetry,
+} from '../utils/deviceSecret';
 import {
   assertSessionBeforePinWrite,
   isWideKdf,
@@ -102,6 +118,20 @@ interface PasswordRecord {
 interface GateRecord {
   fails: number;
   until: number;
+  waitMs: number;
+  left: number;
+  seen: number;
+}
+
+let lockClockForTests: (() => number) | null = null;
+
+/** Solo pruebas: el reloj del teléfono. */
+export function setLockClockForTests(clock: (() => number) | null): void {
+  lockClockForTests = clock;
+}
+
+function clockNow(): number {
+  return lockClockForTests ? lockClockForTests() : Date.now();
 }
 
 async function hashSecret(secret: string, salt: string, rounds: number): Promise<string> {
@@ -142,18 +172,16 @@ async function readPinRecord(): Promise<PinRecord | null> {
   }
 }
 
-async function walletScope(): Promise<string> {
+async function boundScope(): Promise<string | null> {
   const bound = (await getBoundWallet()).toLowerCase();
-  return /^0x[0-9a-f]{40}$/.test(bound) ? bound : 'none';
+  return /^0x[0-9a-f]{40}$/.test(bound) ? bound : null;
 }
 
-async function scopedKey(legacy: string): Promise<string> {
-  return storeSlot([legacy, await walletScope()]);
-}
-
-/** La clave vieja era global. Pasa a esta billetera la primera vez y deja de compartirse. */
+/** La clave vieja era global. Sin billetera no se mueve a "none": espera a que haya una. */
 async function readScoped(legacy: string): Promise<string | null> {
-  const key = await scopedKey(legacy);
+  const scope = await boundScope();
+  if (!scope) return SecureStore.getItemAsync(legacy).catch(() => null);
+  const key = storeSlot([legacy, scope]);
   const current = await SecureStore.getItemAsync(key).catch(() => null);
   if (current) return current;
   const old = await SecureStore.getItemAsync(legacy).catch(() => null);
@@ -164,25 +192,72 @@ async function readScoped(legacy: string): Promise<string | null> {
 }
 
 async function writeScoped(legacy: string, value: string): Promise<void> {
-  await SecureStore.setItemAsync(await scopedKey(legacy), value, OPTIONS);
+  const scope = await boundScope();
+  const key = scope ? storeSlot([legacy, scope]) : legacy;
+  await SecureStore.setItemAsync(key, value, OPTIONS);
+}
+
+function emptyGate(): GateRecord {
+  return { fails: 0, until: 0, waitMs: 0, left: 0, seen: 0 };
+}
+
+function gateFromStored(parsed: Partial<GateRecord>, now: number): GateRecord {
+  const fails = Math.max(0, Number(parsed.fails) || 0);
+  const until = Math.max(0, Number(parsed.until) || 0);
+  if (until === 0) return { ...emptyGate(), fails };
+  const waitMs = Math.max(0, Number(parsed.waitMs) || 0);
+  const seen = Math.max(0, Number(parsed.seen) || 0);
+  if (!waitMs || !seen) {
+    const left = Math.max(0, until - now);
+    return { fails, until, waitMs: left, left, seen: now };
+  }
+  return {
+    fails,
+    until,
+    waitMs,
+    left: Math.max(0, Number(parsed.left) || 0),
+    seen,
+  };
 }
 
 async function readGate(): Promise<GateRecord> {
   try {
     const raw = await withTimeout(readScoped(GATE_KEY), 1500, null);
-    if (!raw) return { fails: 0, until: 0 };
-    const parsed = JSON.parse(raw) as GateRecord;
-    return {
-      fails: Math.max(0, Number(parsed.fails) || 0),
-      until: Math.max(0, Number(parsed.until) || 0),
-    };
+    if (!raw) return emptyGate();
+    return gateFromStored(JSON.parse(raw) as Partial<GateRecord>, clockNow());
   } catch {
-    return { fails: 0, until: 0 };
+    return emptyGate();
   }
+}
+
+async function observedGate(): Promise<GateRecord> {
+  const gate = await readGate();
+  if (gate.left <= 0) return gate;
+  const now = clockNow();
+  const next: WaitClock = advanceWait(gate, now);
+  const until = next.left > 0 ? now + next.left : 0;
+  const moved = next.left !== gate.left || next.seen !== gate.seen;
+  const stored = { ...gate, ...next, until };
+  if (moved) await writeGate(stored);
+  return stored;
 }
 
 async function writeGate(next: GateRecord): Promise<void> {
   await withTimeout(writeScoped(GATE_KEY, JSON.stringify(next)), 1500, undefined);
+}
+
+async function noteMiss(): Promise<number> {
+  const gate = await readGate();
+  const now = clockNow();
+  const next = startWait(gate.fails + 1, now);
+  await writeGate({
+    fails: next.fails,
+    until: now + next.left,
+    waitMs: next.waitMs,
+    left: next.left,
+    seen: next.seen,
+  });
+  return next.left;
 }
 
 async function readAttempts(): Promise<AttemptRecord> {
@@ -538,8 +613,7 @@ export async function isPinSet(): Promise<boolean> {
 }
 
 export async function getPinLockRemaining(): Promise<number> {
-  const gate = await readGate();
-  return remainingLockMs(gate.until);
+  return (await observedGate()).left;
 }
 
 export async function setPin(pin: string): Promise<string> {
@@ -564,7 +638,7 @@ export async function setPin(pin: string): Promise<string> {
   };
   await SecureStore.setItemAsync(PIN_KEY, JSON.stringify(record), OPTIONS);
   await setLockOnOpenEnabled(true);
-  await writeGate({ fails: 0, until: 0 });
+  await writeGate(emptyGate());
   if (passwordSet && existingWrap) {
     await persistPinWrap(pin, material.wrap);
     if (await isBiometricEnabled()) {
@@ -633,15 +707,29 @@ export async function checkPin(pin: string): Promise<PinCheck> {
       : legacy
         ? await hashSecret(pin, record.salt, legacyPinWrapRounds(record))
         : await pinVerifier(secret, record);
+    let openedWithStaged = false;
     if (!timingSafeEqualHex(digestHex(hash), digestHex(record.hash))) {
-      const gate = await readGate();
-      const fails = gate.fails + 1;
-      const until = Date.now() + lockoutMs(fails);
-      await writeGate({ fails, until });
-      const pinFails = attempts.pin + 1;
-      await writeAttempts({ pin: pinFails, password: attempts.password });
-      if (pinFails >= PIN_FAIL_LIMIT) return pinBlockedResult();
-      return { ok: false, remainingMs: remainingLockMs(until), locked: remainingLockMs(until) > 0 };
+      const staged =
+        current && record.device === PIN_DEVICE ? await readStagedDeviceSecret() : null;
+      if (staged) {
+        const stagedMaterial = await derivePinMaterial(
+          boundPin(pin, staged),
+          record.salt,
+          record.rounds || PIN_PBKDF2_ROUNDS
+        );
+        if (timingSafeEqualHex(digestHex(stagedMaterial.verifier), digestHex(record.hash))) {
+          await commitStagedDeviceSecret(staged);
+          material = stagedMaterial;
+          openedWithStaged = true;
+        }
+      }
+      if (!openedWithStaged) {
+        const left = await noteMiss();
+        const pinFails = attempts.pin + 1;
+        await writeAttempts({ pin: pinFails, password: attempts.password });
+        if (pinFails >= PIN_FAIL_LIMIT) return pinBlockedResult();
+        return { ok: false, remainingMs: left, locked: left > 0 };
+      }
     }
   } catch (error) {
     if (error instanceof Error && error.message === 'device-auth') {
@@ -664,7 +752,7 @@ export async function checkPin(pin: string): Promise<PinCheck> {
       return { ok: false, remainingMs: 0, locked: false };
     }
     if (!ready) await resealPinToCurrent(pin, record);
-    await writeGate({ fails: 0, until: 0 });
+    await writeGate(emptyGate());
   } else if (material) {
     const device = await loadDeviceSecret();
     const fresh = ready
@@ -690,7 +778,7 @@ export async function checkPin(pin: string): Promise<PinCheck> {
       await SecureStore.setItemAsync(PIN_KEY, JSON.stringify(updated), OPTIONS);
     }
     setWalletWrapKey(fresh.wrap);
-    await writeGate({ fails: 0, until: 0 });
+    await writeGate(emptyGate());
   } else {
     const oldKeys: string[] = [];
     if (record.kdf === PIN_KDF) {
@@ -720,11 +808,54 @@ export async function checkPin(pin: string): Promise<PinCheck> {
     };
     await SecureStore.setItemAsync(PIN_KEY, JSON.stringify(updated), OPTIONS);
     setWalletWrapKey(fresh.wrap);
-    await writeGate({ fails: 0, until: 0 });
+    await writeGate(emptyGate());
   }
   await writeAttempts({ pin: 0, password: 0 });
   await persistCompanionWraps();
+  if (await takeDeviceRetry()) await retryDeviceProtection(pin);
   return { ok: true };
+}
+
+/**
+ * El reintento con éxito tira el secreto que estuvo en claro y sella el PIN con uno nuevo.
+ * El registro nuevo se guarda antes de sustituir el secreto. Si el proceso cae en medio,
+ * el siguiente PIN abre con el borrador y termina el cambio.
+ */
+export async function retryDeviceProtection(
+  pin: string
+): Promise<'bound' | 'open' | 'no-lock' | 'lost'> {
+  const guard = await readDeviceGuard();
+  if (guard === 'bound') return 'bound';
+  if (!(await phoneHasScreenLock())) return 'no-lock';
+  const record = await readPinRecord();
+  if (!record || record.device !== PIN_DEVICE || !isSixDigits(pin)) return 'lost';
+  const current = await loadDeviceSecret();
+  const old = await derivePinMaterial(
+    boundPin(pin, current.hex),
+    record.salt,
+    record.rounds || PIN_PBKDF2_ROUNDS
+  );
+  if (!timingSafeEqualHex(digestHex(old.verifier), digestHex(record.hash))) return 'lost';
+  const hex = await stageNewDeviceSecret();
+  const fresh = await derivePinMaterial(boundPin(pin, hex), record.salt, PIN_PBKDF2_ROUNDS);
+  const next: PinRecord = {
+    ...record,
+    v: 3,
+    hash: fresh.verifier,
+    rounds: PIN_PBKDF2_ROUNDS,
+    kdf: PIN_KDF,
+    split: PIN_SPLIT,
+    device: PIN_DEVICE,
+    deviceAuth: 1,
+  };
+  await SecureStore.setItemAsync(PIN_KEY, JSON.stringify(next), OPTIONS);
+  const session = getWalletWrapKey();
+  if (session) {
+    await SecureStore.setItemAsync(PIN_WRAP_KEY, sealSecret(session, fresh.wrap), OPTIONS);
+  }
+  await commitStagedDeviceSecret(hex);
+  if (!(await isPasswordSet())) setWalletWrapKey(fresh.wrap);
+  return 'bound';
 }
 
 export async function matchPin(pin: string): Promise<boolean> {
@@ -787,7 +918,7 @@ export async function clearPin(current: string): Promise<boolean> {
     // ignore
   }
   await setLockOnOpenEnabled(false);
-  await writeGate({ fails: 0, until: 0 });
+  await writeGate(emptyGate());
   return true;
 }
 
@@ -845,7 +976,7 @@ export async function setPassword(password: string, conveniencePin?: string): Pr
     await persistWrapForBiometric(nextWrap);
   }
   await persistCompanionWraps(nextWrap);
-  await writeGate({ fails: 0, until: 0 });
+  await writeGate(emptyGate());
   return nextWrap;
 }
 
@@ -892,13 +1023,9 @@ export async function checkPassword(password: string): Promise<PinCheck> {
       ? await pbkdf2Sha256Hex(password, record.salt, rounds)
       : await hashSecret(password, record.salt, rounds);
   if (!verifierMatches(hash, record.hash)) {
-    const gate = await readGate();
-    const fails = gate.fails + 1;
-    const until = Date.now() + lockoutMs(fails);
-    await writeGate({ fails, until });
+    const wait = await noteMiss();
     const attempts = await readAttempts();
     await writeAttempts({ pin: attempts.pin, password: attempts.password + 1 });
-    const wait = remainingLockMs(until);
     return { ok: false, remainingMs: wait, locked: wait > 0 };
   }
   if (material && ready) {
@@ -948,7 +1075,7 @@ export async function checkPassword(password: string): Promise<PinCheck> {
     await SecureStore.setItemAsync(PASSWORD_KEY, JSON.stringify(next), OPTIONS);
     setWalletWrapKey(fresh.wrap);
   }
-  await writeGate({ fails: 0, until: 0 });
+  await writeGate(emptyGate());
   await writeAttempts({ pin: 0, password: 0 });
   await ackDeviceRepair();
   void persistCompanionWraps();

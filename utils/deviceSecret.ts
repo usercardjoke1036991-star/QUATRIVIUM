@@ -5,8 +5,10 @@ import { getProductMode } from '../constants/rpcConfig';
 import { storeSlot } from './storeSlot';
 
 const SECRET_KEY = storeSlot(['quatrivium', 'lock', 'deviceSecret']);
+const NEXT_KEY = storeSlot(['quatrivium', 'lock', 'deviceSecret', 'next']);
 const AUTH_KEY = storeSlot(['quatrivium', 'lock', 'deviceAuth']);
 const REPAIR_KEY = storeSlot(['quatrivium', 'lock', 'deviceRepair']);
+const RETRY_KEY = storeSlot(['quatrivium', 'lock', 'deviceRetry']);
 
 const PLAIN = { keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY };
 
@@ -165,42 +167,84 @@ export async function phoneHasScreenLock(): Promise<boolean> {
 }
 
 /**
- * Reescribe el mismo secreto con el candado del teléfono.
- * Sin bloqueo de pantalla no lo intenta. Nunca genera otro secreto.
+ * El aviso no lee el secreto. Solo mira las marcas.
+ * Sin marca de candado, el secreto sigue en claro hasta que el usuario reintente con el PIN.
  */
-export async function retryDeviceBinding(): Promise<'bound' | 'open' | 'no-lock' | 'lost'> {
-  const flag = await SecureStore.getItemAsync(AUTH_KEY);
-  if (flag === '1') return 'bound';
-  if (!(await phoneHasScreenLock())) return 'no-lock';
-  const hex = await readPlain();
-  if (!hex) return 'lost';
-  try {
-    await SecureStore.setItemAsync(SECRET_KEY, hex, AUTH);
-    const back = await readAuthed();
-    if (back !== hex) return 'open';
-    await mark('1');
-    return 'bound';
-  } catch {
-    return 'open';
-  }
-}
-
-export async function deviceNeedsNotice(): Promise<boolean> {
-  return getProductMode() === 'live';
-}
-
 export async function readDeviceGuard(): Promise<DeviceGuard> {
   const repair = await SecureStore.getItemAsync(REPAIR_KEY).catch(() => null);
-  try {
-    const secret = await loadDeviceSecret();
-    if (repair === '1' || secret.repair) return 'repair';
-    return secret.authenticated ? 'bound' : 'open';
-  } catch (error) {
-    const message = error instanceof Error ? error.message : '';
-    if (message === 'device-key-reset') return 'reset';
-    if (message === 'device-secret-lost') return 'lost';
-    return 'confirm';
+  if (repair === '1') return 'repair';
+  const flag = await SecureStore.getItemAsync(AUTH_KEY).catch(() => null);
+  if (flag === '1') return 'bound';
+  if (flag === '0') return 'open';
+  return 'confirm';
+}
+
+export type DeviceNoticeKey =
+  | ''
+  | 'lockDeviceOpen'
+  | 'lockDeviceNoLock'
+  | 'lockDeviceRepair'
+  | 'lockDeviceKeyReset'
+  | 'lockDeviceSecretLost'
+  | 'lockDeviceAuth';
+
+/** Lo que monta el aviso y lo que corre al volver a primer plano. No toca el secreto. */
+export async function refreshDeviceNotice(): Promise<DeviceNoticeKey> {
+  if (getProductMode() !== 'live') return '';
+  const guard = await readDeviceGuard();
+  if (guard === 'repair') return 'lockDeviceRepair';
+  if (guard === 'open') {
+    return (await phoneHasScreenLock()) ? 'lockDeviceOpen' : 'lockDeviceNoLock';
   }
+  return '';
+}
+
+/** El botón de reintento solo deja una marca. El secreto nuevo se crea al acertar el PIN. */
+export async function armDeviceRetry(): Promise<'ready' | 'no-lock' | 'bound'> {
+  const guard = await readDeviceGuard();
+  if (guard === 'bound') return 'bound';
+  if (!(await phoneHasScreenLock())) return 'no-lock';
+  await SecureStore.setItemAsync(RETRY_KEY, '1', PLAIN);
+  return 'ready';
+}
+
+export async function takeDeviceRetry(): Promise<boolean> {
+  const armed = await SecureStore.getItemAsync(RETRY_KEY).catch(() => null);
+  if (armed !== '1') return false;
+  await SecureStore.deleteItemAsync(RETRY_KEY).catch(() => {});
+  return true;
+}
+
+/**
+ * Secreto nuevo, todavía aparte. El PIN vivo sigue abriendo con el secreto viejo
+ * hasta que el registro del PIN ya use el nuevo.
+ */
+export async function stageNewDeviceSecret(): Promise<string> {
+  const hex = toHex(await Crypto.getRandomBytesAsync(32));
+  await SecureStore.setItemAsync(NEXT_KEY, hex, AUTH);
+  const back = await SecureStore.getItemAsync(NEXT_KEY, AUTH).catch(() => null);
+  if (!isHex32(back) || back !== hex) throw new Error('device-auth');
+  return hex;
+}
+
+export async function readStagedDeviceSecret(): Promise<string | null> {
+  try {
+    const raw = await SecureStore.getItemAsync(NEXT_KEY, AUTH);
+    return isHex32(raw) ? raw : null;
+  } catch (error) {
+    throw authError(error);
+  }
+}
+
+/** Pasa el secreto nuevo al sitio vivo y borra el borrador. */
+export async function commitStagedDeviceSecret(hex: string): Promise<void> {
+  await SecureStore.setItemAsync(SECRET_KEY, hex, AUTH);
+  const back = await readAuthed();
+  if (back !== hex) throw new Error('device-auth');
+  await mark('1');
+  await SecureStore.deleteItemAsync(NEXT_KEY).catch(() => {});
+  await SecureStore.deleteItemAsync(REPAIR_KEY).catch(() => {});
+  await SecureStore.deleteItemAsync(RETRY_KEY).catch(() => {});
 }
 
 /** La contraseña correcta cierra el aviso. El secreto que abre el PIN no cambia. */
