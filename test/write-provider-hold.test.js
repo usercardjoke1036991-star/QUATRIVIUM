@@ -199,13 +199,18 @@ describe('write provider pending hold', function () {
     expect(await hold.readHold(store, 42161, signer.address)).to.equal(null);
   });
 
-  it('reads the receipt from the second RPC when the first is down', async function () {
+  function receiptNode(receipt) {
+    const rpc = node();
+    rpc.getTransactionReceipt = async () => receipt;
+    return rpc;
+  }
+
+  it('keeps the send pending when one RPC is down', async function () {
     const down = node();
     down.getTransactionReceipt = async () => {
       throw new Error('down');
     };
-    const up = node();
-    up.getTransactionReceipt = async () => ({
+    const up = receiptNode({
       hash: HASH,
       blockNumber: 12,
       blockHash: `0x${'cd'.repeat(32)}`,
@@ -218,27 +223,54 @@ describe('write provider pending hold', function () {
         throw new Error('unused');
       },
     });
-    const receipt = await rpc.getTransactionReceipt(HASH);
+    expect(await rpc.getTransactionReceipt(HASH)).to.equal(null);
+  });
+
+  it('accepts the receipt only when two RPCs agree, and a lying status stays pending', async function () {
+    const blockHash = `0x${'cd'.repeat(32)}`;
+    const good = {
+      hash: HASH,
+      blockNumber: 12,
+      blockHash,
+      status: 1,
+    };
+    const agreed = write.createWriteProvider(42161, 'arbitrum', {
+      urls: ['https://a.example', 'https://b.example'],
+      nodes: [receiptNode(good), receiptNode({ ...good })],
+      call: async () => {
+        throw new Error('unused');
+      },
+    });
+    const receipt = await agreed.getTransactionReceipt(HASH);
     expect(receipt.blockNumber).to.equal(12);
-    expect(receipt.hash).to.equal(HASH);
+    expect(receipt.status).to.equal(1);
+    const lied = write.createWriteProvider(42161, 'arbitrum', {
+      urls: ['https://a.example', 'https://b.example'],
+      nodes: [receiptNode(good), receiptNode({ ...good, status: 0 })],
+      call: async () => {
+        throw new Error('unused');
+      },
+    });
+    expect(await lied.getTransactionReceipt(HASH)).to.equal(null);
   });
 
   it('asks our RPCs for a WalletConnect receipt and never the wallet', async function () {
     let walletCalls = 0;
+    const agreed = {
+      hash: HASH,
+      blockNumber: 9,
+      blockHash: `0x${'11'.repeat(32)}`,
+      status: 1,
+    };
     write.setReceiptNodesForTests([
       {
         async getTransactionReceipt() {
-          throw new Error('down');
+          return agreed;
         },
       },
       {
         async getTransactionReceipt() {
-          return {
-            hash: HASH,
-            blockNumber: 9,
-            blockHash: `0x${'11'.repeat(32)}`,
-            status: 1,
-          };
+          return { ...agreed };
         },
       },
     ]);

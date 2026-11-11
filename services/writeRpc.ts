@@ -72,25 +72,40 @@ function confirmedReceipt(receipt: unknown, hash: string): ReceiptLike | null {
   return row;
 }
 
-/** El primer recibo con el mismo hash y un bloque ya confirmado. El nodo caído se salta. */
+function sameReceipt(left: ReceiptLike, right: ReceiptLike): boolean {
+  return (
+    String(left.hash || '').toLowerCase() === String(right.hash || '').toLowerCase() &&
+    String(left.blockHash || '').toLowerCase() === String(right.blockHash || '').toLowerCase() &&
+    Number(left.status) === Number(right.status)
+  );
+}
+
+/**
+ * Igual que el dinero: hacen falta dos RPC propios que coincidan en hash,
+ * estado y bloque. Si discrepan, o solo responde uno, el envío sigue pendiente.
+ */
 export async function firstConfirmedReceipt(
   hash: string,
   nodes: readonly ReceiptNode[]
 ): Promise<ReceiptLike | null> {
-  let last: unknown;
-  let sawNull = false;
-  for (const node of nodes) {
-    try {
-      const receipt = await node.getTransactionReceipt(hash);
-      const confirmed = confirmedReceipt(receipt, hash);
-      if (confirmed) return confirmed;
-      sawNull = true;
-    } catch (error) {
-      last = error;
-    }
-  }
-  if (sawNull) return null;
-  throw last instanceof Error ? last : new Error('rpc');
+  let thrown: unknown = null;
+  const settled = await Promise.all(
+    nodes.map(async (node) => {
+      try {
+        const receipt = await node.getTransactionReceipt(hash);
+        const confirmed = confirmedReceipt(receipt, hash);
+        if (!confirmed) return { ok: false as const, empty: true };
+        return { ok: true as const, empty: false, value: confirmed };
+      } catch (error) {
+        thrown = error;
+        return { ok: false as const, empty: false };
+      }
+    })
+  );
+  const values = settled.flatMap((row) => (row.ok ? [row.value] : []));
+  if (values.length >= 2 && sameReceipt(values[0], values[1])) return values[0];
+  if (values.length >= 2 || values.length === 1 || settled.some((row) => row.empty)) return null;
+  throw thrown instanceof Error ? thrown : new Error('rpc');
 }
 
 /** Solo pruebas: la segunda consulta del hash no tiene que esperar un segundo. */
