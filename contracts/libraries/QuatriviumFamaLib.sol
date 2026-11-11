@@ -439,8 +439,13 @@ library QuatriviumFamaLib {
         if (ok && raw.length >= 32) r = abi.decode(raw, (address));
     }
 
+    /// @dev EIP-150 entrega como mucho gasleft * 63/64. 180000 * 64 / 63 + el CALL.
+    uint256 private constant AVISO_RESERVA = 180000;
+    uint256 private constant AVISO_MINIMO = (AVISO_RESERVA * 64) / 63 + 1 + 7000;
+
     /// @dev Boost 100 % on-chain: Reserva liquida el extra de esta comisión (sin attester).
     ///      Un fallo de Reserva nunca bloquea el pago del préstamo; el gas queda acotado.
+    ///      Sin el mínimo, un límite justo deja el aviso en cero y el boost no se pide.
     function _avisarReserva(
         address reserva,
         address beneficiario,
@@ -450,9 +455,10 @@ library QuatriviumFamaLib {
         uint256 remaining
     ) private {
         if (reserva == address(0)) return;
+        if (gasleft() < AVISO_MINIMO) revert();
         bytes32 salt = keccak256(abi.encode(deudor, generacion, block.timestamp, remaining));
         // slither-disable-next-line unchecked-lowlevel
-        (bool ok, ) = reserva.call{gas: 180000}(
+        (bool ok, ) = reserva.call{gas: AVISO_RESERVA}(
             abi.encodeWithSignature(
                 "pagarBoostComision(address,uint256,bytes32)",
                 beneficiario,
@@ -461,6 +467,18 @@ library QuatriviumFamaLib {
             )
         );
         if (!ok) emit ReservaBoostFallido(reserva, beneficiario, monto);
+    }
+
+    /// @dev El test llama el mismo aviso con un tope de gas. No lo usa el contrato.
+    function probarAvisoReserva(
+        address reserva,
+        address beneficiario,
+        uint256 monto,
+        address deudor,
+        uint8 generacion,
+        uint256 remaining
+    ) external {
+        _avisarReserva(reserva, beneficiario, monto, deudor, generacion, remaining);
     }
 
     function alimentarPool(

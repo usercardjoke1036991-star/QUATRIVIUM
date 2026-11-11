@@ -65,7 +65,12 @@ describe('write provider pending hold', function () {
 
   beforeEach(function () {
     memory.clear();
+    write.setHoldStoreForTests(store);
     write.setUnseenRecheckForTests(0);
+  });
+
+  afterEach(function () {
+    write.setHoldStoreForTests(null);
   });
 
   it('releases when no RPC saw the hash and the nonce did not move, including a lower nonce', async function () {

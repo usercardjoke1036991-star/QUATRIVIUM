@@ -44,7 +44,7 @@ export type ReceiptLike = {
 };
 
 export type ReceiptNode = {
-  getTransactionReceipt(hash: string): Promise<ReceiptLike | null>;
+  getTransactionReceipt(hash: string): Promise<unknown>;
 };
 
 /** Solo pruebas de WalletConnect: los recibos salen de estos nodos, no de la billetera. */
@@ -55,16 +55,21 @@ export function setReceiptNodesForTests(nodes: ReceiptNode[] | null): void {
 export function ownReceiptNodes(): ReceiptNode[] {
   if (receiptNodesForTests) return receiptNodesForTests;
   const network = { chainId: NETWORK_CONFIG.chainId, name: NETWORK_CONFIG.chainName };
-  return publicRpcList().map(
-    (url) => new JsonRpcProvider(url, network, { staticNetwork: true, batchMaxCount: 1 })
-  );
+  return publicRpcList().map((url) => {
+    const node = new JsonRpcProvider(url, network, { staticNetwork: true, batchMaxCount: 1 });
+    return {
+      getTransactionReceipt: (wanted: string) => node.getTransactionReceipt(wanted),
+    };
+  });
 }
 
-function confirmedReceipt(receipt: ReceiptLike | null, hash: string): ReceiptLike | null {
-  if (!receipt || receipt.blockNumber == null || Number(receipt.blockNumber) <= 0) return null;
-  if (!receipt.blockHash) return null;
-  if (String(receipt.hash || '').toLowerCase() !== hash.toLowerCase()) return null;
-  return receipt;
+function confirmedReceipt(receipt: unknown, hash: string): ReceiptLike | null {
+  if (!receipt || typeof receipt !== 'object') return null;
+  const row = receipt as ReceiptLike;
+  if (row.blockNumber == null || Number(row.blockNumber) <= 0) return null;
+  if (!row.blockHash) return null;
+  if (String(row.hash || '').toLowerCase() !== hash.toLowerCase()) return null;
+  return row;
 }
 
 /** El primer recibo con el mismo hash y un bloque ya confirmado. El nodo caído se salta. */
@@ -109,15 +114,26 @@ const holdStore: HoldStore = {
   },
 };
 
+let holdStoreForTests: HoldStore | null = null;
+
+/** Solo pruebas: el módulo ya cargado no puede cambiar de AsyncStorage a mitad de la suite. */
+export function setHoldStoreForTests(store: HoldStore | null): void {
+  holdStoreForTests = store;
+}
+
+function holds(): HoldStore {
+  return holdStoreForTests ?? holdStore;
+}
+
 export async function nonceForSender(
   chainId: number,
   networkNonce: number,
   from: string
 ): Promise<number> {
-  const held = await readHold(holdStore, chainId, from);
+  const held = await readHold(holds(), chainId, from);
   if (!held) return networkNonce;
   if (networkNonce > held.nonce) {
-    await deleteHold(holdStore, chainId, from);
+    await deleteHold(holds(), chainId, from);
     return networkNonce;
   }
   return nonceAfterHold(networkNonce, held);
@@ -125,7 +141,7 @@ export async function nonceForSender(
 
 /** Borra el pendiente de esta red. La pantalla ya avisó que podría cobrarse dos veces. */
 export async function discardPendingSends(chainId: number): Promise<number> {
-  return discardChainHolds(holdStore, chainId);
+  return discardChainHolds(holds(), chainId);
 }
 
 /** Proveedor de escritura: nonce, gas, comisión y espera no salen de un solo RPC. */
@@ -210,18 +226,18 @@ export function createWriteProvider(
   provider.getTransactionCount = async (address: string, blockTag?: BlockTag) => {
     if (blockTag == null || blockTag === 'pending') {
       const networkNonce = await highestPendingNonce(urls, address, call);
-      const held = await readHold(holdStore, chainId, address);
+      const held = await readHold(holds(), chainId, address);
       if (held?.unseen) {
         const seen = await hashSightings(urls, held.hash, call);
         if (seen > 0) throw new Error('pending-nonce');
-        await deleteHold(holdStore, chainId, address);
+        await deleteHold(holds(), chainId, address);
         return networkNonce;
       }
       if (
         held &&
         shouldReleaseHold(await hashSightings(urls, held.hash, call), networkNonce, held)
       ) {
-        await deleteHold(holdStore, chainId, address);
+        await deleteHold(holds(), chainId, address);
         return networkNonce;
       }
       return nonceForSender(chainId, networkNonce, address);
@@ -245,7 +261,7 @@ export function createWriteProvider(
     if (!tx.from || tx.hash == null || tx.nonce == null || !tx.signature) {
       throw new Error('unsigned');
     }
-    rejectReusedNonce(await readHold(holdStore, chainId, tx.from), tx.nonce, tx.hash);
+    rejectReusedNonce(await readHold(holds(), chainId, tx.from), tx.nonce, tx.hash);
     const outcome = await broadcastRawAcrossRpcs({
       urls,
       raw: signedTx,
@@ -275,7 +291,7 @@ export function createWriteProvider(
         networkNonce = null;
       }
       if (seen === 0 && networkNonce != null && networkNonce <= tx.nonce) {
-        await settleHold(holdStore, {
+        await settleHold(holds(), {
           chainId,
           from: tx.from,
           nonce: tx.nonce,
@@ -287,9 +303,9 @@ export function createWriteProvider(
       }
     }
     if (networkNonce != null && networkNonce > tx.nonce) {
-      await deleteHold(holdStore, chainId, tx.from);
+      await deleteHold(holds(), chainId, tx.from);
     } else {
-      await settleHold(holdStore, {
+      await settleHold(holds(), {
         chainId,
         from: tx.from,
         nonce: tx.nonce,
