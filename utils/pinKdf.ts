@@ -8,6 +8,11 @@ import { sha256 } from '@noble/hashes/sha2';
  * (Joplin, discourse.joplinapp.org/t/38622), así que 9000 quedan en unos 4,9 s.
  * 100000 vueltas en ese mismo JavaScript serían unos 54 s, no 2 a 5.
  * El registro guarda las vueltas para poder subirlas después.
+ *
+ * Un registro viejo de 600000 vueltas baja a 9000 al abrir. Esas 600000 se
+ * pensaron para un KDF nativo: en este JavaScript (Hermes) serían cerca de un
+ * minuto por bloque. El PIN de 6 dígitos no queda solo: la misma pasada mezcla
+ * un secreto de 32 bytes que vive en el llavero del teléfono.
  */
 
 export const PIN_PBKDF2_ROUNDS = 9_000;
@@ -15,6 +20,13 @@ export const PIN_KDF = 'pbkdf2-sha256';
 /** 2 = un bloque y HKDF. 1 = el formato viejo de 64 bytes. */
 export const PIN_SPLIT = 2;
 export const PIN_SPLIT_WIDE = 1;
+/** 1 = el verificador se calculó con el secreto del teléfono. */
+export const PIN_DEVICE = 1;
+
+/** El secreto no se guarda junto al verificador. Entra en la contraseña del KDF. */
+export function boundPin(pin: string, deviceHex: string): string {
+  return `${pin}:${deviceHex}`;
+}
 
 type DeriveFn = (
   secret: Uint8Array,
@@ -141,13 +153,16 @@ export async function deriveWidePinMaterial(
 }
 
 export function needsPinUpgrade(
-  record: { kdf?: string; rounds?: number; split?: number } | null
+  record: { kdf?: string; rounds?: number; split?: number; device?: number } | null
 ): boolean {
   if (!record) return false;
+  // 600000 no se queda: en JS puro no cabe en unos segundos, y el secreto del
+  // teléfono ya iguala el costo de quien prueba el PIN con el de quien lo pone.
   return (
     record.kdf !== PIN_KDF ||
-    Number(record.rounds || 0) < PIN_PBKDF2_ROUNDS ||
-    record.split !== PIN_SPLIT
+    Number(record.rounds || 0) !== PIN_PBKDF2_ROUNDS ||
+    record.split !== PIN_SPLIT ||
+    record.device !== PIN_DEVICE
   );
 }
 

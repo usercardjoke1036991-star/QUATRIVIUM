@@ -170,6 +170,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
   const { colors } = useTheme();
   const [ready, setReady] = useState(false);
   const [locked, setLocked] = useState(false);
+  const [pinBlocked, setPinBlocked] = useState(false);
   const [pin, setPinDigits] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -684,7 +685,20 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
     const result = await checkPin(next);
     setBusy(false);
     if (result.ok) {
+      setPinBlocked(false);
       await finishUnlock(next);
+      return;
+    }
+    if (result.pinBlocked) {
+      setPinBlocked(true);
+      setUnlockMode('password');
+      setError(t('lockPinBlocked'));
+      setPinDigits('');
+      return;
+    }
+    if (result.deviceAuth) {
+      setError(t('lockDeviceAuth'));
+      setPinDigits('');
       return;
     }
     setLockMs(result.remainingMs);
@@ -716,7 +730,18 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
     try {
       const result = await checkPassword(passwordInput);
       if (result.ok) {
+        setPinBlocked(false);
         await passQueuedMethod(askingSignIn);
+        return;
+      }
+      if (result.wiped) {
+        setError(t('lockWalletWiped'));
+        setPasswordInput('');
+        return;
+      }
+      if (result.wipeWarning) {
+        setError(t('lockWipeWarning'));
+        setPasswordInput('');
         return;
       }
       setLockMs(result.remainingMs);
@@ -915,6 +940,14 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
         return;
       }
       {
+        if (checked.wiped) {
+          setError(t('lockWalletWiped'));
+          return;
+        }
+        if (checked.wipeWarning) {
+          setError(t('lockWipeWarning'));
+          return;
+        }
         const exists = await probePasswordSet(2000);
         setLockMs(checked.remainingMs);
         setError(
@@ -1811,6 +1844,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
           !unlockPrimaryOnly &&
           unlockChoices.includes('pin') &&
           hasPin &&
+          !pinBlocked &&
           unlockMode !== 'pin' ? (
             <TouchableOpacity
               onPress={() => {

@@ -51,6 +51,12 @@ function parseStored(raw: string): StoredWallet | null {
 }
 
 async function readRawWallet(): Promise<string | null> {
+  const live = !allowWalletAsyncFallback(getProductMode());
+  if (live) {
+    const secure = await SecureStore.getItemAsync(WALLET_KEY).catch(() => null);
+    await AsyncStorage.removeItem(WALLET_FALLBACK).catch(() => {});
+    return secure;
+  }
   const secure = await withLimit(
     SecureStore.getItemAsync(WALLET_KEY).catch(() => null),
     12000,

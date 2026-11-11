@@ -15,14 +15,23 @@ function installMock(name, exports) {
 }
 
 let crashOnLiveWrap = false;
+let rejectDeviceAuth = false;
+const secureWrites = [];
 
 installMock('expo-secure-store', {
   WHEN_UNLOCKED_THIS_DEVICE_ONLY: 'when-unlocked',
-  async getItemAsync(key) {
+  async getItemAsync(key, options) {
+    if (rejectDeviceAuth && options && options.requireAuthentication) {
+      throw new Error('no-credential');
+    }
     return memory.has(key) ? memory.get(key) : null;
   },
-  async setItemAsync(key, value) {
+  async setItemAsync(key, value, options) {
     if (crashOnLiveWrap && key === PIN_WRAP) throw new Error('crash');
+    if (rejectDeviceAuth && options && options.requireAuthentication) {
+      throw new Error('no-credential');
+    }
+    secureWrites.push({ key, options: options || null });
     memory.set(key, value);
   },
   async deleteItemAsync(key) {
@@ -64,6 +73,8 @@ const kdf = loadTs(path.join(__dirname, '..', 'utils', 'pinKdf.ts'));
 const errors = loadTs(path.join(__dirname, '..', 'utils', 'txErrors.ts'));
 const box = loadTs(path.join(__dirname, '..', 'utils', 'secretBox.ts'));
 const lock = loadTs(path.join(__dirname, '..', 'services', 'appLock.ts'));
+const wallet = loadTs(path.join(__dirname, '..', 'services', 'appWallet.ts'));
+const rpc = loadTs(path.join(__dirname, '..', 'constants', 'rpcConfig.ts'));
 const { sha256, toUtf8Bytes } = require('ethers');
 
 const PIN_RECORD = 'quatrivium.lock.pin';
@@ -91,7 +102,7 @@ describe('app lock PBKDF2', function () {
       missing = error.message;
     }
     expect(missing).to.equal('pbkdf2-missing');
-    expect(memory.size).to.equal(0);
+    expect(memory.has(PIN_RECORD)).to.equal(false);
     const text = errors.humanizeTxError({ message: 'pbkdf2-missing' });
     expect(text.includes('candado') || text.includes('lock key')).to.equal(true);
   });
@@ -110,7 +121,21 @@ describe('app lock PBKDF2', function () {
       const record = JSON.parse(saved);
       expect(record.split).to.equal(2);
       expect(record.rounds).to.equal(9000);
-      const material = await kdf.derivePinMaterial(PIN, record.salt, record.rounds);
+      expect(record.device).to.equal(1);
+      const deviceHex = memory.get('quatrivium.lock.deviceSecret');
+      expect(
+        secureWrites.some(
+          (row) =>
+            row.key === 'quatrivium.lock.deviceSecret' &&
+            row.options &&
+            row.options.requireAuthentication
+        )
+      ).to.equal(true);
+      const material = await kdf.derivePinMaterial(
+        kdf.boundPin(PIN, deviceHex),
+        record.salt,
+        record.rounds
+      );
       expect(kdf.takeKdfCalls()).to.equal(1);
       expect(kdf.takeKdfBlocks()).to.equal(1);
       expect(material.verifier).to.not.equal(material.wrap.slice(2));
@@ -175,6 +200,7 @@ describe('app lock PBKDF2', function () {
     const mid = JSON.parse(memory.get(PIN_RECORD));
     expect(mid.split).to.equal(2);
     expect(mid.rounds).to.equal(9000);
+    expect(mid.device).to.equal(1);
     expect(memory.has(PIN_NEXT)).to.equal(true);
     expect(box.openSecret(memory.get(PIN_WRAP), wide.wrap)).to.equal(session);
     memory.delete('quatrivium.lock.gate');
@@ -208,6 +234,71 @@ describe('app lock PBKDF2', function () {
     expect(moved.split).to.equal(2);
     expect(moved.kdf).to.equal('pbkdf2-sha256');
     expect(moved.rounds).to.equal(9000);
+    expect(moved.device).to.equal(1);
     expect(kdf.takeKdfBlocks()).to.equal(1);
+  });
+
+  it('blocks the pin after ten misses, warns before the fifth password, and wipes the wallet', async function () {
+    await lock.setPassword(PASSWORD);
+    await lock.setPin(PIN);
+    memory.set('quatrivium.appWallet.v1', 'sobre');
+    memory.delete('quatrivium.lock.attempts');
+    kdf.setPbkdf2ForTests(async () => new Uint8Array(32));
+    for (let i = 0; i < 9; i += 1) {
+      memory.delete('quatrivium.lock.gate');
+      const wrong = await lock.checkPin('193746');
+      expect(wrong.pinBlocked).to.equal(undefined);
+    }
+    memory.delete('quatrivium.lock.gate');
+    const blocked = await lock.checkPin('193746');
+    expect(blocked.pinBlocked).to.equal(true);
+    kdf.takeKdfCalls();
+    const still = await lock.checkPin(PIN);
+    expect(still.pinBlocked).to.equal(true);
+    expect(kdf.takeKdfCalls()).to.equal(0);
+    for (let i = 0; i < 3; i += 1) {
+      memory.delete('quatrivium.lock.gate');
+      const miss = await lock.checkPassword('Otra-8z');
+      expect(miss.wipeWarning).to.equal(undefined);
+      expect(miss.wiped).to.equal(undefined);
+    }
+    memory.delete('quatrivium.lock.gate');
+    const warning = await lock.checkPassword('Otra-8z');
+    expect(warning.wipeWarning).to.equal(true);
+    expect(memory.get('quatrivium.appWallet.v1')).to.equal('sobre');
+    memory.delete('quatrivium.lock.gate');
+    const wiped = await lock.checkPassword('Otra-8z');
+    expect(wiped.wiped).to.equal(true);
+    expect(memory.has('quatrivium.appWallet.v1')).to.equal(false);
+  });
+
+  it('never opens the live wallet from AsyncStorage', async function () {
+    rpc.setProductMode('live');
+    memory.set('mem:quatrivium.appWallet.v1.fallback', 'sobre-async');
+    const opened = await wallet.loadAppWallet();
+    expect(opened).to.equal(null);
+    expect(memory.has('mem:quatrivium.appWallet.v1.fallback')).to.equal(false);
+    memory.set('quatrivium.appWallet.v1', 'sobre-seguro');
+    const still = await wallet.loadAppWallet();
+    expect(still).to.equal(null);
+    expect(memory.has('mem:quatrivium.appWallet.v1.fallback')).to.equal(false);
+  });
+
+  it('keeps the secret when the phone cannot ask for a credential', async function () {
+    memory.clear();
+    secureWrites.length = 0;
+    rejectDeviceAuth = true;
+    try {
+      const wrap = await lock.setPin(PIN);
+      expect(/^0x[0-9a-f]{64}$/.test(wrap)).to.equal(true);
+      const saved = [...memory.values()].find((value) => String(value).includes('pbkdf2-sha256'));
+      const record = JSON.parse(saved);
+      expect(record.device).to.equal(1);
+      expect(record.deviceAuth).to.equal(0);
+      expect(memory.get('quatrivium.lock.deviceAuth')).to.equal('0');
+      expect(/^[0-9a-f]{64}$/.test(memory.get('quatrivium.lock.deviceSecret'))).to.equal(true);
+    } finally {
+      rejectDeviceAuth = false;
+    }
   });
 });
