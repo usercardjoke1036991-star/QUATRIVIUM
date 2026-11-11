@@ -50,11 +50,13 @@ export function isWeakPin(pin: string): boolean {
 }
 
 const LOCK_STEPS_MS = [30_000, 60_000, 5 * 60_000, 15 * 60_000, 60 * 60_000];
+const LOCK_DAY_MS = 24 * 60 * 60 * 1000;
 
+/** 30 s, 1 min, 5 min, 15 min, 1 h, y 24 h en cada fallo extra. Nunca borra la billetera. */
 export function lockoutMs(fails: number): number {
   if (fails <= 0) return 0;
-  const index = Math.min(fails, LOCK_STEPS_MS.length) - 1;
-  return LOCK_STEPS_MS[index];
+  if (fails > LOCK_STEPS_MS.length) return LOCK_DAY_MS;
+  return LOCK_STEPS_MS[fails - 1];
 }
 
 export function remainingLockMs(until: number, now = Date.now()): number {

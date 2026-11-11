@@ -70,6 +70,7 @@ installMock('react-native', {
 });
 
 const kdf = loadTs(path.join(__dirname, '..', 'utils', 'pinKdf.ts'));
+const copy = loadTs(path.join(__dirname, '..', 'utils', 'lockFailureCopy.ts'));
 const errors = loadTs(path.join(__dirname, '..', 'utils', 'txErrors.ts'));
 const box = loadTs(path.join(__dirname, '..', 'utils', 'secretBox.ts'));
 const lock = loadTs(path.join(__dirname, '..', 'services', 'appLock.ts'));
@@ -159,6 +160,7 @@ describe('app lock PBKDF2', function () {
       expect(bad.ok).to.equal(false);
       expect(kdf.takeKdfCalls()).to.equal(1);
       memory.delete('quatrivium.lock.gate');
+      memory.delete('quatrivium.lock.gate.none');
       const wrong = await lock.checkPin('193746');
       expect(wrong.ok).to.equal(false);
       expect(kdf.takeKdfCalls()).to.equal(1);
@@ -238,38 +240,115 @@ describe('app lock PBKDF2', function () {
     expect(kdf.takeKdfBlocks()).to.equal(1);
   });
 
-  it('blocks the pin after ten misses, warns before the fifth password, and wipes the wallet', async function () {
+  it('blocks the pin after ten misses and never deletes the wallet', async function () {
     await lock.setPassword(PASSWORD);
     await lock.setPin(PIN);
     memory.set('quatrivium.appWallet.v1', 'sobre');
-    memory.delete('quatrivium.lock.attempts');
+    memory.delete('quatrivium.lock.attempts.none');
     kdf.setPbkdf2ForTests(async () => new Uint8Array(32));
     for (let i = 0; i < 9; i += 1) {
-      memory.delete('quatrivium.lock.gate');
+      memory.delete('quatrivium.lock.gate.none');
       const wrong = await lock.checkPin('193746');
       expect(wrong.pinBlocked).to.equal(undefined);
     }
-    memory.delete('quatrivium.lock.gate');
+    memory.delete('quatrivium.lock.gate.none');
     const blocked = await lock.checkPin('193746');
     expect(blocked.pinBlocked).to.equal(true);
     kdf.takeKdfCalls();
     const still = await lock.checkPin(PIN);
     expect(still.pinBlocked).to.equal(true);
     expect(kdf.takeKdfCalls()).to.equal(0);
-    for (let i = 0; i < 3; i += 1) {
-      memory.delete('quatrivium.lock.gate');
+    memory.delete('quatrivium.lock.gate.none');
+    for (let i = 0; i < 6; i += 1) {
+      const gateKey = 'quatrivium.lock.gate.none';
+      if (memory.has(gateKey)) {
+        const row = JSON.parse(memory.get(gateKey));
+        row.until = 0;
+        memory.set(gateKey, JSON.stringify(row));
+      }
       const miss = await lock.checkPassword('Otra-8z');
-      expect(miss.wipeWarning).to.equal(undefined);
-      expect(miss.wiped).to.equal(undefined);
+      expect(miss.ok).to.equal(false);
+      expect(memory.get('quatrivium.appWallet.v1')).to.equal('sobre');
+      if (i === 5) expect(miss.remainingMs).to.be.greaterThan(23 * 60 * 60 * 1000);
     }
-    memory.delete('quatrivium.lock.gate');
-    const warning = await lock.checkPassword('Otra-8z');
-    expect(warning.wipeWarning).to.equal(true);
+    expect(JSON.parse(memory.get('quatrivium.lock.attempts.none')).password).to.equal(6);
+  });
+
+  it('counts failures per wallet and a good pin or password clears that wallet only', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    const walletA = `0x${'11'.repeat(20)}`;
+    const walletB = `0x${'22'.repeat(20)}`;
+    memory.set('quatrivium.device.boundWallet', walletA);
+    await lock.setPassword(PASSWORD);
+    await lock.setPin(PIN);
+    memory.set('quatrivium.appWallet.v1', 'sobre');
+    for (let i = 0; i < 6; i += 1) {
+      const gateKey = `quatrivium.lock.gate.${walletA}`;
+      if (memory.has(gateKey)) {
+        const row = JSON.parse(memory.get(gateKey));
+        row.until = 0;
+        memory.set(gateKey, JSON.stringify(row));
+      }
+      await lock.checkPassword('Otra-8z');
+    }
     expect(memory.get('quatrivium.appWallet.v1')).to.equal('sobre');
-    memory.delete('quatrivium.lock.gate');
-    const wiped = await lock.checkPassword('Otra-8z');
-    expect(wiped.wiped).to.equal(true);
-    expect(memory.has('quatrivium.appWallet.v1')).to.equal(false);
+    expect(JSON.parse(memory.get(`quatrivium.lock.attempts.${walletA}`)).password).to.equal(6);
+    memory.set('quatrivium.device.boundWallet', walletB);
+    await lock.checkPassword('Otra-8z');
+    expect(JSON.parse(memory.get(`quatrivium.lock.attempts.${walletB}`)).password).to.equal(1);
+    expect(JSON.parse(memory.get(`quatrivium.lock.attempts.${walletA}`)).password).to.equal(6);
+    const gateB = `quatrivium.lock.gate.${walletB}`;
+    const waitingB = JSON.parse(memory.get(gateB));
+    waitingB.until = 0;
+    memory.set(gateB, JSON.stringify(waitingB));
+    const opened = await lock.checkPassword(PASSWORD);
+    expect(opened.ok).to.equal(true);
+    expect(JSON.parse(memory.get(`quatrivium.lock.attempts.${walletB}`)).password).to.equal(0);
+    expect(JSON.parse(memory.get(`quatrivium.lock.attempts.${walletA}`)).password).to.equal(6);
+    memory.set('quatrivium.device.boundWallet', walletA);
+    const gateA = `quatrivium.lock.gate.${walletA}`;
+    const waiting = JSON.parse(memory.get(gateA));
+    waiting.until = 0;
+    memory.set(gateA, JSON.stringify(waiting));
+    const pinOk = await lock.checkPin(PIN);
+    expect(pinOk.ok).to.equal(true);
+    const cleared = JSON.parse(memory.get(`quatrivium.lock.attempts.${walletA}`));
+    expect(cleared.pin).to.equal(0);
+    expect(cleared.password).to.equal(0);
+    expect(memory.get('quatrivium.appWallet.v1')).to.equal('sobre');
+  });
+
+  it('names a blocked pin, a wait in minutes, and a phone read failure', function () {
+    const seen = [];
+    const t = (key, vars) => {
+      seen.push({ key, vars });
+      return key;
+    };
+    const blocked = copy.describeLockFailure(
+      'pin',
+      { ok: false, remainingMs: 0, locked: true, pinBlocked: true },
+      t
+    );
+    const zero = copy.describeLockFailure('pin', { ok: false, remainingMs: 0, locked: true }, t);
+    const wrong = copy.describeLockFailure('pin', { ok: false, remainingMs: 0, locked: false }, t);
+    const minutes = copy.describeLockFailure(
+      'password',
+      { ok: false, remainingMs: 5 * 60 * 1000, locked: true },
+      t
+    );
+    const phone = copy.describeLockFailure(
+      'pin',
+      { ok: false, remainingMs: 0, locked: false, deviceAuth: true },
+      t
+    );
+    expect(blocked).to.equal('lockPinBlocked');
+    expect(zero).to.equal('lockPinBlocked');
+    expect(wrong).to.equal('lockPinWrong');
+    expect(minutes).to.equal('lockCooldownMinutes');
+    expect(seen[3].vars.minutes).to.equal(5);
+    expect(phone).to.equal('lockDeviceAuth');
+    expect(JSON.stringify(seen).includes('"seconds":0')).to.equal(false);
   });
 
   it('never opens the live wallet from AsyncStorage', async function () {

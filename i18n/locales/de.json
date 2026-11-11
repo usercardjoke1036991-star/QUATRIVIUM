@@ -351,6 +351,7 @@
   "lockWalletWiped": "Die lokale Boerse wurde geloescht. Die Wiederherstellungsphrase wird gebraucht.",
   "lockDeviceAuth": "Bestaetigen Sie das Telefon, um das Schloss zu oeffnen.",
   "lockCooldown": "Zu viele Versuche. {seconds} s warten.",
+  "lockCooldownMinutes": "Zu viele Versuche. {minutes} min warten.",
   "lockPinChanged": "PIN aktualisiert.",
   "lockBiometric": "Mit Fingerabdruck entsperren",
   "lockBiometricFace": "Mit Face ID entsperren",

@@ -351,6 +351,7 @@
   "lockWalletWiped": "Локальный кошелёк стёрт. Нужна фраза восстановления.",
   "lockDeviceAuth": "Подтвердите телефон, чтобы открыть замок.",
   "lockCooldown": "Слишком много попыток. Подождите {seconds} с.",
+  "lockCooldownMinutes": "Слишком много попыток. Подождите {minutes} мин.",
   "lockPinChanged": "PIN обновлён.",
   "lockBiometric": "Разблокировать отпечатком",
   "lockBiometricFace": "Разблокировать Face ID",

@@ -126,6 +126,8 @@ describe('cyber hardening — PIN and secret box', function () {
     expect(lockoutMs(3)).to.equal(5 * 60_000);
     expect(lockoutMs(4)).to.equal(15 * 60_000);
     expect(lockoutMs(5)).to.equal(60 * 60_000);
+    expect(lockoutMs(6)).to.equal(24 * 60 * 60_000);
+    expect(lockoutMs(8)).to.equal(24 * 60 * 60_000);
     const now = 1_700_000_000_000;
     expect(remainingLockMs(now + lockoutMs(1), now)).to.equal(30_000);
     expect(remainingLockMs(now, now + 1)).to.equal(0);

@@ -351,6 +351,7 @@
   "lockWalletWiped": "この端末の財布は消えました。回復の語句が必要です。",
   "lockDeviceAuth": "鍵を開けるには端末を確認してください。",
   "lockCooldown": "試行が多すぎます。{seconds} 秒お待ちください。",
+  "lockCooldownMinutes": "試行が多すぎます。{minutes} 分お待ちください。",
   "lockPinChanged": "PIN を更新しました。",
   "lockBiometric": "指紋でロック解除",
   "lockBiometricFace": "Face ID でロック解除",

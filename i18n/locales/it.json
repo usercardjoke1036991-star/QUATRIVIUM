@@ -351,6 +351,7 @@
   "lockWalletWiped": "Il portafoglio locale e stato cancellato. Serve la frase di recupero.",
   "lockDeviceAuth": "Conferma il telefono per aprire il lucchetto.",
   "lockCooldown": "Troppi tentativi. Attendi {seconds} s.",
+  "lockCooldownMinutes": "Troppi tentativi. Attendi {minutes} min.",
   "lockPinChanged": "PIN aggiornato.",
   "lockBiometric": "Sblocca con l’impronta",
   "lockBiometricFace": "Sblocca con Face ID",

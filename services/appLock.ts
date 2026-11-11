@@ -42,6 +42,7 @@ import {
 import { APP_DISPLAY_NAME } from '../constants/brand';
 import { getProductMode } from '../constants/rpcConfig';
 import { allowWalletAsyncFallback } from '../utils/walletVaultPolicy';
+import { getBoundWallet } from './deviceBinding';
 import { clearWalletSession, getWalletWrapKey, setWalletWrapKey } from './walletSession';
 import { externalWalletHandoffActive } from './walletHandoff';
 import { isPickerHeld } from '../utils/pickerHold';
@@ -67,13 +68,8 @@ const BIO_WRAP_OPTIONS = {
 };
 
 export const PIN_LENGTH = 6;
-/** Diez PIN seguidos mal: el PIN se bloquea y solo abre la contraseña. */
+/** Diez PIN seguidos mal: el PIN se bloquea y solo abre la contraseña. No se borra nada. */
 export const PIN_FAIL_LIMIT = 10;
-/**
- * Cinco contraseñas seguidas mal. A la cuarta se avisa que la siguiente borra
- * la billetera local y hará falta la frase. A la quinta se borra.
- */
-export const PASSWORD_FAIL_LIMIT = 5;
 export { PASSWORD_LENGTH, isValidMasterPassword };
 export const PIN_ROUNDS = 20_000;
 const BACKGROUND_LOCK_MS = 20_000;
@@ -146,13 +142,34 @@ async function readPinRecord(): Promise<PinRecord | null> {
   }
 }
 
+async function walletScope(): Promise<string> {
+  const bound = (await getBoundWallet()).toLowerCase();
+  return /^0x[0-9a-f]{40}$/.test(bound) ? bound : 'none';
+}
+
+async function scopedKey(legacy: string): Promise<string> {
+  return storeSlot([legacy, await walletScope()]);
+}
+
+/** La clave vieja era global. Pasa a esta billetera la primera vez y deja de compartirse. */
+async function readScoped(legacy: string): Promise<string | null> {
+  const key = await scopedKey(legacy);
+  const current = await SecureStore.getItemAsync(key).catch(() => null);
+  if (current) return current;
+  const old = await SecureStore.getItemAsync(legacy).catch(() => null);
+  if (!old) return null;
+  await SecureStore.setItemAsync(key, old, OPTIONS);
+  await SecureStore.deleteItemAsync(legacy).catch(() => {});
+  return old;
+}
+
+async function writeScoped(legacy: string, value: string): Promise<void> {
+  await SecureStore.setItemAsync(await scopedKey(legacy), value, OPTIONS);
+}
+
 async function readGate(): Promise<GateRecord> {
   try {
-    const raw = await withTimeout(
-      SecureStore.getItemAsync(GATE_KEY).catch(() => null),
-      1500,
-      null
-    );
+    const raw = await withTimeout(readScoped(GATE_KEY), 1500, null);
     if (!raw) return { fails: 0, until: 0 };
     const parsed = JSON.parse(raw) as GateRecord;
     return {
@@ -165,16 +182,12 @@ async function readGate(): Promise<GateRecord> {
 }
 
 async function writeGate(next: GateRecord): Promise<void> {
-  await withTimeout(
-    SecureStore.setItemAsync(GATE_KEY, JSON.stringify(next), OPTIONS),
-    1500,
-    undefined
-  );
+  await withTimeout(writeScoped(GATE_KEY, JSON.stringify(next)), 1500, undefined);
 }
 
 async function readAttempts(): Promise<AttemptRecord> {
   try {
-    const raw = await SecureStore.getItemAsync(ATTEMPT_KEY);
+    const raw = await readScoped(ATTEMPT_KEY);
     if (!raw) return { pin: 0, password: 0 };
     const parsed = JSON.parse(raw) as AttemptRecord;
     return {
@@ -187,7 +200,7 @@ async function readAttempts(): Promise<AttemptRecord> {
 }
 
 async function writeAttempts(next: AttemptRecord): Promise<void> {
-  await SecureStore.setItemAsync(ATTEMPT_KEY, JSON.stringify(next), OPTIONS);
+  await writeScoped(ATTEMPT_KEY, JSON.stringify(next));
 }
 
 function pinBlockedResult(): PinCheck {
@@ -576,8 +589,6 @@ export type PinCheck =
       remainingMs: number;
       locked: boolean;
       pinBlocked?: boolean;
-      wipeWarning?: boolean;
-      wiped?: boolean;
       deviceAuth?: boolean;
     };
 
@@ -703,7 +714,7 @@ export async function checkPin(pin: string): Promise<PinCheck> {
     setWalletWrapKey(fresh.wrap);
     await writeGate({ fails: 0, until: 0 });
   }
-  await writeAttempts({ pin: 0, password: attempts.password });
+  await writeAttempts({ pin: 0, password: 0 });
   await persistCompanionWraps();
   return { ok: true };
 }
@@ -878,19 +889,9 @@ export async function checkPassword(password: string): Promise<PinCheck> {
     const until = Date.now() + lockoutMs(fails);
     await writeGate({ fails, until });
     const attempts = await readAttempts();
-    const passwordFails = attempts.password + 1;
-    await writeAttempts({ pin: attempts.pin, password: passwordFails });
-    if (passwordFails >= PASSWORD_FAIL_LIMIT) {
-      const { wipeAppWallet } = await import('./appWallet');
-      await wipeAppWallet();
-      clearWalletSession();
-      await writeAttempts({ pin: attempts.pin, password: 0 });
-      return { ok: false, remainingMs: 0, locked: true, wiped: true };
-    }
-    if (passwordFails === PASSWORD_FAIL_LIMIT - 1) {
-      return { ok: false, remainingMs: 0, locked: false, wipeWarning: true };
-    }
-    return { ok: false, remainingMs: remainingLockMs(until), locked: remainingLockMs(until) > 0 };
+    await writeAttempts({ pin: attempts.pin, password: attempts.password + 1 });
+    const wait = remainingLockMs(until);
+    return { ok: false, remainingMs: wait, locked: wait > 0 };
   }
   if (material && ready) {
     setWalletWrapKey(material.wrap);

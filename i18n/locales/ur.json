@@ -351,6 +351,7 @@
   "lockWalletWiped": "اس فون کا بٹوہ مٹ گیا۔ بازیافت کا جملہ چاہیے۔",
   "lockDeviceAuth": "تالا کھولنے کے لیے فون کی تصدیق کریں۔",
   "lockCooldown": "بہت کوششیں۔ {seconds} سیکنڈ انتظار کریں۔",
+  "lockCooldownMinutes": "بہت کوششیں۔ {minutes} منٹ انتظار کریں۔",
   "lockPinChanged": "PIN اپ ڈیٹ ہو گیا۔",
   "lockBiometric": "فنگر پرنٹ سے کھولیں",
   "lockBiometricFace": "Face ID سے کھولیں",

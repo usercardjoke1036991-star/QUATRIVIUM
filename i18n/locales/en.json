@@ -351,6 +351,7 @@
   "lockWalletWiped": "The local wallet was deleted. The recovery phrase is required.",
   "lockDeviceAuth": "Confirm this phone to open the lock.",
   "lockCooldown": "Too many attempts. Wait {seconds} s.",
+  "lockCooldownMinutes": "Too many tries. Wait {minutes} min.",
   "lockPinChanged": "PIN updated.",
   "lockBiometric": "Unlock with fingerprint",
   "lockBiometricFace": "Unlock with Face ID",

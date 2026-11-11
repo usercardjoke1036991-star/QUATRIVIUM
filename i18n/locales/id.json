@@ -351,6 +351,7 @@
   "lockWalletWiped": "Dompet di ponsel ini terhapus. Frasa pemulihan diperlukan.",
   "lockDeviceAuth": "Konfirmasi ponsel ini untuk membuka kunci.",
   "lockCooldown": "Terlalu banyak percobaan. Tunggu {seconds} d.",
+  "lockCooldownMinutes": "Terlalu banyak percobaan. Tunggu {minutes} menit.",
   "lockPinChanged": "PIN diperbarui.",
   "lockBiometric": "Buka dengan sidik jari",
   "lockBiometricFace": "Buka dengan Face ID",

@@ -351,6 +351,7 @@
   "lockWalletWiped": "이 휴대폰의 지갑이 삭제되었습니다. 복구 문구가 필요합니다.",
   "lockDeviceAuth": "잠금을 열려면 휴대폰을 확인하세요.",
   "lockCooldown": "시도가 너무 많습니다. {seconds}초 기다리세요.",
+  "lockCooldownMinutes": "시도가 너무 많습니다. {minutes}분 기다리세요.",
   "lockPinChanged": "PIN이 업데이트되었습니다.",
   "lockBiometric": "지문으로 잠금 해제",
   "lockBiometricFace": "Face ID로 잠금 해제",

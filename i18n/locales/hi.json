@@ -351,6 +351,7 @@
   "lockWalletWiped": "इस फोन का बटुआ मिट गया। रिकवरी वाक्य चाहिए।",
   "lockDeviceAuth": "ताला खोलने के लिए फोन की पुष्टि करें।",
   "lockCooldown": "बहुत प्रयास। {seconds} सेकंड प्रतीक्षा करें।",
+  "lockCooldownMinutes": "बहुत कोशिशें। {minutes} मिनट रुकें।",
   "lockPinChanged": "PIN अपडेट हो गया।",
   "lockBiometric": "फ़िंगरप्रिंट से अनलॉक करें",
   "lockBiometricFace": "Face ID से अनलॉक करें",

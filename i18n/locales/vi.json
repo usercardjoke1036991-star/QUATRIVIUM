@@ -351,6 +351,7 @@
   "lockWalletWiped": "Vi tren dien thoai da bi xoa. Can cau khoi phuc.",
   "lockDeviceAuth": "Xac nhan dien thoai de mo khoa.",
   "lockCooldown": "Quá nhiều lần thử. Đợi {seconds} giây.",
+  "lockCooldownMinutes": "Qua nhieu lan thu. Doi {minutes} phut.",
   "lockPinChanged": "Đã cập nhật PIN.",
   "lockBiometric": "Mở khóa bằng vân tay",
   "lockBiometricFace": "Mở khóa bằng Face ID",

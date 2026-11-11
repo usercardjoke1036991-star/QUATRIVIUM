@@ -22,6 +22,7 @@ import {
 import { SecretInput } from './SecretInput';
 import { AppText } from './AppText';
 import type { TranslationKey } from '../i18n/translations';
+import { describeLockFailure } from '../utils/lockFailureCopy';
 
 interface FundsConfirmValue {
   confirmFunds: (purpose?: FundsConfirmPurpose, details?: FundsTxDetails) => Promise<boolean>;
@@ -154,11 +155,7 @@ export const FundsConfirmHost: React.FC<{ children: React.ReactNode }> = ({ chil
       setBusy(true);
       const checked = await checkPin(pin);
       if (!checked.ok) {
-        setError(
-          checked.locked
-            ? t('lockCooldown', { seconds: Math.ceil(checked.remainingMs / 1000) })
-            : t('lockPinWrong')
-        );
+        setError(describeLockFailure('pin', checked, t));
         setPin('');
         setBusy(false);
         return;
@@ -183,11 +180,7 @@ export const FundsConfirmHost: React.FC<{ children: React.ReactNode }> = ({ chil
     setBusy(true);
     const checked = await checkPassword(password);
     if (!checked.ok) {
-      setError(
-        checked.locked
-          ? t('lockCooldown', { seconds: Math.ceil(checked.remainingMs / 1000) })
-          : t('lockPasswordWrong')
-      );
+      setError(describeLockFailure('password', checked, t));
       setPassword('');
       setBusy(false);
       return;

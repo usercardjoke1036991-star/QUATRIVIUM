@@ -351,6 +351,7 @@
   "lockWalletWiped": "本机钱包已删除。需要恢复短语。",
   "lockDeviceAuth": "请确认本机以打开锁。",
   "lockCooldown": "尝试次数过多。请等待 {seconds} 秒。",
+  "lockCooldownMinutes": "尝试过多。请等待 {minutes} 分钟。",
   "lockPinChanged": "PIN 已更新。",
   "lockBiometric": "用指纹解锁",
   "lockBiometricFace": "用面容解锁",

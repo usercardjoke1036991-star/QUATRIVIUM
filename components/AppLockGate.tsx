@@ -36,6 +36,7 @@ import {
   setPassword,
   shouldRelockAfterBackground,
 } from '../services/appLock';
+import { describeLockFailure, lockWaitCopy } from '../utils/lockFailureCopy';
 import { isValidMasterPassword } from '../utils/passwordPolicy';
 import {
   addressFromPhrase,
@@ -692,21 +693,9 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
     if (result.pinBlocked) {
       setPinBlocked(true);
       setUnlockMode('password');
-      setError(t('lockPinBlocked'));
-      setPinDigits('');
-      return;
-    }
-    if (result.deviceAuth) {
-      setError(t('lockDeviceAuth'));
-      setPinDigits('');
-      return;
     }
     setLockMs(result.remainingMs);
-    setError(
-      result.locked
-        ? t('lockCooldown', { seconds: Math.ceil(result.remainingMs / 1000) })
-        : t('lockPinWrong')
-    );
+    setError(describeLockFailure('pin', result, t));
     setPinDigits('');
   };
 
@@ -734,22 +723,8 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
         await passQueuedMethod(askingSignIn);
         return;
       }
-      if (result.wiped) {
-        setError(t('lockWalletWiped'));
-        setPasswordInput('');
-        return;
-      }
-      if (result.wipeWarning) {
-        setError(t('lockWipeWarning'));
-        setPasswordInput('');
-        return;
-      }
       setLockMs(result.remainingMs);
-      setError(
-        result.locked
-          ? t('lockCooldown', { seconds: Math.ceil(result.remainingMs / 1000) })
-          : t('lockPasswordWrong')
-      );
+      setError(describeLockFailure('password', result, t));
       setPasswordInput('');
     } finally {
       setBusy(false);
@@ -940,23 +915,9 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
         return;
       }
       {
-        if (checked.wiped) {
-          setError(t('lockWalletWiped'));
-          return;
-        }
-        if (checked.wipeWarning) {
-          setError(t('lockWipeWarning'));
-          return;
-        }
         const exists = await probePasswordSet(2000);
         setLockMs(checked.remainingMs);
-        setError(
-          checked.locked
-            ? t('lockCooldown', { seconds: Math.ceil(checked.remainingMs / 1000) })
-            : exists === false
-              ? t('signInNoAccount')
-              : t('lockPasswordWrong')
-        );
+        setError(describeLockFailure('password', checked, t, exists === false));
         return;
       }
     } catch {
@@ -1094,7 +1055,10 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
                               : askingSignIn && !signInExtra
                                 ? t('signInLead')
                                 : lockMs > 0
-                                  ? t('lockCooldown', { seconds: Math.ceil(lockMs / 1000) })
+                                  ? t(
+                                      lockWaitCopy(lockMs)?.key || 'lockCooldown',
+                                      lockWaitCopy(lockMs)?.vars
+                                    )
                                   : unlockMode === 'password'
                                     ? t('lockUnlockLeadPassword')
                                     : unlockMode === 'authenticator'

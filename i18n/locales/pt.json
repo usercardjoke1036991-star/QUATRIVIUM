@@ -351,6 +351,7 @@
   "lockWalletWiped": "A carteira local foi apagada. A frase de recuperacao e precisa.",
   "lockDeviceAuth": "Confirme o telefone para abrir o cadeado.",
   "lockCooldown": "Muitas tentativas. Espere {seconds} s.",
+  "lockCooldownMinutes": "Muitas tentativas. Espere {minutes} min.",
   "lockPinChanged": "PIN atualizado.",
   "lockBiometric": "Desbloquear com impressão digital",
   "lockBiometricFace": "Desbloquear com Face ID",

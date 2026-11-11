@@ -351,6 +351,7 @@
   "lockWalletWiped": "La billetera local se borro. Hace falta la frase de recuperacion.",
   "lockDeviceAuth": "Confirme el telefono para abrir el candado.",
   "lockCooldown": "Demasiados intentos. Espere {seconds} s.",
+  "lockCooldownMinutes": "Demasiados intentos. Espere {minutes} min.",
   "lockPinChanged": "PIN actualizado.",
   "lockBiometric": "Acceder con huella",
   "lockBiometricFace": "Desbloquear con Face ID",

@@ -351,6 +351,7 @@
   "lockWalletWiped": "Le portefeuille local a ete efface. La phrase de recuperation est necessaire.",
   "lockDeviceAuth": "Confirmez le telephone pour ouvrir le cadenas.",
   "lockCooldown": "Trop de tentatives. Attendez {seconds} s.",
+  "lockCooldownMinutes": "Trop de tentatives. Attendez {minutes} min.",
   "lockPinChanged": "PIN mis à jour.",
   "lockBiometric": "Déverrouiller avec l’empreinte",
   "lockBiometricFace": "Déverrouiller avec Face ID",

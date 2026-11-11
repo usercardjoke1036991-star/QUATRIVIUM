@@ -351,6 +351,7 @@
   "lockWalletWiped": "مسحت محفظة الهاتف. عبارة الاسترداد لازمة.",
   "lockDeviceAuth": "أكد الهاتف لفتح القفل.",
   "lockCooldown": "محاولات كثيرة. انتظر {seconds} ث.",
+  "lockCooldownMinutes": "محاولات كثيرة. انتظر {minutes} د.",
   "lockPinChanged": "تم تحديث PIN.",
   "lockBiometric": "فتح بالبصمة",
   "lockBiometricFace": "فتح بـ Face ID",

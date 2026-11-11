@@ -351,6 +351,7 @@
   "lockWalletWiped": "এই ফোনের মানিব্যাগ মুছে গেছে। পুনরুদ্ধার বাক্য লাগবে।",
   "lockDeviceAuth": "তালা খুলতে ফোন নিশ্চিত করুন।",
   "lockCooldown": "অনেক চেষ্টা। {seconds} সেকেন্ড অপেক্ষা করুন।",
+  "lockCooldownMinutes": "অনেক চেষ্টা। {minutes} মিনিট অপেক্ষা করুন।",
   "lockPinChanged": "PIN আপডেট হয়েছে।",
   "lockBiometric": "ফিঙ্গারপ্রিন্ট দিয়ে আনলক করুন",
   "lockBiometricFace": "Face ID দিয়ে আনলক করুন",

@@ -351,6 +351,7 @@
   "lockWalletWiped": "Yerel cuzdan silindi. Kurtarma cumlesi gerekir.",
   "lockDeviceAuth": "Kilidi acmak icin telefonu onaylayin.",
   "lockCooldown": "Çok fazla deneme. {seconds} sn bekleyin.",
+  "lockCooldownMinutes": "Cok fazla deneme. {minutes} dk bekleyin.",
   "lockPinChanged": "PIN güncellendi.",
   "lockBiometric": "Parmak izi ile aç",
   "lockBiometricFace": "Face ID ile aç",
