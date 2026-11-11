@@ -1,5 +1,7 @@
 import { useState, useRef } from 'react';
 import { showNotice } from '../utils/appNotice';
+import { NETWORK_CONFIG } from '../constants/rpcConfig';
+import { discardPendingSends } from '../services/writeRpc';
 import { QuatriviumCreditService } from '../services/quatriviumCreditService';
 import { humanizeTxError } from '../utils/txErrors';
 import { parseInviteInput } from '../utils/inviteCode';
@@ -42,13 +44,34 @@ export const useWeb3Transactions = () => {
     } catch (error: unknown) {
       const errorMessage = humanizeTxError(error);
       const raw = error instanceof Error ? error.message : '';
+      if (raw.includes('broadcast-unseen')) {
+        showNotice(t('rpcSendUnseen'), t('rpcSendUnseenWait'));
+        return { success: false, error: 'broadcast-unseen' };
+      }
       if (
         raw.includes('tx-pending') ||
         raw.includes('tx-timeout') ||
         raw.includes('pending-nonce')
       ) {
         const hash = (error as { hash?: string }).hash || '';
-        showNotice(t('rpcSendPending'), hash || t('rpcSendPending'));
+        showNotice(t('rpcSendPending'), hash || t('rpcSendPending'), [
+          { text: t('cancel'), style: 'cancel' },
+          {
+            text: t('discardPending'),
+            onPress: () => {
+              showNotice(t('discardPending'), t('discardPendingWarn'), [
+                { text: t('cancel'), style: 'cancel' },
+                {
+                  text: t('discardPending'),
+                  style: 'destructive',
+                  onPress: () => {
+                    void discardPendingSends(NETWORK_CONFIG.chainId);
+                  },
+                },
+              ]);
+            },
+          },
+        ]);
         return { success: false, error: 'tx-pending' };
       }
       showNotice(t('error'), errorMessage);

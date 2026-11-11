@@ -16,14 +16,35 @@ import {
   nonceAfterHold,
   publicJsonRpc,
   rejectReusedNonce,
+  type RpcCall,
 } from '../utils/broadcastRpc';
 import {
   deleteHold,
+  discardChainHolds,
   readHold,
   settleHold,
   shouldReleaseHold,
   type HoldStore,
 } from '../utils/pendingHold';
+
+export type WriteRpcInject = {
+  urls: readonly string[];
+  nodes: JsonRpcProvider[];
+  call: RpcCall;
+};
+
+let unseenRecheckMs = 1_500;
+
+/** Solo pruebas: la segunda consulta del hash no tiene que esperar un segundo. */
+export function setUnseenRecheckForTests(ms: number): void {
+  unseenRecheckMs = ms;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
 
 const holdStore: HoldStore = {
   get: (key) => AsyncStorage.getItem(key),
@@ -35,24 +56,38 @@ const holdStore: HoldStore = {
   },
 };
 
-export async function nonceForSender(networkNonce: number, from: string): Promise<number> {
-  const held = await readHold(holdStore, from);
+export async function nonceForSender(
+  chainId: number,
+  networkNonce: number,
+  from: string
+): Promise<number> {
+  const held = await readHold(holdStore, chainId, from);
   if (!held) return networkNonce;
   if (networkNonce > held.nonce) {
-    await deleteHold(holdStore, from);
+    await deleteHold(holdStore, chainId, from);
     return networkNonce;
   }
   return nonceAfterHold(networkNonce, held);
 }
 
+/** Borra el pendiente de esta red. La pantalla ya avisó que podría cobrarse dos veces. */
+export async function discardPendingSends(chainId: number): Promise<number> {
+  return discardChainHolds(holdStore, chainId);
+}
+
 /** Proveedor de escritura: nonce, gas, comisión y espera no salen de un solo RPC. */
-export function createWriteProvider(chainId: number, chainName: string): JsonRpcProvider {
-  const urls = publicRpcList();
+export function createWriteProvider(
+  chainId: number,
+  chainName: string,
+  injected?: WriteRpcInject
+): JsonRpcProvider {
+  const urls = [...(injected?.urls ?? publicRpcList())];
+  const call = injected?.call ?? publicJsonRpc;
   if (urls.length === 0) throw new Error('no-rpc');
   const network = { chainId, name: chainName };
-  const nodes = urls.map(
-    (url) => new JsonRpcProvider(url, network, { staticNetwork: true, batchMaxCount: 1 })
-  );
+  const nodes =
+    injected?.nodes ??
+    urls.map((url) => new JsonRpcProvider(url, network, { staticNetwork: true, batchMaxCount: 1 }));
   const provider = nodes[0];
   const primary = {
     getBlockNumber: provider.getBlockNumber.bind(provider),
@@ -120,16 +155,16 @@ export function createWriteProvider(chainId: number, chainName: string): JsonRpc
 
   provider.getTransactionCount = async (address: string, blockTag?: BlockTag) => {
     if (blockTag == null || blockTag === 'pending') {
-      const networkNonce = await highestPendingNonce(urls, address, publicJsonRpc);
-      const held = await readHold(holdStore, address);
+      const networkNonce = await highestPendingNonce(urls, address, call);
+      const held = await readHold(holdStore, chainId, address);
       if (
         held &&
-        shouldReleaseHold(await hashSightings(urls, held.hash, publicJsonRpc), networkNonce, held)
+        shouldReleaseHold(await hashSightings(urls, held.hash, call), networkNonce, held)
       ) {
-        await deleteHold(holdStore, address);
+        await deleteHold(holdStore, chainId, address);
         return networkNonce;
       }
-      return nonceForSender(networkNonce, address);
+      return nonceForSender(chainId, networkNonce, address);
     }
     const raw = await relay((node) => node.getTransactionCount(address, blockTag));
     return Number(raw);
@@ -140,30 +175,51 @@ export function createWriteProvider(chainId: number, chainName: string): JsonRpc
     if (!tx.from || tx.hash == null || tx.nonce == null || !tx.signature) {
       throw new Error('unsigned');
     }
-    rejectReusedNonce(await readHold(holdStore, tx.from), tx.nonce, tx.hash);
+    rejectReusedNonce(await readHold(holdStore, chainId, tx.from), tx.nonce, tx.hash);
     const outcome = await broadcastRawAcrossRpcs({
       urls,
       raw: signedTx,
       from: tx.from,
       nonce: tx.nonce,
       hash: tx.hash,
-      call: publicJsonRpc,
+      call,
     });
     let networkNonce: number | null = null;
     try {
-      networkNonce = await highestPendingNonce(urls, tx.from, publicJsonRpc);
+      networkNonce = await highestPendingNonce(urls, tx.from, call);
     } catch {
       networkNonce = null;
     }
-    const seen = await hashSightings(urls, outcome.hash, publicJsonRpc);
-    const release = outcome.kind === 'pending' && seen === 0 && networkNonce === tx.nonce;
-    const kept = await settleHold(holdStore, {
-      from: tx.from,
-      nonce: tx.nonce,
-      hash: outcome.hash,
-      release,
-    });
-    if (kept === 'released') throw new Error('broadcast-failed');
+    let seen = await hashSightings(urls, outcome.hash, call);
+    if (
+      outcome.kind === 'pending' &&
+      seen === 0 &&
+      networkNonce != null &&
+      networkNonce <= tx.nonce
+    ) {
+      await sleep(unseenRecheckMs);
+      seen = await hashSightings(urls, outcome.hash, call);
+      try {
+        networkNonce = await highestPendingNonce(urls, tx.from, call);
+      } catch {
+        networkNonce = null;
+      }
+      if (seen === 0 && networkNonce != null && networkNonce <= tx.nonce) {
+        await deleteHold(holdStore, chainId, tx.from);
+        throw new Error('broadcast-unseen');
+      }
+    }
+    if (networkNonce != null && networkNonce > tx.nonce) {
+      await deleteHold(holdStore, chainId, tx.from);
+    } else {
+      await settleHold(holdStore, {
+        chainId,
+        from: tx.from,
+        nonce: tx.nonce,
+        hash: outcome.hash,
+        release: false,
+      });
+    }
     const response = new TransactionResponse(
       {
         hash: outcome.hash,
@@ -187,8 +243,12 @@ export function createWriteProvider(chainId: number, chainName: string): JsonRpc
       },
       provider
     );
-    (response as TransactionResponse & { broadcastKind: 'sent' | 'pending' }).broadcastKind =
-      outcome.kind;
+    const visible = response as TransactionResponse & {
+      broadcastKind: 'sent' | 'pending';
+      broadcastSeen: number;
+    };
+    visible.broadcastSeen = seen;
+    visible.broadcastKind = seen >= 2 ? 'sent' : 'pending';
     return response;
   };
 

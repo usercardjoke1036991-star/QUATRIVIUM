@@ -17,6 +17,10 @@ function valid(row: HeldSend | undefined): row is HeldSend {
   );
 }
 
+export function holdKey(chainId: number, from: string): string {
+  return `${Math.floor(chainId)}:${from.toLowerCase()}`;
+}
+
 async function readAll(store: HoldStore): Promise<Record<string, HeldSend>> {
   const raw = await store.get(FILE);
   if (!raw) return {};
@@ -28,20 +32,7 @@ async function readAll(store: HoldStore): Promise<Record<string, HeldSend>> {
   }
 }
 
-export async function readHold(store: HoldStore, from: string): Promise<HeldSend | null> {
-  const row = (await readAll(store))[from.toLowerCase()];
-  return valid(row) ? { nonce: row.nonce, hash: row.hash } : null;
-}
-
-export async function writeHold(store: HoldStore, from: string, hold: HeldSend): Promise<void> {
-  const all = await readAll(store);
-  all[from.toLowerCase()] = { nonce: hold.nonce, hash: hold.hash.toLowerCase() };
-  await store.set(FILE, JSON.stringify(all));
-}
-
-export async function deleteHold(store: HoldStore, from: string): Promise<void> {
-  const all = await readAll(store);
-  delete all[from.toLowerCase()];
+async function saveAll(store: HoldStore, all: Record<string, HeldSend>): Promise<void> {
   if (Object.keys(all).length === 0) {
     await store.del(FILE);
     return;
@@ -49,18 +40,70 @@ export async function deleteHold(store: HoldStore, from: string): Promise<void> 
   await store.set(FILE, JSON.stringify(all));
 }
 
-/** Nadie vio el hash y la red sigue en N: no hay hueco que guardar. */
+/** La clave vieja era solo la dirección. Pasa a chainId:dirección la primera vez que se lee. */
+export async function readHold(
+  store: HoldStore,
+  chainId: number,
+  from: string
+): Promise<HeldSend | null> {
+  const all = await readAll(store);
+  const key = holdKey(chainId, from);
+  const current = all[key];
+  if (valid(current)) return { nonce: current.nonce, hash: current.hash };
+  const legacy = all[from.toLowerCase()];
+  if (!valid(legacy)) return null;
+  all[key] = { nonce: legacy.nonce, hash: legacy.hash };
+  delete all[from.toLowerCase()];
+  await saveAll(store, all);
+  return all[key];
+}
+
+export async function writeHold(
+  store: HoldStore,
+  chainId: number,
+  from: string,
+  hold: HeldSend
+): Promise<void> {
+  const all = await readAll(store);
+  delete all[from.toLowerCase()];
+  all[holdKey(chainId, from)] = { nonce: hold.nonce, hash: hold.hash.toLowerCase() };
+  await saveAll(store, all);
+}
+
+export async function deleteHold(store: HoldStore, chainId: number, from: string): Promise<void> {
+  const all = await readAll(store);
+  delete all[holdKey(chainId, from)];
+  delete all[from.toLowerCase()];
+  await saveAll(store, all);
+}
+
+export async function discardChainHolds(store: HoldStore, chainId: number): Promise<number> {
+  const all = await readAll(store);
+  const prefix = `${Math.floor(chainId)}:`;
+  let removed = 0;
+  for (const key of Object.keys(all)) {
+    if (key.startsWith(prefix) || !key.includes(':')) {
+      delete all[key];
+      removed += 1;
+    }
+  }
+  await saveAll(store, all);
+  return removed;
+}
+
+/** Nadie vio el hash y el nonce de red no pasó de N: no hay hueco que guardar. */
 export function shouldReleaseHold(
   sightings: number,
   networkNonce: number,
   held: HeldSend
 ): boolean {
-  return sightings === 0 && networkNonce === held.nonce;
+  return sightings === 0 && networkNonce <= held.nonce;
 }
 
 export async function settleHold(
   store: HoldStore,
   input: {
+    chainId: number;
     from: string;
     nonce: number;
     hash: string;
@@ -68,9 +111,12 @@ export async function settleHold(
   }
 ): Promise<'held' | 'released'> {
   if (input.release) {
-    await deleteHold(store, input.from);
+    await deleteHold(store, input.chainId, input.from);
     return 'released';
   }
-  await writeHold(store, input.from, { nonce: input.nonce, hash: input.hash.toLowerCase() });
+  await writeHold(store, input.chainId, input.from, {
+    nonce: input.nonce,
+    hash: input.hash.toLowerCase(),
+  });
   return 'held';
 }

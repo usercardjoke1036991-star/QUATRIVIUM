@@ -92,6 +92,7 @@ const REVERT_KEYS: [string, TranslationKey][] = [
   ['rate', 'otpRate'],
   ['internal-wallet-only', 'errInternalOnly'],
   ['no-admin-proposal', 'errNoAdminProposal'],
+  ['broadcast-unseen', 'rpcSendUnseen'],
   ['tx-pending', 'rpcSendPending'],
   ['tx-timeout', 'rpcSendPending'],
   ['tx-reverted', 'txFailed'],

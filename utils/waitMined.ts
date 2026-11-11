@@ -19,19 +19,27 @@ function sleep(ms: number): Promise<void> {
 export async function waitMined(tx: MinedTx, timeoutMs = DEFAULT_MS) {
   const hash = typeof tx.hash === 'string' ? tx.hash : '';
   if (!HASH.test(hash)) throw new Error('tx-pending');
-  if ((tx as { broadcastKind?: string }).broadcastKind === 'pending') {
+  const seen = (tx as { broadcastSeen?: number }).broadcastSeen;
+  const unseen = (tx as { broadcastKind?: string }).broadcastKind === 'pending' && !(seen >= 1);
+  if (unseen) {
     const pending = new Error('tx-pending');
     (pending as Error & { hash: string }).hash = hash;
     throw pending;
   }
-  const provider = getProviderWithFallback();
+  const attached = (
+    tx as { provider?: { getTransactionReceipt?: (hash: string) => Promise<unknown> } }
+  ).provider;
+  const provider =
+    attached && typeof attached.getTransactionReceipt === 'function'
+      ? attached
+      : getProviderWithFallback();
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try {
-      const receipt = await Promise.race([
+      const receipt = (await Promise.race([
         provider.getTransactionReceipt(hash),
         sleep(RPC_MS).then(() => null),
-      ]);
+      ])) as { status?: number | bigint } | null;
       if (receipt) {
         if (Number(receipt.status) === 0) throw new Error('tx-reverted');
         return receipt;

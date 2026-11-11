@@ -29,19 +29,43 @@ describe('pending send hold', function () {
   it('keeps one signature after a cut and drops a send that never landed', async function () {
     const store = memoryStore();
     expect(
-      await hold.settleHold(store, { from: FROM, nonce: 4, hash: HASH, release: false })
+      await hold.settleHold(store, {
+        chainId: 42161,
+        from: FROM,
+        nonce: 4,
+        hash: HASH,
+        release: false,
+      })
     ).to.equal('held');
     const again = memoryStore();
     await again.set('quatrivium.pendingSend.v1', await store.get('quatrivium.pendingSend.v1'));
-    const saved = await hold.readHold(again, FROM);
+    const saved = await hold.readHold(again, 42161, FROM);
     expect(saved.nonce).to.equal(4);
     expect(saved.hash).to.equal(HASH);
     expect(hold.shouldReleaseHold(1, 4, saved)).to.equal(false);
     expect(hold.shouldReleaseHold(0, 4, saved)).to.equal(true);
+    expect(hold.shouldReleaseHold(0, 3, saved)).to.equal(true);
+    expect(hold.shouldReleaseHold(0, 5, saved)).to.equal(false);
     expect(
-      await hold.settleHold(store, { from: FROM, nonce: 4, hash: HASH, release: true })
+      await hold.settleHold(store, {
+        chainId: 42161,
+        from: FROM,
+        nonce: 4,
+        hash: HASH,
+        release: true,
+      })
     ).to.equal('released');
-    expect(await hold.readHold(store, FROM)).to.equal(null);
+    expect(await hold.readHold(store, 42161, FROM)).to.equal(null);
+    await store.set(
+      'quatrivium.pendingSend.v1',
+      JSON.stringify({ [FROM.toLowerCase()]: { nonce: 4, hash: HASH } })
+    );
+    const moved = await hold.readHold(store, 42161, FROM);
+    expect(moved.nonce).to.equal(4);
+    expect(await hold.readHold(store, 421614, FROM)).to.equal(null);
+    const raw = JSON.parse(await store.get('quatrivium.pendingSend.v1'));
+    expect(raw[`42161:${FROM.toLowerCase()}`].hash).to.equal(HASH);
+    expect(raw[FROM.toLowerCase()]).to.equal(undefined);
   });
 
   it('does not sign another nonce after a cut, and a restart still blocks', async function () {
@@ -74,10 +98,10 @@ describe('pending send hold', function () {
     expect(sent.length > 0).to.equal(true);
     expect(sent.every((raw) => raw === '0xsigned')).to.equal(true);
     const store = memoryStore();
-    await hold.writeHold(store, FROM, { nonce: 4, hash: first.hash });
+    await hold.writeHold(store, 42161, FROM, { nonce: 4, hash: first.hash });
     const restarted = memoryStore();
     await restarted.set('quatrivium.pendingSend.v1', await store.get('quatrivium.pendingSend.v1'));
-    const saved = await hold.readHold(restarted, FROM);
+    const saved = await hold.readHold(restarted, 42161, FROM);
     let blocked = '';
     try {
       broadcast.nonceAfterHold(4, saved);
