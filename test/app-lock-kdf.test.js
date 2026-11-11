@@ -16,25 +16,32 @@ function installMock(name, exports) {
 
 let crashOnLiveWrap = false;
 let rejectDeviceAuth = false;
+let authError = 'no-credential';
 const secureWrites = [];
+const secretMeta = new Map();
 
 installMock('expo-secure-store', {
   WHEN_UNLOCKED_THIS_DEVICE_ONLY: 'when-unlocked',
   async getItemAsync(key, options) {
-    if (rejectDeviceAuth && options && options.requireAuthentication) {
-      throw new Error('no-credential');
+    if (options && options.requireAuthentication) {
+      if (!memory.has(key)) return null;
+      if (rejectDeviceAuth) throw new Error(authError);
+    } else if (secretMeta.get(key) && secretMeta.get(key).requireAuthentication) {
+      throw new Error('auth-required');
     }
     return memory.has(key) ? memory.get(key) : null;
   },
   async setItemAsync(key, value, options) {
     if (crashOnLiveWrap && key === PIN_WRAP) throw new Error('crash');
     if (rejectDeviceAuth && options && options.requireAuthentication) {
-      throw new Error('no-credential');
+      throw new Error(authError);
     }
+    secretMeta.set(key, options || {});
     secureWrites.push({ key, options: options || null });
     memory.set(key, value);
   },
   async deleteItemAsync(key) {
+    secretMeta.delete(key);
     memory.delete(key);
   },
 });
@@ -74,6 +81,7 @@ const copy = loadTs(path.join(__dirname, '..', 'utils', 'lockFailureCopy.ts'));
 const errors = loadTs(path.join(__dirname, '..', 'utils', 'txErrors.ts'));
 const box = loadTs(path.join(__dirname, '..', 'utils', 'secretBox.ts'));
 const lock = loadTs(path.join(__dirname, '..', 'services', 'appLock.ts'));
+const device = loadTs(path.join(__dirname, '..', 'utils', 'deviceSecret.ts'));
 const wallet = loadTs(path.join(__dirname, '..', 'services', 'appWallet.ts'));
 const rpc = loadTs(path.join(__dirname, '..', 'constants', 'rpcConfig.ts'));
 const { sha256, toUtf8Bytes } = require('ethers');
@@ -361,6 +369,80 @@ describe('app lock PBKDF2', function () {
     const still = await wallet.loadAppWallet();
     expect(still).to.equal(null);
     expect(memory.has('mem:quatrivium.appWallet.v1.fallback')).to.equal(false);
+  });
+
+  it('keeps a readable secret when the mark is missing and a password ack does not replace it', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    memory.delete('quatrivium.lock.gate.none');
+    memory.delete('quatrivium.lock.deviceSecret');
+    memory.delete('quatrivium.lock.deviceAuth');
+    secretMeta.clear();
+    await lock.setPassword(PASSWORD);
+    await lock.setPin(PIN);
+    const hex = memory.get('quatrivium.lock.deviceSecret');
+    memory.delete('quatrivium.lock.deviceAuth');
+    const loaded = await device.loadDeviceSecret();
+    expect(loaded.hex).to.equal(hex);
+    expect(loaded.repair).to.equal(true);
+    expect(memory.get('quatrivium.lock.deviceSecret')).to.equal(hex);
+    const opened = await lock.checkPin(PIN);
+    expect(opened.ok).to.equal(true);
+    const acked = await lock.checkPassword(PASSWORD);
+    expect(acked.ok).to.equal(true);
+    expect(memory.has('quatrivium.lock.deviceRepair')).to.equal(false);
+    expect(memory.get('quatrivium.lock.deviceSecret')).to.equal(hex);
+  });
+
+  it('retries the same secret only after the phone has a screen lock', async function () {
+    memory.delete('quatrivium.lock.deviceSecret');
+    memory.delete('quatrivium.lock.deviceAuth');
+    secretMeta.clear();
+    rejectDeviceAuth = true;
+    try {
+      await lock.setPin(PIN);
+    } finally {
+      rejectDeviceAuth = false;
+    }
+    const hex = memory.get('quatrivium.lock.deviceSecret');
+    expect(memory.get('quatrivium.lock.deviceAuth')).to.equal('0');
+    device.setScreenLockForTests(async () => false);
+    expect(await device.retryDeviceBinding()).to.equal('no-lock');
+    expect(memory.get('quatrivium.lock.deviceSecret')).to.equal(hex);
+    device.setScreenLockForTests(async () => true);
+    expect(await device.retryDeviceBinding()).to.equal('bound');
+    expect(memory.get('quatrivium.lock.deviceSecret')).to.equal(hex);
+    expect(memory.get('quatrivium.lock.deviceAuth')).to.equal('1');
+    device.setScreenLockForTests(null);
+  });
+
+  it('does not count a new fingerprint as a wrong pin and lets the pin be redone', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    memory.delete('quatrivium.lock.gate.none');
+    memory.delete('quatrivium.lock.attempts.none');
+    memory.delete('quatrivium.lock.deviceSecret');
+    memory.delete('quatrivium.lock.deviceAuth');
+    secretMeta.clear();
+    await lock.setPassword(PASSWORD);
+    await lock.setPin(PIN);
+    const hex = memory.get('quatrivium.lock.deviceSecret');
+    authError = 'KeyPermanentlyInvalidatedException';
+    rejectDeviceAuth = true;
+    try {
+      const reset = await lock.checkPin(PIN);
+      expect(reset.deviceKeyReset).to.equal(true);
+      expect(reset.ok).to.equal(false);
+      expect(memory.get('quatrivium.lock.deviceSecret')).to.equal(hex);
+      expect(memory.has('quatrivium.lock.attempts.none')).to.equal(false);
+    } finally {
+      rejectDeviceAuth = false;
+      authError = 'no-credential';
+    }
+    const redone = await lock.setPin(PIN);
+    expect(/^0x[0-9a-f]{64}$/.test(redone)).to.equal(true);
+    const again = await lock.checkPin(PIN);
+    expect(again.ok).to.equal(true);
   });
 
   it('keeps the secret when the phone cannot ask for a credential', async function () {

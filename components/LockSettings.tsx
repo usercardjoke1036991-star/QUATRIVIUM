@@ -17,6 +17,7 @@ import { isWeakPin } from '../utils/pinPolicy';
 import { fallbackAuthIfNeeded } from '../services/authPrefs';
 import { hasSecurityConfirmMethod } from '../services/fundsConfirm';
 import { useFundsConfirm } from './FundsConfirmHost';
+import { DeviceGuardNotice } from './DeviceGuardNotice';
 import { SecretInput } from './SecretInput';
 import { AppText } from './AppText';
 
@@ -322,7 +323,12 @@ export const LockSettings: React.FC<{
     </View>
   );
 
-  return <View>{mode === 'password' ? passwordBlock : pinBlock}</View>;
+  return (
+    <View>
+      <DeviceGuardNotice />
+      {mode === 'password' ? passwordBlock : pinBlock}
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({

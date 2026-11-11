@@ -13,7 +13,7 @@ import {
   pbkdf2Sha256Hex,
   wrapStoreMode,
 } from '../utils/pinKdf';
-import { loadDeviceSecret } from '../utils/deviceSecret';
+import { ackDeviceRepair, ensureDeviceSecret, loadDeviceSecret } from '../utils/deviceSecret';
 import {
   assertSessionBeforePinWrite,
   isWideKdf,
@@ -550,7 +550,7 @@ export async function setPin(pin: string): Promise<string> {
   const existingWrap = getWalletWrapKey();
   assertSessionBeforePinWrite(passwordSet, existingWrap);
   const salt = Crypto.randomUUID();
-  const secret = await loadDeviceSecret();
+  const secret = await ensureDeviceSecret();
   const material = await derivePinMaterial(boundPin(pin, secret.hex), salt, PIN_PBKDF2_ROUNDS);
   const record: PinRecord = {
     v: 3,
@@ -590,6 +590,8 @@ export type PinCheck =
       locked: boolean;
       pinBlocked?: boolean;
       deviceAuth?: boolean;
+      deviceKeyReset?: boolean;
+      deviceSecretLost?: boolean;
     };
 
 function pinReady(record: PinRecord): boolean {
@@ -644,6 +646,12 @@ export async function checkPin(pin: string): Promise<PinCheck> {
   } catch (error) {
     if (error instanceof Error && error.message === 'device-auth') {
       return { ok: false, remainingMs: 0, locked: false, deviceAuth: true };
+    }
+    if (error instanceof Error && error.message === 'device-key-reset') {
+      return { ok: false, remainingMs: 0, locked: false, deviceKeyReset: true };
+    }
+    if (error instanceof Error && error.message === 'device-secret-lost') {
+      return { ok: false, remainingMs: 0, locked: false, deviceSecretLost: true };
     }
     throw error;
   }
@@ -942,6 +950,7 @@ export async function checkPassword(password: string): Promise<PinCheck> {
   }
   await writeGate({ fails: 0, until: 0 });
   await writeAttempts({ pin: 0, password: 0 });
+  await ackDeviceRepair();
   void persistCompanionWraps();
   return { ok: true };
 }

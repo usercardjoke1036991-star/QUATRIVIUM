@@ -16,6 +16,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { AppIcon } from './icons';
 import { AppText, AppTextInput } from './AppText';
 import { BrandSplash, BrandWordmark } from './BrandSplash';
+import { DeviceGuardNotice } from './DeviceGuardNotice';
 import { SecretInput } from './SecretInput';
 import { PasswordRulesHint } from './PasswordRulesHint';
 import {
@@ -690,8 +691,8 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
       await finishUnlock(next);
       return;
     }
-    if (result.pinBlocked) {
-      setPinBlocked(true);
+    if (result.pinBlocked || result.deviceKeyReset || result.deviceSecretLost) {
+      setPinBlocked(result.pinBlocked === true);
       setUnlockMode('password');
     }
     setLockMs(result.remainingMs);
@@ -1111,6 +1112,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
                 ))}
               </View>
             ) : null}
+            <DeviceGuardNotice />
             {error ? (
               <AppText style={[styles.error, { color: colors.danger }]}>{error}</AppText>
             ) : null}

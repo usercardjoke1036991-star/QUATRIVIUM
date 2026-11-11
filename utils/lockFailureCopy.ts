@@ -8,6 +8,8 @@ export type LockMiss = {
   locked: boolean;
   pinBlocked?: boolean;
   deviceAuth?: boolean;
+  deviceKeyReset?: boolean;
+  deviceSecretLost?: boolean;
 };
 
 type Copy = { key: TranslationKey; vars?: Vars };
@@ -32,6 +34,8 @@ export function lockFailureCopy(
   passwordMissing = false
 ): Copy {
   if (checked.pinBlocked) return { key: 'lockPinBlocked' };
+  if (checked.deviceKeyReset) return { key: 'lockDeviceKeyReset' };
+  if (checked.deviceSecretLost) return { key: 'lockDeviceSecretLost' };
   if (checked.deviceAuth) return { key: 'lockDeviceAuth' };
   const wait = lockWaitCopy(checked.remainingMs);
   if (checked.locked && wait) return wait;
