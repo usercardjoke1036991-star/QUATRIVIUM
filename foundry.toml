@@ -15,6 +15,11 @@ revert_strings = "strip"
 auto_detect_solc = false
 fs_permissions = [{ access = "read", path = "./" }]
 
+[invariant]
+runs = 16
+depth = 200
+fail_on_revert = true
+
 [lint]
 lint_on_build = false
 

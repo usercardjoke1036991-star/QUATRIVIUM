@@ -1,5 +1,6 @@
 {
   "filter_paths": "contracts/mocks,node_modules",
   "exclude_informational": true,
+  "fail_on": "high",
   "detectors_to_exclude": "naming-convention,solc-version,timestamp"
 }

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
+import {console2} from "forge-std/console2.sol";
 import {QuatriviumCreditHarness} from "../contracts/test/QuatriviumCreditHarness.sol";
 import {QuatriviumFamaCaja} from "../contracts/QuatriviumFamaCaja.sol";
 import {QuatriviumReserva} from "../contracts/QuatriviumReserva.sol";
@@ -18,6 +19,16 @@ contract QuatriviumMoneyHandler is Test {
     address public owner;
     uint256 public ownerPk;
     address[] public actors;
+    uint256 public okDeposit;
+    uint256 public okDonate;
+    uint256 public okVerify;
+    uint256 public okAlta;
+    uint256 public okBorrow;
+    uint256 public okRepay;
+    uint256 public okAportar;
+    uint256 public okBloquear;
+    uint256 public okDesbloquear;
+    uint256 public okLiquidate;
 
     constructor(
         QuatriviumCreditHarness credit_,
@@ -46,48 +57,61 @@ contract QuatriviumMoneyHandler is Test {
         token.mint(owner, amount);
         vm.prank(owner, owner);
         credit.depositarLiquidez(address(token), amount);
+        okDeposit += 1;
     }
 
     function donate(uint256 actorSeed, uint96 amount) public {
         address actor = _actor(actorSeed);
         amount = uint96(bound(amount, 1, 20 ether));
+        if (token.balanceOf(actor) < amount) token.mint(actor, amount);
         vm.prank(actor, actor);
-        try credit.donar(address(token), amount) {} catch {}
+        credit.donar(address(token), amount);
+        okDonate += 1;
     }
 
     function verifyStamp(uint256 actorSeed) public {
         address actor = _actor(actorSeed);
-        vm.prank(actor, actor);
-        try credit.pagarVerificacion(address(token), 1 ether) {} catch {}
+        token.mint(address(alta), 1 ether);
+        vm.prank(address(alta));
+        token.approve(address(credit), 1 ether);
+        vm.prank(address(alta), actor);
+        credit.pagarVerificacion(address(token), 1 ether);
+        okVerify += 1;
     }
 
     function altaRegistro(uint256 actorSeed) public {
         address actor = _actor(actorSeed);
+        if (alta.registroHecho(actor)) return;
+        if (token.balanceOf(actor) < 4 ether) token.mint(actor, 4 ether);
         vm.prank(actor, actor);
-        try alta.pagarRegistro() {} catch {}
+        alta.pagarRegistro();
+        okAlta += 1;
     }
 
     function borrow(uint256 actorSeed, bool small) public {
         address actor = _actor(actorSeed);
         (, uint256 activo,,,,) = credit.usuarios(actor);
-        if (activo > 0) return;
+        if (activo > 0 || credit.esMoroso(actor) || !alta.registroHecho(actor)) return;
         (,, uint256 lastTs) = credit.obtenerProgresoUsuario(actor);
         if (lastTs != 0 && block.timestamp < lastTs + 48 hours) {
             vm.warp(lastTs + 48 hours + 1);
         }
-        uint256 nivel = small ? 1 : 0;
+        uint256 nivel = small ? uint256(1) : uint256(1);
         vm.prank(actor, actor);
-        try alta.pagarRegistro() {} catch {}
-        vm.prank(actor, actor);
-        try credit.solicitarPrestamo(address(token), nivel) {} catch {}
+        credit.solicitarPrestamo(address(token), nivel);
+        okBorrow += 1;
     }
 
     function repay(uint256 actorSeed) public {
         address actor = _actor(actorSeed);
+        (, uint256 activo,,,,) = credit.usuarios(actor);
+        if (activo == 0) borrow(actorSeed, true);
         (,, uint256 total,) = credit.obtenerDeuda(actor);
         if (total == 0) return;
+        if (token.balanceOf(actor) < total) token.mint(actor, total);
         vm.prank(actor, actor);
-        try credit.pagarPrestamo(address(token), total) {} catch {}
+        credit.pagarPrestamo(address(token), total);
+        okRepay += 1;
     }
 
     function reservaAportar(uint96 amount) public {
@@ -95,37 +119,50 @@ contract QuatriviumMoneyHandler is Test {
         token.mint(owner, amount);
         vm.prank(owner, owner);
         reserva.aportarBote(amount);
+        okAportar += 1;
     }
 
     function reservaBloquear(uint256 actorSeed, uint96 amount) public {
         address actor = _actor(actorSeed);
+        (uint256 nivel,,) = credit.obtenerProgresoUsuario(actor);
+        if (nivel < 10 || credit.esMoroso(actor)) return;
         (,, bool activa,) = reserva.posiciones(actor);
         if (activa) return;
         amount = uint96(bound(amount, 1 ether, 80 ether));
+        if (token.balanceOf(actor) < amount) token.mint(actor, amount);
         vm.prank(actor, actor);
-        try reserva.bloquear(amount) {} catch {}
+        reserva.bloquear(amount);
+        okBloquear += 1;
     }
 
     function liquidateLoan(uint256 actorSeed) public {
         address actor = _actor(actorSeed);
         (, uint256 activo, uint256 vencimiento,,,) = credit.usuarios(actor);
+        if (activo == 0) {
+            borrow(actorSeed, true);
+            (, activo, vencimiento,,,) = credit.usuarios(actor);
+        }
         if (activo == 0 || vencimiento == 0) return;
         if (block.timestamp <= vencimiento + 48 hours + 1 hours) {
             vm.warp(vencimiento + 48 hours + 1 hours + 1);
         }
         vm.prank(address(0x1111), address(0x1111));
-        try credit.liquidate(actor, address(token)) {} catch {}
+        credit.liquidate(actor, address(token));
+        okLiquidate += 1;
     }
 
     function reservaDesbloquear(uint256 actorSeed) public {
         address actor = _actor(actorSeed);
         (, uint256 desde, bool activa,) = reserva.posiciones(actor);
-        if (!activa) return;
-        if (block.timestamp < desde + 30 days) {
-            vm.warp(desde + 30 days + 1);
+        if (!activa) {
+            reservaBloquear(actorSeed, 1 ether);
+            (, desde, activa,) = reserva.posiciones(actor);
         }
+        if (!activa) return;
+        if (block.timestamp < desde + 30 days) vm.warp(desde + 30 days + 1);
         vm.prank(actor, actor);
-        try reserva.desbloquear() {} catch {}
+        reserva.desbloquear();
+        okDesbloquear += 1;
     }
 
     function _actor(uint256 seed) internal view returns (address) {
@@ -222,5 +259,34 @@ contract QuatriviumInvariantTest is Test {
     function test_invariants_hold_at_setup() public view {
         invariant_creditNav();
         invariant_reservaCaja();
+    }
+
+    bool private loggedCounts;
+
+    /// Cada corrida tiene profundidad de sobra para tocar las diez acciones.
+    /// Un try/catch ya no puede dejar el contador en cero.
+    function afterInvariant() public {
+        assertGe(handler.okDeposit(), 1, "deposit");
+        assertGe(handler.okDonate(), 1, "donate");
+        assertGe(handler.okVerify(), 1, "verify");
+        assertGe(handler.okAlta(), 1, "alta");
+        assertGe(handler.okBorrow(), 1, "borrow");
+        assertGe(handler.okRepay(), 1, "repay");
+        assertGe(handler.okAportar(), 1, "aportar");
+        assertGe(handler.okBloquear(), 1, "bloquear");
+        assertGe(handler.okDesbloquear(), 1, "desbloquear");
+        assertGe(handler.okLiquidate(), 1, "liquidar");
+        if (loggedCounts) return;
+        loggedCounts = true;
+        console2.log("okDeposit", handler.okDeposit());
+        console2.log("okDonate", handler.okDonate());
+        console2.log("okVerify", handler.okVerify());
+        console2.log("okAlta", handler.okAlta());
+        console2.log("okBorrow", handler.okBorrow());
+        console2.log("okRepay", handler.okRepay());
+        console2.log("okAportar", handler.okAportar());
+        console2.log("okBloquear", handler.okBloquear());
+        console2.log("okDesbloquear", handler.okDesbloquear());
+        console2.log("okLiquidate", handler.okLiquidate());
     }
 }

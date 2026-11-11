@@ -70,3 +70,63 @@ jobs:
         # Comprueba eas.json production: APP_ENV=production, chain 42161 (Arbitrum One),
         # LUSD (0x93b346b6BC2548dA6A1E7d98E9a421B42541425b) y coherencia con deployedAddresses.ts.
         run: npm run production:check:ci
+
+  foundry:
+    name: Foundry
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci --ignore-scripts
+
+      - name: Setup Foundry
+        uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: 1.9.0
+
+      - name: Test
+        run: forge test --fuzz-runs 256
+
+  slither:
+    name: Slither
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: npm ci --ignore-scripts
+
+      - name: Install Slither
+        run: pip install slither-analyzer==0.11.6 solc-select==1.2.0 && solc-select install 0.8.24 && solc-select use 0.8.24
+
+      - name: Compile
+        run: npx hardhat --config hardhat.config.cjs compile
+
+      - name: Analyze
+        run: slither . --config-file slither.config.json --compile-force-framework hardhat --hardhat-ignore-compile
+        env:
+          HARDHAT_CONFIG: hardhat.config.cjs
