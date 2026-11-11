@@ -186,9 +186,117 @@ describe('write provider pending hold', function () {
     }
     expect(unseen).to.equal('broadcast-unseen');
     expect(lookups).to.be.greaterThan(2);
-    expect(await hold.readHold(store, 42161, signer.address)).to.equal(null);
+    const kept = await hold.readHold(store, 42161, signer.address);
+    expect(kept.unseen).to.equal(true);
+    expect(kept.hash).to.equal(Transaction.from(raw).hash);
     await hold.writeHold(store, 42161, signer.address, { nonce: 4, hash: HASH });
     expect(await write.discardPendingSends(42161)).to.equal(1);
     expect(await hold.readHold(store, 42161, signer.address)).to.equal(null);
+  });
+
+  it('reads the receipt from the second RPC when the first is down', async function () {
+    const down = node();
+    down.getTransactionReceipt = async () => {
+      throw new Error('down');
+    };
+    const up = node();
+    up.getTransactionReceipt = async () => ({
+      hash: HASH,
+      blockNumber: 12,
+      blockHash: `0x${'cd'.repeat(32)}`,
+      status: 1,
+    });
+    const rpc = write.createWriteProvider(42161, 'arbitrum', {
+      urls: ['https://a.example', 'https://b.example'],
+      nodes: [down, up],
+      call: async () => {
+        throw new Error('unused');
+      },
+    });
+    const receipt = await rpc.getTransactionReceipt(HASH);
+    expect(receipt.blockNumber).to.equal(12);
+    expect(receipt.hash).to.equal(HASH);
+  });
+
+  it('asks our RPCs for a WalletConnect receipt and never the wallet', async function () {
+    let walletCalls = 0;
+    write.setReceiptNodesForTests([
+      {
+        async getTransactionReceipt() {
+          throw new Error('down');
+        },
+      },
+      {
+        async getTransactionReceipt() {
+          return {
+            hash: HASH,
+            blockNumber: 9,
+            blockHash: `0x${'11'.repeat(32)}`,
+            status: 1,
+          };
+        },
+      },
+    ]);
+    try {
+      const receipt = await wait.waitMined(
+        {
+          hash: HASH,
+          broadcastSeen: 1,
+          broadcastKind: 'pending',
+          provider: {
+            async getTransactionReceipt() {
+              walletCalls += 1;
+              throw new Error('wallet');
+            },
+          },
+        },
+        5000
+      );
+      expect(receipt.blockNumber).to.equal(9);
+      expect(walletCalls).to.equal(0);
+    } finally {
+      write.setReceiptNodesForTests(null);
+    }
+  });
+
+  it('does not sign the next nonce when an unseen hash shows up before the retry', async function () {
+    const signer = Wallet.createRandom();
+    const raw = await signer.signTransaction({
+      to: signer.address,
+      nonce: 4,
+      gasLimit: 21_000,
+      gasPrice: 1,
+      chainId: 42161,
+      value: 0,
+    });
+    const hash = Transaction.from(raw).hash;
+    let visible = false;
+    let signedAgain = 0;
+    const rpc = provider(42161, async (_url, method) => {
+      if (method === 'eth_getTransactionCount') return '0x4';
+      if (method === 'eth_sendRawTransaction') throw new Error('timeout');
+      if (method === 'eth_getTransactionByHash') {
+        return visible ? { hash } : null;
+      }
+      throw new Error(method);
+    });
+    let unseen = '';
+    try {
+      await rpc.broadcastTransaction(raw);
+    } catch (error) {
+      unseen = error.message;
+    }
+    expect(unseen).to.equal('broadcast-unseen');
+    visible = true;
+    let blocked = '';
+    try {
+      await rpc.getTransactionCount(signer.address, 'pending');
+      signedAgain += 1;
+    } catch (error) {
+      blocked = error.message;
+    }
+    expect(blocked).to.equal('pending-nonce');
+    expect(signedAgain).to.equal(0);
+    expect((await hold.readHold(store, 42161, signer.address)).hash).to.equal(hash);
   });
 });

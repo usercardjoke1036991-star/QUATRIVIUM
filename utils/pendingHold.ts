@@ -49,10 +49,16 @@ export async function readHold(
   const all = await readAll(store);
   const key = holdKey(chainId, from);
   const current = all[key];
-  if (valid(current)) return { nonce: current.nonce, hash: current.hash };
+  if (valid(current)) {
+    return { nonce: current.nonce, hash: current.hash, unseen: current.unseen === true };
+  }
   const legacy = all[from.toLowerCase()];
   if (!valid(legacy)) return null;
-  all[key] = { nonce: legacy.nonce, hash: legacy.hash };
+  all[key] = {
+    nonce: legacy.nonce,
+    hash: legacy.hash,
+    unseen: legacy.unseen === true,
+  };
   delete all[from.toLowerCase()];
   await saveAll(store, all);
   return all[key];
@@ -66,7 +72,9 @@ export async function writeHold(
 ): Promise<void> {
   const all = await readAll(store);
   delete all[from.toLowerCase()];
-  all[holdKey(chainId, from)] = { nonce: hold.nonce, hash: hold.hash.toLowerCase() };
+  const next: HeldSend = { nonce: hold.nonce, hash: hold.hash.toLowerCase() };
+  if (hold.unseen) next.unseen = true;
+  all[holdKey(chainId, from)] = next;
   await saveAll(store, all);
 }
 
@@ -108,6 +116,7 @@ export async function settleHold(
     nonce: number;
     hash: string;
     release: boolean;
+    unseen?: boolean;
   }
 ): Promise<'held' | 'released'> {
   if (input.release) {
@@ -117,6 +126,7 @@ export async function settleHold(
   await writeHold(store, input.chainId, input.from, {
     nonce: input.nonce,
     hash: input.hash.toLowerCase(),
+    unseen: input.unseen === true,
   });
   return 'held';
 }

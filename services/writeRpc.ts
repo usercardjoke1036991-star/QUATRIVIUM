@@ -6,7 +6,7 @@ import {
   type BlockTag,
   type TransactionRequest,
 } from 'ethers';
-import { publicRpcList } from '../constants/rpcConfig';
+import { NETWORK_CONFIG, publicRpcList } from '../constants/rpcConfig';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   broadcastRawAcrossRpcs,
@@ -34,6 +34,59 @@ export type WriteRpcInject = {
 };
 
 let unseenRecheckMs = 1_500;
+let receiptNodesForTests: ReceiptNode[] | null = null;
+
+export type ReceiptLike = {
+  hash?: string;
+  blockNumber?: number | null;
+  blockHash?: string | null;
+  status?: number | bigint;
+};
+
+export type ReceiptNode = {
+  getTransactionReceipt(hash: string): Promise<ReceiptLike | null>;
+};
+
+/** Solo pruebas de WalletConnect: los recibos salen de estos nodos, no de la billetera. */
+export function setReceiptNodesForTests(nodes: ReceiptNode[] | null): void {
+  receiptNodesForTests = nodes;
+}
+
+export function ownReceiptNodes(): ReceiptNode[] {
+  if (receiptNodesForTests) return receiptNodesForTests;
+  const network = { chainId: NETWORK_CONFIG.chainId, name: NETWORK_CONFIG.chainName };
+  return publicRpcList().map(
+    (url) => new JsonRpcProvider(url, network, { staticNetwork: true, batchMaxCount: 1 })
+  );
+}
+
+function confirmedReceipt(receipt: ReceiptLike | null, hash: string): ReceiptLike | null {
+  if (!receipt || receipt.blockNumber == null || Number(receipt.blockNumber) <= 0) return null;
+  if (!receipt.blockHash) return null;
+  if (String(receipt.hash || '').toLowerCase() !== hash.toLowerCase()) return null;
+  return receipt;
+}
+
+/** El primer recibo con el mismo hash y un bloque ya confirmado. El nodo caído se salta. */
+export async function firstConfirmedReceipt(
+  hash: string,
+  nodes: readonly ReceiptNode[]
+): Promise<ReceiptLike | null> {
+  let last: unknown;
+  let sawNull = false;
+  for (const node of nodes) {
+    try {
+      const receipt = await node.getTransactionReceipt(hash);
+      const confirmed = confirmedReceipt(receipt, hash);
+      if (confirmed) return confirmed;
+      sawNull = true;
+    } catch (error) {
+      last = error;
+    }
+  }
+  if (sawNull) return null;
+  throw last instanceof Error ? last : new Error('rpc');
+}
 
 /** Solo pruebas: la segunda consulta del hash no tiene que esperar un segundo. */
 export function setUnseenRecheckForTests(ms: number): void {
@@ -89,6 +142,7 @@ export function createWriteProvider(
     injected?.nodes ??
     urls.map((url) => new JsonRpcProvider(url, network, { staticNetwork: true, batchMaxCount: 1 }));
   const provider = nodes[0];
+  const primaryReceipt = provider.getTransactionReceipt.bind(provider);
   const primary = {
     getBlockNumber: provider.getBlockNumber.bind(provider),
     getTransaction: provider.getTransaction.bind(provider),
@@ -157,6 +211,12 @@ export function createWriteProvider(
     if (blockTag == null || blockTag === 'pending') {
       const networkNonce = await highestPendingNonce(urls, address, call);
       const held = await readHold(holdStore, chainId, address);
+      if (held?.unseen) {
+        const seen = await hashSightings(urls, held.hash, call);
+        if (seen > 0) throw new Error('pending-nonce');
+        await deleteHold(holdStore, chainId, address);
+        return networkNonce;
+      }
       if (
         held &&
         shouldReleaseHold(await hashSightings(urls, held.hash, call), networkNonce, held)
@@ -169,6 +229,16 @@ export function createWriteProvider(
     const raw = await relay((node) => node.getTransactionCount(address, blockTag));
     return Number(raw);
   };
+
+  provider.getTransactionReceipt = ((hash: string) =>
+    firstConfirmedReceipt(
+      hash,
+      nodes.map((node, index) => ({
+        getTransactionReceipt: (wanted: string) =>
+          index === 0 ? primaryReceipt(wanted) : node.getTransactionReceipt(wanted),
+      }))
+    )) as JsonRpcProvider['getTransactionReceipt'];
+  (provider as JsonRpcProvider & { quatriviumReceipts?: boolean }).quatriviumReceipts = true;
 
   provider.broadcastTransaction = async (signedTx: string) => {
     const tx = Transaction.from(signedTx);
@@ -205,7 +275,14 @@ export function createWriteProvider(
         networkNonce = null;
       }
       if (seen === 0 && networkNonce != null && networkNonce <= tx.nonce) {
-        await deleteHold(holdStore, chainId, tx.from);
+        await settleHold(holdStore, {
+          chainId,
+          from: tx.from,
+          nonce: tx.nonce,
+          hash: outcome.hash,
+          release: false,
+          unseen: true,
+        });
         throw new Error('broadcast-unseen');
       }
     }

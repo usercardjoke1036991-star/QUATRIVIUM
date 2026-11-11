@@ -9,7 +9,7 @@ export type AgreeKind<T> =
 
 export type BroadcastOutcome = { kind: 'sent'; hash: string } | { kind: 'pending'; hash: string };
 
-export type HeldSend = { nonce: number; hash: string };
+export type HeldSend = { nonce: number; hash: string; unseen?: boolean };
 
 function httpsUrls(urls: readonly string[]): string[] {
   return urls.map((url) => url.trim()).filter((url) => url.startsWith('https://'));

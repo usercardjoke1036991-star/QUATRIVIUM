@@ -1,4 +1,4 @@
-import { getProviderWithFallback } from '../constants/rpcConfig';
+import { firstConfirmedReceipt, ownReceiptNodes } from '../services/writeRpc';
 
 const HASH = /^0x[0-9a-fA-F]{64}$/;
 const DEFAULT_MS = 45_000;
@@ -27,13 +27,17 @@ export async function waitMined(tx: MinedTx, timeoutMs = DEFAULT_MS) {
     throw pending;
   }
   const attached = (
-    tx as { provider?: { getTransactionReceipt?: (hash: string) => Promise<unknown> } }
+    tx as {
+      provider?: {
+        quatriviumReceipts?: boolean;
+        getTransactionReceipt?: (hash: string) => Promise<unknown>;
+      };
+    }
   ).provider;
-  const fallback = getProviderWithFallback();
   const readReceipt =
-    attached && typeof attached.getTransactionReceipt === 'function'
+    attached && attached.quatriviumReceipts && typeof attached.getTransactionReceipt === 'function'
       ? attached.getTransactionReceipt.bind(attached)
-      : fallback.getTransactionReceipt.bind(fallback);
+      : (wanted: string) => firstConfirmedReceipt(wanted, ownReceiptNodes());
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try {
