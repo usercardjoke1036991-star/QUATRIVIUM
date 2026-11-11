@@ -94,7 +94,7 @@ contract QuatriviumAuditForgeTest is Test {
         uint256 used = mark - gasleft();
         console2.log("gas pago 40 generaciones", used);
         assertGt(used, 21_000);
-        assertLt(used, 30_000_000);
+        assertLt(used, 3_000_000);
     }
 
     function test_runtime_fits_eip170() public view {

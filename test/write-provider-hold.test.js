@@ -254,6 +254,33 @@ describe('write provider pending hold', function () {
     expect(await lied.getTransactionReceipt(HASH)).to.equal(null);
   });
 
+  it('accepts a later pair when the first two receipts disagree', async function () {
+    const alone = `0x${'cd'.repeat(32)}`;
+    const agreed = `0x${'ef'.repeat(32)}`;
+    const first = {
+      hash: HASH,
+      blockNumber: 12,
+      blockHash: alone,
+      status: 1,
+    };
+    const pair = { ...first, blockHash: agreed };
+    const rpc = write.createWriteProvider(42161, 'arbitrum', {
+      urls: ['https://a.example', 'https://b.example', 'https://c.example', 'https://d.example'],
+      nodes: [
+        receiptNode(first),
+        receiptNode({ ...first, status: 0 }),
+        receiptNode(pair),
+        receiptNode({ ...pair }),
+      ],
+      call: async () => {
+        throw new Error('unused');
+      },
+    });
+    const receipt = await rpc.getTransactionReceipt(HASH);
+    expect(receipt.blockHash).to.equal(agreed);
+    expect(receipt.status).to.equal(1);
+  });
+
   it('asks our RPCs for a WalletConnect receipt and never the wallet', async function () {
     let walletCalls = 0;
     const agreed = {

@@ -80,9 +80,19 @@ function sameReceipt(left: ReceiptLike, right: ReceiptLike): boolean {
   );
 }
 
+function agreedReceipt(values: readonly ReceiptLike[]): ReceiptLike | null {
+  for (let i = 0; i < values.length; i += 1) {
+    for (let j = i + 1; j < values.length; j += 1) {
+      if (sameReceipt(values[i], values[j])) return values[i];
+    }
+  }
+  return null;
+}
+
 /**
- * Igual que el dinero: hacen falta dos RPC propios que coincidan en hash,
- * estado y bloque. Si discrepan, o solo responde uno, el envío sigue pendiente.
+ * Hacen falta dos RPC propios que coincidan en hash, estado y bloque.
+ * No tienen que ser los dos primeros: vale cualquier par entre los N.
+ * Si ninguno coincide, o solo responde uno, el envío sigue pendiente.
  */
 export async function firstConfirmedReceipt(
   hash: string,
@@ -103,8 +113,9 @@ export async function firstConfirmedReceipt(
     })
   );
   const values = settled.flatMap((row) => (row.ok ? [row.value] : []));
-  if (values.length >= 2 && sameReceipt(values[0], values[1])) return values[0];
-  if (values.length >= 2 || values.length === 1 || settled.some((row) => row.empty)) return null;
+  const agreed = agreedReceipt(values);
+  if (agreed) return agreed;
+  if (values.length >= 1 || settled.some((row) => row.empty)) return null;
   throw thrown instanceof Error ? thrown : new Error('rpc');
 }
 
