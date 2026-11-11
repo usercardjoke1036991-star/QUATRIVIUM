@@ -67,7 +67,6 @@ export const CONTRACT_ABI = [
   'function usuarios(address) view returns (uint256 nivelActual, uint256 montoActivo, uint256 vencimiento, bool enMora, address monedaActivo, uint256 tasaAplicadaBP)',
   'function obtenerHistorialUsuario(address usuario) view returns (uint256 puntosReputacion, bool moroso, uint256 pagadosATiempo, uint256 morosos, uint256 totalPenalizaciones)',
   'function obtenerRedReputacion(address usuario) view returns (uint256 puntos, uint256 bonosCobrados, uint256 umbral, uint256 bono, uint256 puntosPorReferido)',
-  'function puntosRed(address) view returns (uint256)',
   'function PUNTOS_POR_REFERIDO() view returns (uint256)',
   'function UMBRAL_BONO_RED() view returns (uint256)',
   'function BONO_RED_USDT() view returns (uint256)',

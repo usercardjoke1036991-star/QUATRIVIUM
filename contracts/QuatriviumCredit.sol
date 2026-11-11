@@ -148,8 +148,6 @@ contract QuatriviumCredit is ReentrancyGuard {
     mapping(address => uint256) internal moraDesde;
     mapping(address => uint256) internal moraDiasCobrados;
     mapping(address => uint256) public reputacion;
-    mapping(address => uint256) public puntosRed;
-    mapping(address => uint256) public bonosRedCobrados;
     mapping(address => uint256) public prestamosPagadosATiempo;
     mapping(address => uint256) public prestamosMorosos;
     mapping(address => uint256) public penalizacionesAcumuladas;
@@ -785,13 +783,13 @@ contract QuatriviumCredit is ReentrancyGuard {
         uint256 bono,
         uint256 puntosPorReferido
     ) {
-        return (
-            puntosRed[usuario],
-            bonosRedCobrados[usuario],
-            UMBRAL_BONO_RED,
-            BONO_RED_USDT,
-            PUNTOS_POR_REFERIDO
+        (bool ok, bytes memory raw) = famaHermano.staticcall(
+            abi.encodeWithSelector(bytes4(keccak256("famaRedEstado(address)")), usuario)
         );
+        if (ok && raw.length >= 64) (puntos, bonosCobrados) = abi.decode(raw, (uint256, uint256));
+        umbral = UMBRAL_BONO_RED;
+        bono = BONO_RED_USDT;
+        puntosPorReferido = PUNTOS_POR_REFERIDO;
     }
 
     function valorLp(address user, address token) public view returns (uint256) {

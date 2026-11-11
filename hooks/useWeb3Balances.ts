@@ -22,7 +22,7 @@ import {
   visibleLoanTiers,
   type LoanTier,
 } from '../constants/loanTiers';
-import { describeAdminCalldata, type OpenAdminProposal } from '../utils/adminProposal';
+import { decodeAdminCalldata, type OpenAdminProposal } from '../utils/adminProposal';
 import { asWeiString, QuatriviumCreditService } from '../services/quatriviumCreditService';
 import { REFERRAL_BONUS_THRESHOLD, REFERRAL_REPUTATION_POINTS } from '../constants/reputation';
 import { esperaParaVolverAPedir } from '../utils/creditCooldown';
@@ -937,9 +937,12 @@ export const useWeb3Balances = (walletAddress: string, selectedToken: Token) => 
                 const cancelled = Boolean(row.cancelled ?? row[5]);
                 const eta = Number(row.eta ?? row[1]);
                 if (executed || cancelled || eta <= 0) continue;
+                const decoded = decodeAdminCalldata(String(row.data ?? row[2] ?? '0x'));
                 openProposal = {
                   id,
-                  selector: describeAdminCalldata(String(row.data ?? row[2] ?? '0x')),
+                  selector: decoded.name || decoded.target,
+                  actionKey: decoded.actionKey,
+                  target: decoded.target,
                   eta,
                   confirms: Number((row.confirms ?? row[3]) || 0),
                   executed,

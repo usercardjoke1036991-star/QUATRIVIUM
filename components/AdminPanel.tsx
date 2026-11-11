@@ -107,9 +107,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setDraft('');
   };
 
-  const runProposal = async (action: string) => {
+  const proposalWords = (proposal: OpenAdminProposal) => {
+    const action =
+      proposal.actionKey === 'adminActionUnknown' ? t('adminActionUnknown') : t(proposal.actionKey);
+    const target =
+      proposal.actionKey === 'adminActionPause' ? t('adminActionPauseTarget') : proposal.target;
+    return { action, target };
+  };
+
+  const runProposal = async () => {
     if (!openProposal) return false;
-    return askAdmin(action, `${openProposal.id} ${openProposal.selector}`);
+    const words = proposalWords(openProposal);
+    return askAdmin(words.action, words.target || String(openProposal.id));
   };
 
   return (
@@ -205,13 +214,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         <AppText style={[styles.meta, { color: colors.text }]}>
           {t('adminProposalMeta', {
             id: openProposal.id,
-            selector: openProposal.selector,
+            selector: proposalWords(openProposal).action,
             confirms: openProposal.confirms,
             when:
               openProposal.eta * 1000 <= Date.now()
                 ? t('adminProposalReady')
                 : new Date(openProposal.eta * 1000).toLocaleString(),
           })}
+          {proposalWords(openProposal).target ? ` · ${proposalWords(openProposal).target}` : ''}
         </AppText>
       ) : (
         <AppText style={[styles.meta, { color: colors.textMuted }]}>
@@ -222,7 +232,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         <TouchableOpacity
           disabled={isLoading}
           onPress={() =>
-            void runProposal(t('confirmAdminProposal')).then((ok) => {
+            void runProposal().then((ok) => {
               if (ok) onConfirmProposal(openProposal.id);
             })
           }
@@ -237,7 +247,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         <TouchableOpacity
           disabled={isLoading}
           onPress={() =>
-            void runProposal(t('executeAdminProposal')).then((ok) => {
+            void runProposal().then((ok) => {
               if (ok) onExecuteProposal(openProposal.id);
             })
           }
@@ -256,7 +266,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         <TouchableOpacity
           disabled={isLoading}
           onPress={() =>
-            void runProposal(t('cancelAdminProposal')).then((ok) => {
+            void runProposal().then((ok) => {
               if (ok) onCancelProposal(openProposal.id);
             })
           }

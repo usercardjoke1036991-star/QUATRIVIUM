@@ -121,6 +121,11 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
         return ganada > cobrada ? ganada - cobrada : 0;
     }
 
+    function famaRedEstado(address usuario) external view returns (uint256 ganada, uint256 cobrada) {
+        ganada = famaRed[usuario];
+        cobrada = famaRedCanjeada[usuario];
+    }
+
     function famaRedDisponible(address usuario) public view returns (uint256) {
         uint256 ganada = famaRed[usuario];
         uint256 cobrada = famaRedCanjeada[usuario];
