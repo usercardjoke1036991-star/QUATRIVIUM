@@ -186,7 +186,6 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
   const paintLockMs = (ms: number, ticket: number) => {
     if (ticket === lockTicket.current) setLockMs(ms);
   };
-  setLockFaultReporter(() => setError(t('lockUnexpected')));
   const [recovering, setRecovering] = useState(false);
   const [recoverEmail, setRecoverEmail] = useState('');
   const [recoverCode, setRecoverCode] = useState('');
@@ -214,6 +213,11 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
   const kickIfSessionMovedRef = useRef<() => Promise<boolean>>(async () => false);
   const backgroundAt = useRef<number | null>(null);
   const passwordCommittedRef = useRef(false);
+
+  useEffect(() => {
+    setLockFaultReporter(() => setError(t('lockUnexpected')));
+    return () => setLockFaultReporter(null);
+  }, [t]);
 
   const applyQueuedMethod = async (method: AuthMethod, flags: UnlockFlags) => {
     const nextMode = modeFromMethod(method, flags.passwordSet, flags.pinSet, flags.authOn);

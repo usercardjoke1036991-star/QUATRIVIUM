@@ -579,8 +579,7 @@ describe('app lock PBKDF2', function () {
     await lock.checkPassword('Otra-8z');
     mono = 40;
     lock.setChainStampsForTests(() => [agreed + 40_000, agreed + 41_000]);
-    expect(await lock.refreshLockChain(true)).to.equal(30_000);
-    mono += 30_000;
+    expect(await lock.refreshLockChain(true)).to.equal(0);
     const opened = await lock.checkPassword(PASSWORD);
     expect(opened.ok).to.equal(true);
   });
@@ -892,7 +891,38 @@ describe('app lock PBKDF2', function () {
     lock.setChainStampsForTests(() => [chain, chain + 500]);
     expect(await lock.refreshLockChain(true)).to.equal(30_000);
     lock.setChainStampsForTests(() => [chain + 60_000, chain + 61_000]);
-    expect(await lock.refreshLockChain(true)).to.equal(30_000);
+    expect(await lock.refreshLockChain(true)).to.equal(0);
+  });
+
+  it('opens a closed hour wait from two agreeing RPCs and ignores one fast node', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    memory.delete('quatrivium.lock.gate');
+    memory.delete('quatrivium.lock.attempts');
+    const chain = 1_900_000_000_000;
+    const hour = 60 * 60 * 1000;
+    lock.setChainStampsForTests(() => [chain, chain + 1_000]);
+    await lock.setPassword(PASSWORD);
+    for (let fail = 1; fail <= 5; fail += 1) {
+      if (fail > 1) {
+        mono += JSON.parse(memory.get('quatrivium.lock.gate')).left;
+        expect(await lock.tickLockWait()).to.equal(0);
+      }
+      const miss = await lock.checkPassword('Otra-8z');
+      expect(miss.remainingMs).to.equal(policy.lockoutMs(fail));
+    }
+    expect(JSON.parse(memory.get('quatrivium.lock.gate')).waitMs).to.equal(hour);
+    expect(JSON.parse(memory.get('quatrivium.lock.gate')).chainAt).to.equal(chain);
+    await lock.pauseLockWait();
+    mono += 2 * hour;
+    await lock.resumeLockWait();
+    expect(await lock.tickLockWait()).to.equal(hour);
+    lock.setChainStampsForTests(() => [chain + hour, null]);
+    expect(policy.agreedChainMs([chain + hour, null])).to.equal(null);
+    expect(await lock.refreshLockChain(true)).to.equal(hour);
+    lock.setChainStampsForTests(() => [chain + hour, chain + hour + 1_000]);
+    expect(await lock.refreshLockChain(true)).to.equal(0);
+    expect((await lock.checkPassword(PASSWORD)).ok).to.equal(true);
   });
 
   it('does not read the chain when no wait is active', async function () {

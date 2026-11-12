@@ -127,14 +127,11 @@ interface GateRecord {
   chainAt: number;
 }
 
-let lockClockForTests: (() => number) | null = null;
 let monoClockForTests: (() => number) | null = null;
 let chainStampsForTests: (() => Promise<(number | null)[]> | (number | null)[]) | null = null;
 
-/** Solo pruebas: el reloj del teléfono. No cumple una espera. */
-export function setLockClockForTests(clock: (() => number) | null): void {
-  lockClockForTests = clock;
-}
+/** Solo pruebas: el reloj del teléfono no cumple una espera, así que no se guarda. */
+export function setLockClockForTests(_clock: (() => number) | null): void {}
 
 /** Solo pruebas: performance.now() mientras la app está abierta. */
 export function setMonoClockForTests(clock: (() => number) | null): void {
@@ -152,10 +149,6 @@ export function setChainStampsForTests(
   reader: (() => Promise<(number | null)[]> | (number | null)[]) | null
 ): void {
   chainStampsForTests = reader;
-}
-
-function wallNow(): number {
-  return lockClockForTests ? lockClockForTests() : Date.now();
 }
 
 function monoNow(): number {
@@ -298,7 +291,6 @@ async function trustedChainMs(): Promise<number | null> {
 }
 
 async function applySample(chain: number | null): Promise<number> {
-  void wallNow();
   const gate = await readGate();
   if (gate.left <= 0) return 0;
   const next: WaitClock = advanceWait(gate, { mono: monoNow(), chain });

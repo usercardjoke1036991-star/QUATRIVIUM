@@ -118,10 +118,11 @@ export function agreedChainMs(stamps: (number | null | undefined)[]): number | n
 
 /**
  * La hora del teléfono no cumple la espera.
- * Con la app abierta, performance.now() descuenta desde la última muestra,
- * también si la espera ya está anclada a la cadena.
- * La siguiente lectura de cadena corrige: si dice que falta más, manda ella.
- * Nunca acorta por debajo de lo que ya contó el reloj abierto.
+ * Con hora de cadena, el tiempo es el del bloque: volver después abre.
+ * Entre lecturas, performance.now() descuenta con la app abierta.
+ * Si llega una lectura válida, la cadena manda en ambos sentidos:
+ * restante = chainLeft, entre 0 y la espera total.
+ * Sin lectura válida, solo cuenta el reloj monotónico ya medido.
  * Si el fallo se guardó sin red y luego hay una lectura válida, se ancla
  * chainAt = cadena − (espera − restante).
  * Un reloj monótono que vuelve atrás (la app se reinició) no descuenta.
@@ -142,10 +143,8 @@ export function advanceWait(gate: WaitClock, sample: WaitSample): WaitClock {
   }
   if (sample.chain != null && sample.chain > 0 && chainAt > 0) {
     const elapsed = sample.chain - chainAt;
-    if (elapsed >= 0) {
-      const chainLeft = Math.max(0, gate.waitMs - elapsed);
-      if (chainLeft > left) left = chainLeft;
-    }
+    const chainLeft = Math.max(0, Math.min(gate.waitMs, gate.waitMs - elapsed));
+    left = chainLeft;
   }
   return { ...gate, chainAt, left, seen: mono };
 }
