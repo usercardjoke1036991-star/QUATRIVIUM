@@ -1,4 +1,4 @@
-/** Direcciones públicas desplegadas. Mainnet (Arbitrum One) se rellena tras `npm run deploy:bsc`. */
+/** Direcciones públicas desplegadas. Mainnet (Arbitrum One) se rellena tras `npm run deploy:arbitrum`. */
 
 export const DEPLOYED_TESTNET = {
   chainId: 421614,

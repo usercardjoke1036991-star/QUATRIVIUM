@@ -43,7 +43,7 @@ La escalera de 1000 niveles, las tasas, el reparto del alta de 4 LUSD y los porc
 | `contracts/libraries/LoanTierSeed.sol` | Tabla de los niveles 1–100 (monto, tasa, días). |
 | `app/`, `components/`, `hooks/`, `services/`, `constants/`, `utils/`, `i18n/` | App. Entrada: `app/index.tsx`. Billetera: `services/appWallet.ts`. Ranking: `services/fameLeaderboard.ts` y `utils/fameRoster.ts`. Superficie soberana (RPC, Nostr, APK, alta): `utils/sovereignSurface.ts`. |
 | `constants/deployedAddresses.ts` | Mainnet: LUSD y la billetera de donación `0x5023bf46dB7458B9bb9152a7ffE64f195CD1a047` ya escritos. `contract`, `reserva`, `fama` y `alta` están vacíos. No inventar direcciones. |
-| `constants/bsc.ts`, `constants/rpcConfig.ts` | A pesar del nombre, la red real es Arbitrum. RPC públicos con respaldo. |
+| `constants/arbitrum.ts`, `constants/rpcConfig.ts` | Arbitrum One (42161) y Arbitrum Sepolia (421614). RPC públicos con respaldo. |
 | `test/` | Tests Hardhat (Mocha). |
 | `forge-test/` | Tests Foundry. `lib/forge-std` está en `.gitignore`. |
 | `scripts/deploy-arbitrum-sovereign.cjs` | Despliegue cuando Jose lo autorice. |
@@ -74,7 +74,13 @@ Todas en `cursor/soberania-contratos-8e15`. PR: https://github.com/usercardjoke1
 
 ## 5. Números
 
-Tras quitar el cobrador de gas del constructor: Hardhat 321, Foundry 54. `QuatriviumCredit`: 23330 bytes, 1246 libres de 24576. El harness de prueba: 24541 bytes.
+Medidos en `cursor/soberania-contratos-8e15` con `allowUnlimitedContractSize: false`. `QuatriviumCredit`: 23317 bytes, 1259 libres de 24576. El harness de prueba: 24528 bytes, 48 libres. Un pago de 40 generaciones: 1246495 de gas, por debajo de 3 000 000.
+
+Hardhat: 362 pruebas en verde. Foundry con `FOUNDRY_PROFILE=ci`: 56 pruebas en verde. Invariantes de Credit y de Reserva: 256 corridas, profundidad 800, 204800 llamadas, 0 reverts cada uno.
+
+Slither: 0 altos, 0 medios, 13 bajos, 10 optimizaciones. `npm audit` del árbol: 37 (15 bajos, 20 moderados, 2 altos, 0 críticos) tras subir `handlebars` a 4.7.10. Producción (`--omit=dev`): 21 (9 bajos, 11 moderados, 1 alto, `image-size`).
+
+El candado no borra la billetera. Esperas: 30 s, 1 min, 5 min, 15 min, 1 h y luego 24 h. El reloj hacia atrás o un salto mayor que la espera no la acortan. El PIN queda bloqueado a los 10 fallos. El aviso no lee el secreto del teléfono: usa las marcas guardadas, y en demo no se muestra. Un reintento con éxito genera un secreto nuevo y vuelve a sellar el PIN. 9000 vueltas de PBKDF2-SHA256 salen de la medida de sjcl en un Android API 27: 10001 vueltas tardaron 5431,5 ms, así que 9000 quedan cerca de 4,9 s en ese JavaScript. No está medido en un teléfono. Un recibo vale cuando 2 de N RPC coinciden. Si no, el envío sigue pendiente.
 
 ## 6. Simulación de impago
 
@@ -93,27 +99,31 @@ Orden de prioridad:
    - Bajo: una segunda cuenta puede nombrar a la primera y cobrar el 1 apartado si esa ya pagó alta y nivel 1. El costo son los otros 3 LUSD más el interés del nivel 1. No es ganancia. `test/alta-invitacion.test.js`.
    - Bajo: `soltarPadrino` no suelta el 1 si el padre viene vacío o es el mismo deudor (`QuatriviumAlta.sol`). El registro normal no produce ese padre.
    - Bajo: siguen tests que leen texto y hablan de dinero. La lista está en `AUDITORIA.md`, sección «Segunda auditoría». No reescribirlos todavía.
-   - Medio: `npm audit` marca `handlebars` (herramienta, no dependencia directa de la app) y otras altas del árbol. No se actualizó.
+   - Medio, abierto: `image-size` (alto de producción). El parche pide un SDK de Expo nuevo. No se subió Expo. `handlebars` pasó a 4.7.10 y el crítico de desarrollo salió. `solidity-coverage` 0.8.17 sigue compilando y escribiendo el informe; el contrato instrumentado no cabe en el gas de despliegue. `tmp` sigue alto vía `solc` y no se forzó.
    - Medio: el cifrado NIP-17/44 no está implementado. `prepareNostrPayload` devuelve null. No hay pantalla de mensaje privado.
 3. **Pendiente antes de dinero real.**
-   - Auditoría externa de los contratos. `AUDITORIA.md` no la sustituye.
+   - Auditoría externa de los contratos. `AUDITORIA.md` la escribieron herramientas de IA, no una firma de auditoría, y no la sustituye.
    - La dirección de fundador debe ser una billetera de varias firmas (Safe) o una billetera física con respaldo. El despliegue exige `CONFIRM_FOUNDER_WALLET=yes`.
-4. **Pendiente cuando Jose lo ordene,** en este orden. Nada de esto se ha hecho.
+4. **Pendiente de Jose, sin tocar el código por nuestra cuenta.**
+   - EIP-7702: `_soloEOA`, Alta y Reserva quedan como están hasta que él decida.
+   - El enlace de SonarCloud lo cambia el dueño en el panel.
+   - `image-size` espera un SDK de Expo nuevo.
+5. **Pendiente cuando Jose lo ordene,** en este orden. Nada de esto se ha hecho.
    1. Compilar el APK firmado y calcular su SHA-256.
    2. Desplegar en Arbitrum One y escribir las direcciones reales en `constants/deployedAddresses.ts` (`contract`, `reserva`, `fama`, `alta`). No inventarlas.
    3. Publicar la huella del certificado y el hash del archivo en `QuatriviumApk`.
    4. IPFS.
    5. ENS.
-5. **Incompleto a propósito en el código actual:**
+6. **Incompleto a propósito en el código actual:**
    - Nostr no abre un websocket ni ofrece mensaje privado: `prepareNostrPayload` devuelve null. La mora sigue bloqueada.
    - El hash del APK instalado no se calcula en el teléfono. Sin registro, la UI dice «versión no verificada».
-   - Credit tiene 2685 bytes libres. Cualquier lógica nueva en ese contrato puede no caber. Preferir un contrato hermano, como ya se hizo con Apk, Leveling y LoanLadder.
-6. La clave que estuvo en el historial (commits `10553d4` y `dc40f15`, archivo `.env.worker.example`) ya fue revocada por Jose. No está en el árbol. No se reescribe la historia y no se copia el valor.
+   - Credit tiene 1259 bytes libres (23317 de 24576). Cualquier lógica nueva en ese contrato puede no caber. Preferir un contrato hermano, como ya se hizo con Apk, Leveling y LoanLadder.
+7. La clave que estuvo en el historial (commits `10553d4` y `dc40f15`, archivo `.env.worker.example`) ya fue revocada por Jose. No está en el árbol. No se reescribe la historia y no se copia el valor.
 
 ## 8. Riesgos
 
-- 2685 bytes libres en Credit. No añadir funciones ahí sin medir `deployedBytecode`.
-- Hardhat tiene `allowUnlimitedContractSize: true`. Un test verde no prueba el límite. El tamaño real es el del artifact (23330).
+- 1259 bytes libres en Credit (23317) y 48 en el harness (24528). No añadir funciones ahí sin medir `deployedBytecode`.
+- Hardhat tiene `allowUnlimitedContractSize: false`. El tamaño que cuenta es el `deployedBytecode` del artifact: Credit 23317 bytes, 1259 libres de 24576. El harness de prueba mide 24528, 48 libres.
 - Los `require` de texto se borran del bytecode (`revertStrings: strip`). Los tests no pueden usar `revertedWith("mensaje")` para esos revert. Los errores con nombre (`SequencerFeedRequerido`, `SoloFundador`) sí se distinguen.
 - La pausa de préstamos nuevos exige 2 de 3 y 72 h. Se levanta sola a los 7 días y luego hay 7 de descanso. No frena pagos ni liquidaciones.
 - El pool y el fondo de seguro no tienen retiro. Un error en el reparto no se «arregla» sacando el dinero.
@@ -129,8 +139,8 @@ Instalar y probar (no compila APK ni despliega):
 ```bash
 npm ci --ignore-scripts
 npm test
-# Foundry, si forge está en el PATH y existe lib/forge-std:
-forge test --fuzz-runs 32
+# Foundry, perfil de CI (256 corridas de invariante, profundidad 800):
+FOUNDRY_PROFILE=ci forge test
 npm run typecheck
 npm run lint
 npm run format:check

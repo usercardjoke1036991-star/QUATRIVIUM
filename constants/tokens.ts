@@ -1,5 +1,5 @@
 import { getUsdtAddress } from './contractConfig';
-import { ARBITRUM_MAINNET } from './bsc';
+import { ARBITRUM_MAINNET } from './arbitrum';
 import { DEPLOYED_TESTNET } from './deployedAddresses';
 import { isDemoMode } from './rpcConfig';
 

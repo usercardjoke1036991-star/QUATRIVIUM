@@ -1,5 +1,5 @@
 import { isAddress } from 'ethers';
-import { ZERO_ADDRESS } from './bsc';
+import { ZERO_ADDRESS } from './arbitrum';
 import { DEPLOYED_MAINNET, DEPLOYED_TESTNET } from './deployedAddresses';
 import { isDemoAccount } from './rpcConfig';
 

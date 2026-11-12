@@ -1,17 +1,21 @@
-import { BSC_MAINNET, BSC_TESTNET, isTestnetOnlyToken } from './bsc';
+import { ARBITRUM_MAINNET, ARBITRUM_SEPOLIA, isTestnetOnlyToken } from './arbitrum';
 import { DEPLOYED_TESTNET } from './deployedAddresses';
 import { getContractAddress, getRuntimeMode } from './rpcConfig';
 
 export { getContractAddress };
 
 export function getUsdtAddress(): string {
-  if (getRuntimeMode() === 'live') return BSC_MAINNET.usdt;
-  const fromEnv = (process.env.EXPO_PUBLIC_USDT_ADDRESS || '').toLowerCase();
+  if (getRuntimeMode() === 'live') return ARBITRUM_MAINNET.lusd;
+  const fromEnv = (
+    process.env.EXPO_PUBLIC_LUSD_ADDRESS ||
+    process.env.EXPO_PUBLIC_USDT_ADDRESS ||
+    ''
+  ).toLowerCase();
   if (fromEnv && isTestnetOnlyToken(fromEnv)) return fromEnv;
-  if (fromEnv && fromEnv.startsWith('0x') && fromEnv !== BSC_MAINNET.usdt.toLowerCase()) {
+  if (fromEnv && fromEnv.startsWith('0x') && fromEnv !== ARBITRUM_MAINNET.lusd.toLowerCase()) {
     return fromEnv;
   }
-  return DEPLOYED_TESTNET.usdt || BSC_TESTNET.usdt;
+  return DEPLOYED_TESTNET.usdt || ARBITRUM_SEPOLIA.usdt;
 }
 
 export const ERC20_ABI = [

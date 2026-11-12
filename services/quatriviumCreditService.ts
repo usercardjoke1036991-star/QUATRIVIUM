@@ -16,7 +16,7 @@ import { ALTA_ABI, getAltaAddress, isAltaConfigured } from '../constants/altaCon
 import { CONTRACT_ABI, ERC20_ABI, getContractAddress } from '../constants/contractConfig';
 import { FAMA_ABI, isFamaAddress } from '../constants/famaConfig';
 import { FAMA_CANJE_POR_USDT } from '../constants/fama';
-import { isTestnetOnlyToken } from '../constants/bsc';
+import { isTestnetOnlyToken } from '../constants/arbitrum';
 import {
   assertTrustedRpc,
   getProviderWithFallback,

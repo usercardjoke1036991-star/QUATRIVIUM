@@ -19,19 +19,15 @@ const ARBITRUM_MAINNET = {
   ],
 };
 
-/** Alias compatible con scripts existentes — apunta a Arbitrum One (42161) y LUSD. */
-const BSC_MAINNET = ARBITRUM_MAINNET;
-
-const BSC_TESTNET = {
-  chainId: 97,
-  chainName: 'bscTestnet',
-  usdt: '0x337610d27c682e347c9cd60bd4b3b107c9d34ddd',
-  usdtUsdFeed: '0xeca2605f0bcf2ba5966372c99837b1f182d3d620',
+const ARBITRUM_SEPOLIA = {
+  chainId: 421614,
+  chainName: 'arbitrumSepolia',
+  usdt: '',
+  usdtUsdFeed: '',
   rpc: [
-    'https://bsc-testnet-rpc.publicnode.com',
-    'https://bsc-testnet.publicnode.com',
-    'https://bsc-testnet.drpc.org',
-    'https://bsc-testnet.bnbchain.org',
+    'https://sepolia-rollup.arbitrum.io/rpc',
+    'https://arbitrum-sepolia-rpc.publicnode.com',
+    'https://arbitrum-sepolia.drpc.org',
   ],
 };
 
@@ -45,4 +41,4 @@ function isZero(value) {
   return !isHexAddress(value) || String(value).toLowerCase() === ZERO;
 }
 
-module.exports = { ARBITRUM_MAINNET, BSC_MAINNET, BSC_TESTNET, ZERO, isHexAddress, isZero };
+module.exports = { ARBITRUM_MAINNET, ARBITRUM_SEPOLIA, ZERO, isHexAddress, isZero };

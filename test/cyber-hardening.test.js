@@ -242,7 +242,13 @@ describe('cyber hardening — PIN and secret box', function () {
       path.join(__dirname, '..', 'scripts', 'deploy-arbitrum-sovereign.cjs'),
       'utf8'
     );
-    const nets = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'bscNetworks.cjs'), 'utf8');
+    const nets = fs.readFileSync(
+      path.join(__dirname, '..', 'scripts', 'arbitrumNetworks.cjs'),
+      'utf8'
+    );
+    const arbitrum = require('../scripts/arbitrumNetworks.cjs');
+    expect(arbitrum.ARBITRUM_MAINNET.chainId).to.equal(42161);
+    expect(arbitrum.ARBITRUM_SEPOLIA.chainId).to.equal(421614);
     expect(script).to.include("process.env.CONFIRM_MAINNET !== 'yes'");
     expect(script).to.include('CONFIRM_FOUNDER_WALLET');
     expect(script).to.include('chainId === 42161');
@@ -956,13 +962,13 @@ describe('demo credit gates', function () {
     }
     const demoKey = historyJournalSuffix({
       mode: 'demo',
-      chainId: 97,
+      chainId: 421614,
       contract: '0xD2',
       address: '0xAA',
     });
     const liveKey = historyJournalSuffix({
       mode: 'live',
-      chainId: 56,
+      chainId: 42161,
       contract: '0x00',
       address: '0xAA',
     });

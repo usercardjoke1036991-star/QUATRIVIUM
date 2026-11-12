@@ -1,6 +1,6 @@
 import { FallbackProvider, JsonRpcProvider, isAddress, type AbstractProvider } from 'ethers';
 import { isHttpsUrl } from '../utils/sanitize';
-import { ARBITRUM_MAINNET, ARBITRUM_SEPOLIA, ZERO_ADDRESS } from './bsc';
+import { ARBITRUM_MAINNET, ARBITRUM_SEPOLIA, ZERO_ADDRESS } from './arbitrum';
 import { DEPLOYED_MAINNET, DEPLOYED_TESTNET } from './deployedAddresses';
 
 export type AppMode = 'demo' | 'live';

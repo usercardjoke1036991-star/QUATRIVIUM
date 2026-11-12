@@ -1,6 +1,5 @@
 /**
  * Direcciones canónicas de Arbitrum One (red soberana de Quatrivium).
- * El nombre del archivo se conserva por compatibilidad de imports; ya no hay BNB Smart Chain.
  *
  * Referencia Ethereum Mainnet (chainId: 1), no usada por la app:
  *   LUSD (18 dec): 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0
@@ -40,10 +39,6 @@ export const ARBITRUM_SEPOLIA = {
     'https://arbitrum-sepolia.drpc.org',
   ],
 } as const;
-
-/** Alias deprecados: apuntan a Arbitrum. Se mantienen para no romper imports antiguos. */
-export const BSC_MAINNET = ARBITRUM_MAINNET;
-export const BSC_TESTNET = ARBITRUM_SEPOLIA;
 
 /** Gas nativo en Arbitrum = ETH. Umbral mínimo razonable para L2 (0.0001 ETH). */
 export const NATIVE_SYMBOL = 'ETH';

@@ -2,7 +2,7 @@ const { expect } = require('chai');
 const fs = require('fs');
 const path = require('path');
 require('ts-node/register');
-const { ARBITRUM_MAINNET } = require('../constants/bsc.ts');
+const { ARBITRUM_MAINNET } = require('../constants/arbitrum.ts');
 const { DEPLOYED_MAINNET } = require('../constants/deployedAddresses.ts');
 const {
   altaBreakdown,
@@ -48,7 +48,7 @@ describe('Fase 4 — app soberana', function () {
     for (const field of ['contract', 'reserva', 'fama', 'alta']) {
       expect(DEPLOYED_MAINNET[field], field).to.equal('');
     }
-    expect(read('constants/bsc.ts')).to.not.include('AggregatorV3');
+    expect(read('constants/arbitrum.ts')).to.not.include('AggregatorV3');
   });
 
   it('parte el alta en fundador, Reserva, padrino y sello', async function () {

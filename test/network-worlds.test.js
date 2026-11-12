@@ -84,8 +84,8 @@ describe('Demo y Real no se mezclan', function () {
     const rpc = loadAppModule('constants/rpcConfig.ts');
     const contracts = loadAppModule('constants/contractConfig.ts');
     const addresses = loadAppModule('constants/deployedAddresses.ts');
-    const bsc = loadAppModule('constants/bsc.ts');
-    return { rpc, contracts, addresses, bsc };
+    const arbitrum = loadAppModule('constants/arbitrum.ts');
+    return { rpc, contracts, addresses, arbitrum };
   });
 
   after(function () {
@@ -94,14 +94,14 @@ describe('Demo y Real no se mezclan', function () {
   });
 
   it('en Real usa Arbitrum One (chain 42161) y LUSD oficial, nunca el de prueba', function () {
-    const { rpc, contracts, addresses, bsc } = app;
+    const { rpc, contracts, addresses, arbitrum } = app;
     rpc.setProductMode('live');
     rpc.setRuntimeMode('live');
     expect(rpc.NETWORK_CONFIG.chainId).to.equal(42161);
     expect(rpc.NETWORK_CONFIG.chainId).to.equal(addresses.DEPLOYED_MAINNET.chainId);
     expect(String(rpc.RPC_URLS.primary || '')).to.not.match(/sepolia/i);
     expect(contracts.getUsdtAddress().toLowerCase()).to.equal(
-      bsc.ARBITRUM_MAINNET.lusd.toLowerCase()
+      arbitrum.ARBITRUM_MAINNET.lusd.toLowerCase()
     );
   });
 
@@ -125,9 +125,9 @@ describe('Demo y Real no se mezclan', function () {
   });
 
   it('configura ETH nativo y umbral mínimo L2 (0.0001 ETH) en Arbitrum', function () {
-    const { bsc } = app;
-    expect(bsc.NATIVE_SYMBOL).to.equal('ETH');
-    expect(bsc.MIN_GAS_WEI).to.equal(100_000_000_000_000n);
+    const { arbitrum } = app;
+    expect(arbitrum.NATIVE_SYMBOL).to.equal('ETH');
+    expect(arbitrum.MIN_GAS_WEI).to.equal(100_000_000_000_000n);
   });
 });
 

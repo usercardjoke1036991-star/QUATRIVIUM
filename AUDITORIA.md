@@ -1,6 +1,43 @@
 # Auditoría de QUATRIVIUM
 
-`QuatriviumCredit` mide 23330 bytes (1246 libres de 24576). El contrato de prueba que hereda de él, `QuatriviumCreditHarness`, mide 24541 bytes y también cabe. Un pago con 40 generaciones de comisión usó 1246534 de gas en Foundry. Un bloque de Arbitrum suele admitir unos 32 millones, así que no recorté el recorrido.
+## Auditoría independiente
+
+Esta revisión la hicieron herramientas de IA en el IDE (lectura del código, Hardhat, Foundry, Slither y `npm audit`). No la hizo una firma de auditoría. No sustituye una auditoría externa antes de usar dinero real.
+
+## Medición de esta rama
+
+Rama `cursor/soberania-contratos-8e15`. Commits de esta entrega: `8d4e1b2` (candado), `e8ba5f1` (recibos), `358ade7` (los tests nombran el revert). La limpieza de Arbitrum, el ejemplo de entorno y este párrafo van en el commit de esta parte.
+
+`allowUnlimitedContractSize` está en `false`. El tamaño es el `deployedBytecode` del artifact de Hardhat, sin el hash de metadata (`bytecodeHash: none`, `appendCBOR: false`). Límite EIP-170: 24576.
+
+| Pieza | Bytes | Libres |
+| --- | --- | --- |
+| QuatriviumCredit | 23317 | 1259 |
+| QuatriviumCreditHarness | 24528 | 48 |
+
+Un pago de 40 generaciones usó 1246495 de gas (el test lo imprime y exige menos de 3 000 000). Foundry con `FOUNDRY_PROFILE=ci`: 56 pruebas en verde. Los invariantes de Credit y de Reserva corrieron 256 veces, profundidad 800, 204800 llamadas y 0 reverts cada uno. Hardhat: 362 pruebas en verde.
+
+Slither, compilación nueva, `fail_on: high`: 0 altos, 0 medios, 13 bajos, 10 de optimización. Los medios que no eran un fallo llevan `slither-disable-next-line` con el motivo en la misma línea. No se cambió la lógica de `_soloEOA`, Alta ni Reserva. Quedan, como bajos u optimización y sin tocarlos: `missing-zero-check`, `calls-loop`, `reentrancy-benign`, `reentrancy-events`, `return-bomb`, variables que podrían ser `constant` o `immutable`.
+
+`npm audit` del árbol completo, después de subir `handlebars` a 4.7.10: 37 avisos (15 bajos, 20 moderados, 2 altos, 0 críticos). Solo producción (`npm audit --omit=dev`): 21 (9 bajos, 11 moderados, 1 alto). El alto de producción es `image-size`. `handlebars` 4.7.9 era crítico y solo lo usaba `solidity-coverage` → `sc-istanbul`; 4.7.10 sale de ese aviso. La herramienta 0.8.17 compiló el árbol y escribió el informe de cobertura. El único test instrumentado se quedó sin gas al desplegar: Credit ya está cerca del límite y la instrumentación lo pasa. No es un fallo de la librería de plantillas. `tmp` sigue alto porque lo arrastra `solc`; no se forzó.
+
+### Candado
+
+Una contraseña mal no borra la billetera. La espera crece: 30 s, 1 min, 5 min, 15 min, 1 h y después 24 h en cada fallo extra. Cambiar la hora no la acorta: se guarda la última hora vista y, si el reloj va hacia atrás o salta más que la espera, se cuenta otra vez desde el fallo. El PIN se bloquea a los 10 fallos (`PIN_FAIL_LIMIT`) y no hay borrado. El secreto del teléfono no se lee para pintar el aviso: bastan las marcas guardadas (`deviceAuth` y la de reparación). En demo el aviso no sale. Si la protección se reintenta con éxito, se genera un secreto nuevo y se vuelve a sellar el PIN, porque los bytes viejos estuvieron sin candado. Si no hay billetera ligada, el contador global no se mueve a `none`.
+
+### 9000 vueltas
+
+`PIN_PBKDF2_ROUNDS` es 9000. En un Android API 27, sjcl midió 5431,5 ms para 10001 vueltas de SHA-256 (nota de Joplin). 9000 quedan cerca de 4,9 s en ese JavaScript. 100000 vueltas en el mismo motor serían cerca de un minuto, no 2 a 5 s. No está medido en el teléfono de Jose. El registro guarda las vueltas para poder subirlas. El PIN se mezcla con un secreto de 32 bytes del llavero del teléfono.
+
+### Recibos
+
+Un recibo cuenta cuando 2 de los N RPC propios coinciden en hash, bloque y estado, no solo los dos primeros. Si no hay par que coincida, o uno está caído, el envío sigue pendiente. No se descarta el pendiente por un recibo suelto.
+
+### Pendiente
+
+- EIP-7702: lo decide Jose. `_soloEOA`, Alta y Reserva no se reescribieron.
+- El enlace de SonarCloud lo cambia el dueño en el panel. El chequeo sigue apuntando al id viejo.
+- `image-size`: hace falta un SDK de Expo nuevo. No se subió Expo.
 
 Arbitrum One ya acepta EIP-7702 (ArbOS 40, según el blog de la fundación y la lista de autorizaciones de Arbiscan). El chequeo `tx.origin == msg.sender` deja pasar a una cuenta normal con código delegado. Ahora entra solo quien no tiene código (`NoEsEOA`). Fuente: https://blog.arbitrum.foundation/the-smartest-wallet-you-already-own-is-on-arbitrum/ y https://eips.ethereum.org/EIPS/eip-7702.
 
@@ -87,7 +124,7 @@ Nada de lo leído permite que un extraño vacíe el pool, el bote de Reserva o e
 - `node scripts/check-external-services.mjs`: sin nombres prohibidos en el árbol actual.
 - `node scripts/check-i18n.mjs`: 17 idiomas, 1256 claves cada uno, sin copias largas del inglés.
 - `npm audit --omit=dev` (10 nov 2026): 0 críticas, 1 alta, 11 medias, 9 bajas. Árbol completo: 1 crítica, 2 altas, 21 medias, 15 bajas. La crítica sigue siendo `handlebars` 4.7.9, solo en desarrollo, y no se tocó. La alta de producción es `image-size` 1.2.1.
-- Slither: el repo tiene `scripts/run-slither.mjs` y `slither.config.json`. El programa `slither` no está instalado en esta máquina. No se ejecutó. No se inventan hallazgos de Slither.
+- Slither de esta rama está en «Medición de esta rama»: 0 altos y 0 medios. La frase vieja de que Slither no estaba instalado ya no vale.
 
 Tamaños de bytecode desplegado (artifact de Hardhat, límite EIP-170 = 24576):
 
@@ -268,7 +305,7 @@ Si LUSD se detiene o un RPC miente, la app rota RPC públicos (`constants/rpcCon
 
 ## Qué no se pudo revisar
 
-- Slither: no está instalado.
+- Slither sí corrió en esta rama. El detalle está en «Medición de esta rama». No se revisó cada bajo como si fuera un bug.
 - Ninguna pantalla en un teléfono, ni modo oscuro, ni contraste, ni un dedo sobre un botón. El usuario prohibió compilar la app.
 - Los 17 idiomas, frase por frase.
 - Cada PNG de `assets/` como imagen. Se contaron como archivos del repo, sin lógica.
@@ -296,7 +333,7 @@ Si LUSD se detiene o un RPC miente, la app rota RPC públicos (`constants/rpcCon
 
 ## Antes de dinero real
 
-Contratos desplegados en Arbitrum One, direcciones escritas en `constants/deployedAddresses.ts`, APK firmado con hash publicado, IPFS y ENS si se van a usar, la clave de Resend revocada, y una auditoría externa de los contratos. Este archivo no es esa auditoría.
+Contratos desplegados en Arbitrum One, direcciones escritas en `constants/deployedAddresses.ts`, APK firmado con hash publicado, IPFS y ENS si se van a usar, y una auditoría externa de los contratos. Este archivo no es esa auditoría: lo escribieron herramientas de IA, no una firma. Siguen pendientes la decisión EIP-7702 de Jose, el enlace de SonarCloud (lo cambia el dueño en el panel) e `image-size` (pide un SDK de Expo nuevo).
 
 ## Inventario
 
@@ -438,7 +475,7 @@ Cada archivo seguido de git en esta rama se revisó al menos por nombre, tipo y,
 - `constants/altaConfig.ts` — revisado: sí
 - `constants/appLinks.ts` — revisado: sí
 - `constants/brand.ts` — revisado: sí
-- `constants/bsc.ts` — revisado: sí
+- `constants/arbitrum.ts` — revisado: sí
 - `constants/commissions.ts` — revisado: sí
 - `constants/compatibleWallets.ts` — revisado: sí
 - `constants/contractConfig.ts` — revisado: sí
@@ -532,7 +569,7 @@ Cada archivo seguido de git en esta rama se revisó al menos por nombre, tipo y,
 - `scripts/apply-i18n-leftovers.mjs` — revisado: sí
 - `scripts/apply-i18n-professional.mjs` — revisado: sí
 - `scripts/attest2of2.mjs` — revisado: sí
-- `scripts/bscNetworks.cjs` — revisado: sí
+- `scripts/arbitrumNetworks.cjs` — revisado: sí
 - `scripts/check-external-services.mjs` — revisado: sí
 - `scripts/check-i18n.mjs` — revisado: sí
 - `scripts/check-production.mjs` — revisado: sí
