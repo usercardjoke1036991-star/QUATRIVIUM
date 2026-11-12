@@ -344,6 +344,7 @@
   "lockPinMismatch": "PIN’ler eşleşmiyor. Tekrar deneyin.",
   "lockPinWrong": "Yanlış PIN.",
   "lockUnexpected": "Beklenmeyen hata. Yeniden deneyin.",
+  "lockStoreUnknown": "Güvenlik durumu okunamadı. Yeniden deneyin.",
   "lockPinWeak": "Bu PIN çok kolay. Tekrar, dizi veya bariz tarihler kullanmayın.",
   "lockKdfMissing": "Bu telefon kilit anahtarini kuramiyor. Zayif yol kapali.",
   "lockKdfWait": "Bu birkaç saniye sürebilir.",

@@ -344,6 +344,7 @@
   "lockPinMismatch": "PIN tidak cocok. Coba lagi.",
   "lockPinWrong": "PIN salah.",
   "lockUnexpected": "Kesalahan tak terduga. Coba lagi.",
+  "lockStoreUnknown": "Status keamanan tidak terbaca. Coba lagi.",
   "lockPinWeak": "PIN itu terlalu mudah. Jangan pakai pengulangan, urutan, atau tanggal yang jelas.",
   "lockKdfMissing": "Ponsel ini tidak bisa menyusun kunci gembok. Jalur lemah ditutup.",
   "lockKdfWait": "Ini bisa butuh beberapa detik.",

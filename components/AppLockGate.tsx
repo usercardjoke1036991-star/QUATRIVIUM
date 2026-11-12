@@ -212,6 +212,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
   const methodQueueRef = useRef<AuthMethod[]>([]);
   const kickIfSessionMovedRef = useRef<() => Promise<boolean>>(async () => false);
   const backgroundAt = useRef<number | null>(null);
+  const backgroundMono = useRef<number | null>(null);
   const passwordCommittedRef = useRef(false);
 
   useEffect(() => {
@@ -589,6 +590,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
     const onChange = (next: AppStateStatus) => {
       if (next === 'background' || next === 'inactive') {
         backgroundAt.current = Date.now();
+        backgroundMono.current = performance.now();
         void pauseLockWait();
         return;
       }
@@ -598,7 +600,15 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
           refreshLockChain(true).then((ms) => paintLockMs(ms, ticket))
         );
       }
-      if (next === 'active' && shouldRelockAfterBackground(backgroundAt.current)) {
+      if (
+        next === 'active' &&
+        shouldRelockAfterBackground(
+          backgroundAt.current,
+          Date.now(),
+          backgroundMono.current,
+          performance.now()
+        )
+      ) {
         Promise.all([
           isPasswordSet(),
           isPinSet(),
@@ -632,6 +642,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
           });
       }
       backgroundAt.current = null;
+      backgroundMono.current = null;
     };
     const sub = AppState.addEventListener('change', onChange);
     return () => sub.remove();

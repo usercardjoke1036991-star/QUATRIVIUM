@@ -97,23 +97,23 @@ export function startWait(fails: number, mono: number, chainAt = 0): WaitClock {
 
 /**
  * Dos de N sellos coinciden si su diferencia cabe en unos minutos.
- * Vale cualquier par, no solo los dos primeros. Se queda el menor del par más cerrado,
- * para que un nodo adelantado no acorte la espera.
+ * Vale cualquier par. De todos los pares que coinciden, se queda el valor más bajo,
+ * para que dos RPC adelantados no le ganen a los honestos.
  */
 export function agreedChainMs(stamps: (number | null | undefined)[]): number | null {
   const values = stamps.filter(
     (stamp): stamp is number => typeof stamp === 'number' && Number.isFinite(stamp) && stamp > 0
   );
-  let best: { gap: number; at: number } | null = null;
+  let lowest: number | null = null;
   for (let i = 0; i < values.length; i += 1) {
     for (let j = i + 1; j < values.length; j += 1) {
       const gap = Math.abs(values[i] - values[j]);
       if (gap > CHAIN_AGREE_MS) continue;
       const at = Math.min(values[i], values[j]);
-      if (!best || gap < best.gap || (gap === best.gap && at < best.at)) best = { gap, at };
+      if (lowest == null || at < lowest) lowest = at;
     }
   }
-  return best ? best.at : null;
+  return lowest;
 }
 
 /**

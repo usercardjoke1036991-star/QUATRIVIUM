@@ -129,9 +129,28 @@ interface GateRecord {
 
 let monoClockForTests: (() => number) | null = null;
 let chainStampsForTests: (() => Promise<(number | null)[]> | (number | null)[]) | null = null;
+let beforeVerifyForTests: (() => Promise<void> | void) | null = null;
+let afterMatchForTests: (() => Promise<void> | void) | null = null;
+let anchorTail: Promise<void> = Promise.resolve();
+let anchorTimer: ReturnType<typeof setTimeout> | null = null;
+let lastLockLeft = 0;
+const STORE_UNKNOWN = Symbol('store-unknown');
 
-/** Solo pruebas: el reloj del teléfono no cumple una espera, así que no se guarda. */
-export function setLockClockForTests(_clock: (() => number) | null): void {}
+/** Solo pruebas: cortar entre el intento guardado y PBKDF2, o entre el acierto y la limpieza. */
+export function setLockPhaseForTests(
+  phase: {
+    beforeVerify?: (() => Promise<void> | void) | null;
+    afterMatch?: (() => Promise<void> | void) | null;
+  } | null
+): void {
+  beforeVerifyForTests = phase?.beforeVerify ?? null;
+  afterMatchForTests = phase?.afterMatch ?? null;
+}
+
+/** La lectura de cadena posterior al fallo. La respuesta en pantalla no la espera. */
+export function whenLockAnchorSettled(): Promise<void> {
+  return anchorTail;
+}
 
 /** Solo pruebas: performance.now() mientras la app está abierta. */
 export function setMonoClockForTests(clock: (() => number) | null): void {
@@ -139,6 +158,14 @@ export function setMonoClockForTests(clock: (() => number) | null): void {
   lastChainMono = -CHAIN_POLL_MS;
   chainFlight = null;
   gateQueue = Promise.resolve();
+  anchorTail = Promise.resolve();
+  if (anchorTimer) {
+    clearTimeout(anchorTimer);
+    anchorTimer = null;
+  }
+  lastLockLeft = 0;
+  beforeVerifyForTests = null;
+  afterMatchForTests = null;
 }
 
 /**
@@ -198,15 +225,19 @@ async function boundScope(): Promise<string | null> {
   return /^0x[0-9a-f]{40}$/.test(bound) ? bound : null;
 }
 
+async function readStoreRaw(key: string): Promise<string | null | typeof STORE_UNKNOWN> {
+  return timedRead(SecureStore.getItemAsync(key), 1500);
+}
+
 /** La clave vieja era global. Sin billetera no se mueve a "none": espera a que haya una. */
-async function readScoped(legacy: string): Promise<string | null> {
+async function readScoped(legacy: string): Promise<string | null | typeof STORE_UNKNOWN> {
   const scope = await boundScope();
-  if (!scope) return SecureStore.getItemAsync(legacy).catch(() => null);
+  if (!scope) return readStoreRaw(legacy);
   const key = storeSlot([legacy, scope]);
-  const current = await SecureStore.getItemAsync(key).catch(() => null);
-  if (current) return current;
-  const old = await SecureStore.getItemAsync(legacy).catch(() => null);
-  if (!old) return null;
+  const current = await readStoreRaw(key);
+  if (current === STORE_UNKNOWN || current) return current;
+  const old = await readStoreRaw(legacy);
+  if (old === STORE_UNKNOWN || !old) return old;
   await SecureStore.setItemAsync(key, old, OPTIONS);
   await SecureStore.deleteItemAsync(legacy).catch(() => {});
   return old;
@@ -292,20 +323,24 @@ async function trustedChainMs(): Promise<number | null> {
 
 async function applySample(chain: number | null): Promise<number> {
   const gate = await readGate();
-  if (gate.left <= 0) return 0;
+  if (gate === STORE_UNKNOWN) return lastLockLeft;
+  if (gate.left <= 0) return rememberLeft(0);
   const next: WaitClock = advanceWait(gate, { mono: monoNow(), chain });
   const moved = next.left !== gate.left || next.seen !== gate.seen || next.chainAt !== gate.chainAt;
   if (moved) await writeGate({ ...gate, ...next, until: 0 });
-  return next.left;
+  return rememberLeft(next.left);
 }
 
-async function readGate(): Promise<GateRecord> {
+async function readGate(): Promise<GateRecord | typeof STORE_UNKNOWN> {
   try {
-    const raw = await withTimeout(readScoped(GATE_KEY), 1500, null);
+    const raw = await readScoped(GATE_KEY);
+    if (raw === STORE_UNKNOWN) return STORE_UNKNOWN;
     if (!raw) return emptyGate();
-    return gateFromStored(JSON.parse(raw) as Partial<GateRecord>);
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return STORE_UNKNOWN;
+    return gateFromStored(parsed as Partial<GateRecord>);
   } catch {
-    return emptyGate();
+    return STORE_UNKNOWN;
   }
 }
 
@@ -325,7 +360,8 @@ export function refreshLockChain(force = false): Promise<number> {
   let flight: Promise<number> = Promise.resolve(0);
   flight = withGate(async () => {
     const gate = await readGate();
-    if (gate.left <= 0) return 0;
+    if (gate === STORE_UNKNOWN) return lastLockLeft;
+    if (gate.left <= 0) return rememberLeft(0);
     const chain = await trustedChainMs();
     lastChainMono = monoNow();
     return applySample(chain);
@@ -340,11 +376,12 @@ export function refreshLockChain(force = false): Promise<number> {
 export function pauseLockWait(): Promise<void> {
   return withGate(async () => {
     const gate = await readGate();
-    if (gate.left <= 0) return;
+    if (gate === STORE_UNKNOWN || gate.left <= 0) return;
     const next = advanceWait(gate, { mono: monoNow(), chain: null });
     if (next.left !== gate.left || next.seen !== gate.seen || next.chainAt !== gate.chainAt) {
       await writeGate({ ...gate, ...next, until: 0 });
     }
+    rememberLeft(next.left);
   });
 }
 
@@ -352,51 +389,151 @@ export function pauseLockWait(): Promise<void> {
 export function resumeLockWait(): Promise<void> {
   return withGate(async () => {
     const gate = await readGate();
-    if (gate.left <= 0) return;
+    if (gate === STORE_UNKNOWN || gate.left <= 0) return;
     const seen = monoNow();
     if (seen === gate.seen) return;
     await writeGate({ ...gate, seen, until: 0 });
   });
 }
 
-async function writeGate(next: GateRecord): Promise<void> {
-  await withTimeout(writeScoped(GATE_KEY, JSON.stringify(next)), 1500, undefined);
+function rememberLeft(left: number): number {
+  lastLockLeft = left;
+  return left;
 }
 
-async function noteMiss(): Promise<number> {
+function sameGate(a: GateRecord, b: GateRecord): boolean {
+  return (
+    a.fails === b.fails &&
+    a.until === b.until &&
+    a.waitMs === b.waitMs &&
+    a.left === b.left &&
+    a.seen === b.seen &&
+    a.chainAt === b.chainAt
+  );
+}
+
+function sameAttempts(a: AttemptRecord, b: AttemptRecord): boolean {
+  return a.pin === b.pin && a.password === b.password;
+}
+
+/** Escribe y vuelve a leer. Si no coincide o se agota el tiempo, la escritura no quedó confirmada. */
+async function writeGate(next: GateRecord): Promise<boolean> {
+  const wrote = await timedRead(writeScoped(GATE_KEY, JSON.stringify(next)), 1500);
+  if (wrote === STORE_UNKNOWN) return false;
+  const back = await readGate();
+  if (back === STORE_UNKNOWN) return false;
+  const confirmed = sameGate(back, next);
+  if (confirmed) rememberLeft(next.left);
+  return confirmed;
+}
+
+async function readAttempts(): Promise<AttemptRecord | typeof STORE_UNKNOWN> {
+  try {
+    const raw = await readScoped(ATTEMPT_KEY);
+    if (raw === STORE_UNKNOWN) return STORE_UNKNOWN;
+    if (!raw) return { pin: 0, password: 0 };
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return STORE_UNKNOWN;
+    const row = parsed as AttemptRecord;
+    return {
+      pin: Math.max(0, Number(row.pin) || 0),
+      password: Math.max(0, Number(row.password) || 0),
+    };
+  } catch {
+    return STORE_UNKNOWN;
+  }
+}
+
+async function writeAttempts(next: AttemptRecord): Promise<boolean> {
+  const wrote = await timedRead(writeScoped(ATTEMPT_KEY, JSON.stringify(next)), 1500);
+  if (wrote === STORE_UNKNOWN) return false;
+  const back = await readAttempts();
+  if (back === STORE_UNKNOWN) return false;
+  return sameAttempts(back, next);
+}
+
+type LockView =
+  | typeof STORE_UNKNOWN
+  | { gate: GateRecord; attempts: AttemptRecord; remaining: number };
+
+async function readLockState(): Promise<LockView> {
   return withGate(async () => {
     const gate = await readGate();
-    const chainAt = (await trustedChainMs()) || 0;
-    lastChainMono = monoNow();
-    const next = startWait(gate.fails + 1, monoNow(), chainAt);
-    await writeGate({
+    const attempts = await readAttempts();
+    if (gate === STORE_UNKNOWN || attempts === STORE_UNKNOWN) return STORE_UNKNOWN;
+    if (gate.left <= 0) return { gate, attempts, remaining: rememberLeft(0) };
+    const next = advanceWait(gate, { mono: monoNow(), chain: null });
+    const moved =
+      next.left !== gate.left || next.seen !== gate.seen || next.chainAt !== gate.chainAt;
+    const stored = { ...gate, ...next, until: 0 };
+    if (moved) await writeGate(stored);
+    return { gate: stored, attempts, remaining: rememberLeft(next.left) };
+  });
+}
+
+async function commitPending(
+  kind: 'pin' | 'password',
+  attempts: AttemptRecord,
+  gate: GateRecord
+): Promise<typeof STORE_UNKNOWN | { left: number; fails: number }> {
+  return withGate(async () => {
+    const next = startWait(gate.fails + 1, monoNow(), 0);
+    const attemptNext = {
+      pin: attempts.pin + (kind === 'pin' ? 1 : 0),
+      password: attempts.password + (kind === 'password' ? 1 : 0),
+    };
+    const gateOk = await writeGate({
       fails: next.fails,
       until: 0,
       waitMs: next.waitMs,
       left: next.left,
       seen: next.seen,
-      chainAt: next.chainAt,
+      chainAt: 0,
     });
-    return next.left;
+    const attemptOk = await writeAttempts(attemptNext);
+    if (!gateOk || !attemptOk) return STORE_UNKNOWN;
+    return { left: next.left, fails: next.fails };
   });
 }
 
-async function readAttempts(): Promise<AttemptRecord> {
-  try {
-    const raw = await readScoped(ATTEMPT_KEY);
-    if (!raw) return { pin: 0, password: 0 };
-    const parsed = JSON.parse(raw) as AttemptRecord;
-    return {
-      pin: Math.max(0, Number(parsed.pin) || 0),
-      password: Math.max(0, Number(parsed.password) || 0),
-    };
-  } catch {
-    return { pin: 0, password: 0 };
-  }
+function scheduleAnchor(fails: number): void {
+  lastChainMono = monoNow();
+  const run = new Promise<void>((resolve) => {
+    anchorTimer = setTimeout(() => {
+      anchorTimer = null;
+      void (async () => {
+        try {
+          const chain = await trustedChainMs();
+          if (chain == null) return;
+          await withGate(async () => {
+            const gate = await readGate();
+            if (
+              gate === STORE_UNKNOWN ||
+              gate.fails !== fails ||
+              gate.left <= 0 ||
+              gate.chainAt > 0
+            ) {
+              return;
+            }
+            const next = advanceWait(gate, { mono: monoNow(), chain });
+            await writeGate({ ...gate, ...next, until: 0 });
+          });
+        } catch {
+          /* the miss is already stored */
+        } finally {
+          resolve();
+        }
+      })();
+    }, 0);
+  });
+  anchorTail = anchorTail.then(
+    () => run,
+    () => run
+  );
 }
 
-async function writeAttempts(next: AttemptRecord): Promise<void> {
-  await writeScoped(ATTEMPT_KEY, JSON.stringify(next));
+function storeUnknownResult(): PinCheck {
+  return { ok: false, remainingMs: 0, locked: false, storeUnknown: true };
 }
 
 function pinBlockedResult(): PinCheck {
@@ -413,8 +550,6 @@ function parsePasswordRecord(raw: string | null): PasswordRecord | null {
     return null;
   }
 }
-
-const STORE_UNKNOWN = Symbol('store-unknown');
 
 function timedRead<T>(promise: Promise<T>, ms: number): Promise<T | typeof STORE_UNKNOWN> {
   return new Promise((resolve) => {
@@ -787,6 +922,7 @@ export type PinCheck =
       deviceAuth?: boolean;
       deviceKeyReset?: boolean;
       deviceSecretLost?: boolean;
+      storeUnknown?: boolean;
     };
 
 function pinReady(record: PinRecord): boolean {
@@ -798,15 +934,28 @@ function pinReady(record: PinRecord): boolean {
   );
 }
 
+function deviceCheck(error: unknown): PinCheck {
+  if (error instanceof Error && error.message === 'device-auth') {
+    return { ok: false, remainingMs: 0, locked: false, deviceAuth: true };
+  }
+  if (error instanceof Error && error.message === 'device-key-reset') {
+    return { ok: false, remainingMs: 0, locked: false, deviceKeyReset: true };
+  }
+  if (error instanceof Error && error.message === 'device-secret-lost') {
+    return { ok: false, remainingMs: 0, locked: false, deviceSecretLost: true };
+  }
+  throw error;
+}
+
 export async function checkPin(pin: string): Promise<PinCheck> {
   if (!isSixDigits(pin)) {
     return { ok: false, remainingMs: 0, locked: false };
   }
-  const attempts = await readAttempts();
-  if (attempts.pin >= PIN_FAIL_LIMIT) return pinBlockedResult();
-  const remaining = await getPinLockRemaining();
-  if (remaining > 0) {
-    return { ok: false, remainingMs: remaining, locked: true };
+  const state = await readLockState();
+  if (state === STORE_UNKNOWN) return storeUnknownResult();
+  if (state.attempts.pin >= PIN_FAIL_LIMIT) return pinBlockedResult();
+  if (state.remaining > 0) {
+    return { ok: false, remainingMs: state.remaining, locked: true };
   }
   const record = await readPinRecord();
   if (!record) {
@@ -816,8 +965,16 @@ export async function checkPin(pin: string): Promise<PinCheck> {
   const current = record.kdf === PIN_KDF && record.split === PIN_SPLIT;
   const wide = isWideKdf(record);
   let material: { verifier: string; wrap: string } | null = null;
+  let secret = '';
   try {
-    const secret = await pinMaterialInput(pin, record);
+    secret = await pinMaterialInput(pin, record);
+  } catch (error) {
+    return deviceCheck(error);
+  }
+  const pending = await commitPending('pin', state.attempts, state.gate);
+  if (pending === STORE_UNKNOWN) return storeUnknownResult();
+  if (beforeVerifyForTests) await beforeVerifyForTests();
+  try {
     material = current
       ? await derivePinMaterial(secret, record.salt, record.rounds || PIN_PBKDF2_ROUNDS)
       : wide
@@ -845,25 +1002,15 @@ export async function checkPin(pin: string): Promise<PinCheck> {
         }
       }
       if (!openedWithStaged) {
-        const left = await noteMiss();
-        const pinFails = attempts.pin + 1;
-        await writeAttempts({ pin: pinFails, password: attempts.password });
-        if (pinFails >= PIN_FAIL_LIMIT) return pinBlockedResult();
-        return { ok: false, remainingMs: left, locked: left > 0 };
+        scheduleAnchor(pending.fails);
+        if (state.attempts.pin + 1 >= PIN_FAIL_LIMIT) return pinBlockedResult();
+        return { ok: false, remainingMs: pending.left, locked: pending.left > 0 };
       }
     }
   } catch (error) {
-    if (error instanceof Error && error.message === 'device-auth') {
-      return { ok: false, remainingMs: 0, locked: false, deviceAuth: true };
-    }
-    if (error instanceof Error && error.message === 'device-key-reset') {
-      return { ok: false, remainingMs: 0, locked: false, deviceKeyReset: true };
-    }
-    if (error instanceof Error && error.message === 'device-secret-lost') {
-      return { ok: false, remainingMs: 0, locked: false, deviceSecretLost: true };
-    }
-    throw error;
+    return deviceCheck(error);
   }
+  if (afterMatchForTests) await afterMatchForTests();
   const ready = pinReady(record);
   if (await isPasswordSet()) {
     const opened = material
@@ -1148,14 +1295,18 @@ export async function checkPassword(password: string): Promise<PinCheck> {
   if (!password) {
     return { ok: false, remainingMs: 0, locked: false };
   }
-  const remaining = await getPinLockRemaining();
-  if (remaining > 0) {
-    return { ok: false, remainingMs: remaining, locked: true };
+  const state = await readLockState();
+  if (state === STORE_UNKNOWN) return storeUnknownResult();
+  if (state.remaining > 0) {
+    return { ok: false, remainingMs: state.remaining, locked: true };
   }
   const record = await readPasswordRecord();
   if (!record) {
     return { ok: false, remainingMs: 0, locked: false };
   }
+  const pending = await commitPending('password', state.attempts, state.gate);
+  if (pending === STORE_UNKNOWN) return storeUnknownResult();
+  if (beforeVerifyForTests) await beforeVerifyForTests();
   const modern = record.kdf === PIN_KDF;
   const current = modern && record.split === PIN_SPLIT;
   const wide = isWideKdf(record);
@@ -1172,11 +1323,10 @@ export async function checkPassword(password: string): Promise<PinCheck> {
       ? await pbkdf2Sha256Hex(password, record.salt, rounds)
       : await hashSecret(password, record.salt, rounds);
   if (!verifierMatches(hash, record.hash)) {
-    const wait = await noteMiss();
-    const attempts = await readAttempts();
-    await writeAttempts({ pin: attempts.pin, password: attempts.password + 1 });
-    return { ok: false, remainingMs: wait, locked: wait > 0 };
+    scheduleAnchor(pending.fails);
+    return { ok: false, remainingMs: pending.left, locked: pending.left > 0 };
   }
+  if (afterMatchForTests) await afterMatchForTests();
   if (material && ready) {
     setWalletWrapKey(material.wrap);
   } else if (material) {
@@ -1390,8 +1540,15 @@ export function lockNow(): void {
 
 export function shouldRelockAfterBackground(
   backgroundedAt: number | null,
-  now = Date.now()
+  now = Date.now(),
+  monoAt: number | null = null,
+  mono = performance.now()
 ): boolean {
   if (externalWalletHandoffActive(now) || isPickerHeld()) return false;
-  return Boolean(backgroundedAt && now - backgroundedAt >= BACKGROUND_LOCK_MS);
+  if (backgroundedAt == null) return false;
+  if (now < backgroundedAt) return true;
+  if (now - backgroundedAt >= BACKGROUND_LOCK_MS) return true;
+  if (monoAt == null) return false;
+  if (mono < monoAt) return true;
+  return mono - monoAt >= BACKGROUND_LOCK_MS;
 }
