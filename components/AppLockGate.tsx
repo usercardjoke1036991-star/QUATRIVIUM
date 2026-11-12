@@ -41,7 +41,7 @@ import {
   shouldRelockAfterBackground,
 } from '../services/appLock';
 import { describeLockFailure, lockWaitCopy } from '../utils/lockFailureCopy';
-import { raceMs, setLockFaultReporter } from '../utils/lockRace';
+import { raceMs, reportLockFault, setLockFaultReporter } from '../utils/lockRace';
 import { isValidMasterPassword } from '../utils/passwordPolicy';
 import {
   addressFromPhrase,
@@ -712,7 +712,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
       setError(describeLockFailure('pin', result, t));
       setPinDigits('');
     } catch {
-      setError(t('lockUnexpected'));
+      reportLockFault();
     } finally {
       setBusy(false);
     }

@@ -103,7 +103,7 @@ Revisión de `60a9654` y `960f446`, más el comportamiento real del alta. No se 
 - Pausa: solo el contrato, tras 2 de 3 y `block.timestamp >= eta` (72 h justas sí valen, Credit líneas 364-372 y 385-389). A los 7 días justos el préstamo nuevo vuelve (`>= pausaPrestamosHasta`). El descanso usa `< pausaReposoHasta`, así que el instante exacto ya permite votar otra. `p.executed = true` va antes de la llamada interna; si esa llamada falla, toda la transacción revierte. No hay reentrada hacia fuera.
 - APK: solo el fundador publica. La huella del certificado queda fija en la primera versión. No hay borrado ni llamada externa.
 - Feed: no hay tope por antigüedad. `answer == 0` permite liquidar si ya pasó más de 1 h desde `startedAt` y la gracia del préstamo. Una ronda vacía (`startedAt == 0`) o un feed que revierte pospone solo la liquidación.
-- Nostr: `prepareNostrPayload` devuelve null siempre (`utils/sovereignSurface.ts`, línea 128). Ningún componente ni idioma ofrece mensaje privado. `nostrMayPublish` también es falso, incluida la mora.
+- Nostr: `prepareNostrPayload` devuelve null siempre (`utils/sovereignSurface.ts`, línea 123). Ningún componente ni idioma ofrece mensaje privado. `nostrMayPublish` también es falso, incluida la mora.
 - Residuos: `scripts/check-external-services.mjs` pasa. Los nombres prohibidos viven en esa lista y en `scripts/run-full-cyber-audit.sh`, que sigue citando `Groth16Verifier` y `zk-contracts` como carpetas a excluir. Esas carpetas ya no existen. No se tocó el script porque los tests leen el resto del archivo.
 - Credit: 21891 bytes, 2685 libres de 24576.
 

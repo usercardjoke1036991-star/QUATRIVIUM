@@ -141,6 +141,7 @@ export function setMonoClockForTests(clock: (() => number) | null): void {
   monoClockForTests = clock;
   lastChainMono = -CHAIN_POLL_MS;
   chainFlight = null;
+  gateQueue = Promise.resolve();
 }
 
 /**
@@ -331,6 +332,8 @@ export function refreshLockChain(force = false): Promise<number> {
   if (!due) return tickLockWait();
   let flight: Promise<number> = Promise.resolve(0);
   flight = withGate(async () => {
+    const gate = await readGate();
+    if (gate.left <= 0) return 0;
     const chain = await trustedChainMs();
     lastChainMono = monoNow();
     return applySample(chain);
