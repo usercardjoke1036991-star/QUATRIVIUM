@@ -1,11 +1,9 @@
-import { BOUND_UNKNOWN, getBoundWallet } from './deviceBinding';
-import {
-  abortPasswordSetup,
-  clearLockAfterSuccess,
-  preparePasswordReplace,
-  setPassword,
-} from './appLock';
 import { addressFromPhrase, importFromPhrase } from './appWallet';
+import {
+  clearLockAfterSuccess,
+  clearRestorePasswordBackup,
+  restorePasswordForPhrase,
+} from './appLock';
 import type { HDNodeWallet } from 'ethers';
 
 export type RestoreAccountResult =
@@ -17,6 +15,7 @@ export type RestoreAccountResult =
 
 /**
  * Restaura solo si la frase es de este teléfono (o no hay vinculada).
+ * La comprobación del vínculo y el token viven en appLock.
  * No escribe nada hasta pasar esa comprobación. Si falla a mitad, restaura la contraseña.
  */
 export async function restoreAccountOnDevice(input: {
@@ -29,28 +28,27 @@ export async function restoreAccountOnDevice(input: {
   } catch {
     return { ok: false, reason: 'phrase' };
   }
-  const bound = await getBoundWallet();
-  if (bound === BOUND_UNKNOWN) return { ok: false, reason: 'store-unknown' };
-  if (bound && bound !== address) return { ok: false, reason: 'wallet-other-app' };
-
-  let token = '';
   try {
-    token = await preparePasswordReplace();
+    await restorePasswordForPhrase({ phraseAddress: address, password: input.password });
   } catch (error) {
-    return { ok: false, reason: error instanceof Error ? error.message : 'password' };
+    const code = error instanceof Error ? error.message : 'password';
+    if (code === 'store-unknown' || code === 'wallet-other-app' || code === 'phrase') {
+      return { ok: false, reason: code };
+    }
+    return { ok: false, reason: code || 'password' };
   }
   try {
-    await setPassword(input.password, undefined, {
-      replaceToken: token,
-      keepLockCounters: true,
-    });
     const wallet = await importFromPhrase(input.phrase);
     await clearLockAfterSuccess();
+    clearRestorePasswordBackup();
     return { ok: true, wallet };
   } catch (error) {
-    await abortPasswordSetup().catch(() => {});
+    const { abortPasswordSetup, takeRestoreTokenForAbort } = await import('./appLock');
+    const token = takeRestoreTokenForAbort();
+    await abortPasswordSetup(token).catch(() => {});
     const code = error instanceof Error ? error.message : 'import';
     if (code === 'device-bound') return { ok: false, reason: 'wallet-other-app' };
+    if (code === 'store-unknown') return { ok: false, reason: 'store-unknown' };
     if (code === 'phrase' || code.includes('phrase')) return { ok: false, reason: 'phrase' };
     return { ok: false, reason: code || 'import' };
   }

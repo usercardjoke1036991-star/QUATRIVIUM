@@ -33,12 +33,10 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           PUSH_BEFORE: ${{ github.event.before }}
-          BASE_REF: ${{ github.base_ref }}
         run: |
           set -euo pipefail
           if [ "$EVENT_NAME" = "pull_request" ]; then
-            git fetch --no-tags origin "$BASE_REF"
-            gitleaks detect --source . --redact --no-banner --exit-code 1 --log-opts="origin/${BASE_REF}..HEAD"
+            gitleaks detect --source . --redact --no-banner --exit-code 1 --log-opts="HEAD"
           elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
             gitleaks detect --source . --redact --no-banner --exit-code 1
           elif [ -z "$PUSH_BEFORE" ] || [ "$PUSH_BEFORE" = "0000000000000000000000000000000000000000" ]; then

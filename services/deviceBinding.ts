@@ -83,9 +83,11 @@ export async function getBoundWallet(): Promise<string> {
 
 export async function bindAppWallet(address: string): Promise<void> {
   const next = address.toLowerCase();
-  if (!/^0x[0-9a-f]{40}$/.test(next)) return;
+  if (!/^0x[0-9a-f]{40}$/.test(next)) throw new Error('bind-unconfirmed');
   await AsyncStorage.setItem(BOUND_FALLBACK, next).catch(() => {});
   await withLimit(SecureStore.setItemAsync(BOUND_WALLET_KEY, next, OPTIONS), 2500, undefined);
+  const back = await getBoundWallet();
+  if (back !== next) throw new Error('bind-unconfirmed');
 }
 
 export async function clearBoundWallet(): Promise<void> {

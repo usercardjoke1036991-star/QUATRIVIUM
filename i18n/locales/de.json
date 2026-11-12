@@ -345,6 +345,7 @@
   "lockPinWrong": "Falsche PIN.",
   "lockUnexpected": "Unerwarteter Fehler. Erneut versuchen.",
   "lockStoreUnknown": "Sicherheitsstatus nicht lesbar. Erneut versuchen.",
+  "lockVerifyTimeout": "Die Prüfung dauerte zu lange. Erneut versuchen.",
   "lockPinWeak": "Diese PIN ist zu einfach. Keine Wiederholungen, Folgen oder offensichtliche Daten.",
   "lockKdfMissing": "Dieses Telefon baut den Schluessel nicht. Kein schwacher Weg.",
   "lockKdfWait": "Das kann ein paar Sekunden dauern.",

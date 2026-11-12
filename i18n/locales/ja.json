@@ -345,6 +345,7 @@
   "lockPinWrong": "PIN が違います。",
   "lockUnexpected": "予期しないエラーです。やり直してください。",
   "lockStoreUnknown": "保護状態を読めません。やり直してください。",
+  "lockVerifyTimeout": "確認に時間がかかりすぎました。やり直してください。",
   "lockPinWeak": "その PIN は簡単すぎます。繰り返し、連続、分かりやすい日付は使わないでください。",
   "lockKdfMissing": "この端末は錠の鍵を作れません。弱い方式には落ちません。",
   "lockKdfWait": "数秒かかることがあります。",

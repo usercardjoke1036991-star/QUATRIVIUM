@@ -162,6 +162,7 @@ describe('app lock PBKDF2', function () {
     lock.setLockPhaseForTests(null);
     lock.setMonoClockForTests(null);
     lock.setChainStampsForTests(() => []);
+    auth.setTotpRunIdForTests(null);
     device.setScreenLockForTests(null);
     crashOnSecretPromote = false;
     randomByte = 0;
@@ -1361,14 +1362,26 @@ describe('app lock PBKDF2', function () {
 
   it('restores the previous password when import fails after the write', async function () {
     const { sha256 } = require('@noble/hashes/sha2');
+    const { Mnemonic, HDNodeWallet, randomBytes } = require('ethers');
     kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
     await lock.setPassword(PASSWORD);
     const passwordBefore = memory.get('quatrivium.lock.password');
+    const owner = HDNodeWallet.fromMnemonic(Mnemonic.fromEntropy(randomBytes(32)));
+    memory.set('quatrivium.device.boundWallet', owner.address.toLowerCase());
     lock.lockNow();
-    const token = await lock.preparePasswordReplace();
-    await lock.setPassword('Nueva-9z', undefined, { replaceToken: token, keepLockCounters: true });
-    expect(memory.get('quatrivium.lock.password')).to.not.equal(passwordBefore);
-    await lock.abortPasswordSetup();
+    const original = wallet.importFromPhrase;
+    wallet.importFromPhrase = async () => {
+      throw new Error('wallet-persist');
+    };
+    try {
+      const result = await restore.restoreAccountOnDevice({
+        phrase: owner.mnemonic.phrase,
+        password: 'Nueva-9z',
+      });
+      expect(result.ok).to.equal(false);
+    } finally {
+      wallet.importFromPhrase = original;
+    }
     expect(memory.get('quatrivium.lock.password')).to.equal(passwordBefore);
     expect((await lock.checkPassword(PASSWORD)).ok).to.equal(true);
   });
@@ -1689,7 +1702,7 @@ describe('app lock PBKDF2', function () {
     expect(denied.ok).to.equal(false);
   });
 
-  it('drops a totp-only wrap without the device secret and refuses unlock when the phone lock is open', async function () {
+  it('keeps a totp wrap when the device secret is missing and the guard is not lost', async function () {
     const { sha256 } = require('@noble/hashes/sha2');
     kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
     await lock.setPassword(PASSWORD);
@@ -1703,7 +1716,8 @@ describe('app lock PBKDF2', function () {
     lock.lockNow();
     const gone = await auth.unlockWithAuthenticator(totp.totpAt(secret, Date.now()));
     expect(gone.ok).to.equal(false);
-    expect(memory.has('qc_totp_wrap_v1')).to.equal(false);
+    expect(memory.has('qc_totp_wrap_v1')).to.equal(true);
+    expect(memory.get('qc_totp_secret_v1')).to.equal(secret);
     memory.set('qc_totp_secret_v1', secret);
     memory.set('quatrivium.lock.deviceAuth', '0');
     memory.set('quatrivium.lock.deviceSecret', 'ef'.repeat(32));
@@ -1807,5 +1821,266 @@ describe('app lock PBKDF2', function () {
         authOn: false,
       })
     ).to.equal('password');
+  });
+
+  it('rejects a foreign restore when the bound link is gone but the wallet remains', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    const { Mnemonic, HDNodeWallet, randomBytes } = require('ethers');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    await lock.setPassword(PASSWORD);
+    memory.set('quatrivium.appWallet.v1', 'sobre-dueno-intact');
+    memory.delete('quatrivium.device.boundWallet');
+    memory.delete('mem:quatrivium.device.boundWallet.fallback');
+    const passwordBefore = memory.get('quatrivium.lock.password');
+    const walletBefore = memory.get('quatrivium.appWallet.v1');
+    lock.lockNow();
+    const foreign = HDNodeWallet.fromMnemonic(Mnemonic.fromEntropy(randomBytes(32)));
+    const result = await restore.restoreAccountOnDevice({
+      phrase: foreign.mnemonic.phrase,
+      password: 'Ataque-9z',
+    });
+    expect(result.ok).to.equal(false);
+    expect(result.reason).to.equal('store-unknown');
+    expect(memory.get('quatrivium.lock.password')).to.equal(passwordBefore);
+    expect(memory.get('quatrivium.appWallet.v1')).to.equal(walletBefore);
+    expect((await lock.checkPassword(PASSWORD)).ok).to.equal(true);
+  });
+
+  it('keeps a successful password when abort runs after setPassword', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    await lock.setPassword(PASSWORD);
+    await lock.setPassword('Nueva-9z');
+    expect(memory.get('quatrivium.lock.password')).to.be.a('string');
+    await lock.abortPasswordSetup();
+    expect(memory.get('quatrivium.lock.password')).to.be.a('string');
+    expect((await lock.checkPassword('Nueva-9z')).ok).to.equal(true);
+  });
+
+  it('rejects an expired or foreign restore token', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    const { Mnemonic, HDNodeWallet, randomBytes } = require('ethers');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    await lock.setPassword(PASSWORD);
+    const owner = HDNodeWallet.fromMnemonic(Mnemonic.fromEntropy(randomBytes(32)));
+    const passwordBefore = memory.get('quatrivium.lock.password');
+    memory.set('quatrivium.device.boundWallet', owner.address.toLowerCase());
+    memory.delete('mem:quatrivium.device.boundWallet.fallback');
+    lock.lockNow();
+    let issued = '';
+    lock.setReplaceTokenObserverForTests((token) => {
+      issued = token;
+      throw new Error('capture-token');
+    });
+    const paused = await restore.restoreAccountOnDevice({
+      phrase: owner.mnemonic.phrase,
+      password: 'Nueva-9z',
+    });
+    lock.setReplaceTokenObserverForTests(null);
+    expect(paused.ok).to.equal(false);
+    expect(paused.reason).to.equal('capture-token');
+    expect(issued).to.be.a('string').and.not.equal('');
+    let foreign = '';
+    try {
+      await lock.setPassword('Nueva-9z', undefined, {
+        replaceToken: issued,
+        restoreAddress: `0x${'ab'.repeat(20)}`,
+      });
+    } catch (error) {
+      foreign = error instanceof Error ? error.message : 'throw';
+    }
+    expect(foreign).to.equal('password-locked');
+    expect(memory.get('quatrivium.lock.password')).to.equal(passwordBefore);
+    lock.advanceReplaceClockForTests(61_000);
+    let late = '';
+    try {
+      await lock.setPassword('Nueva-9z', undefined, {
+        replaceToken: issued,
+        restoreAddress: owner.address,
+      });
+    } catch (error) {
+      late = error instanceof Error ? error.message : 'throw';
+    }
+    expect(late).to.equal('password-locked');
+    expect(memory.get('quatrivium.lock.password')).to.equal(passwordBefore);
+    for (const key of [...memory.keys()]) {
+      if (String(key).startsWith('quatrivium.lock.gate')) memory.delete(key);
+    }
+    expect((await lock.checkPassword(PASSWORD)).ok).to.equal(true);
+  });
+
+  it('rejects a restore token used twice', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    const { Mnemonic, HDNodeWallet, randomBytes } = require('ethers');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    await lock.setPassword(PASSWORD);
+    const owner = HDNodeWallet.fromMnemonic(Mnemonic.fromEntropy(randomBytes(32)));
+    memory.set('quatrivium.device.boundWallet', owner.address.toLowerCase());
+    lock.lockNow();
+    let issued = '';
+    lock.setReplaceTokenObserverForTests((token) => {
+      issued = token;
+    });
+    const first = await restore.restoreAccountOnDevice({
+      phrase: owner.mnemonic.phrase,
+      password: 'Nueva-9z',
+    });
+    lock.setReplaceTokenObserverForTests(null);
+    expect(first.ok).to.equal(true);
+    const saved = memory.get('quatrivium.lock.password');
+    lock.lockNow();
+    let again = '';
+    try {
+      await lock.setPassword('OtraClave-9z', undefined, {
+        replaceToken: issued,
+        restoreAddress: owner.address,
+      });
+    } catch (error) {
+      again = error instanceof Error ? error.message : 'throw';
+    }
+    expect(again).to.equal('password-locked');
+    expect(memory.get('quatrivium.lock.password')).to.equal(saved);
+    for (const key of [...memory.keys()]) {
+      if (String(key).startsWith('quatrivium.lock.gate')) memory.delete(key);
+    }
+    expect((await lock.checkPassword('Nueva-9z')).ok).to.equal(true);
+  });
+
+  it('accepts a valid totp ten minutes later after an app restart', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    memory.delete('quatrivium.lock.gate');
+    memory.delete('quatrivium.lock.attempts');
+    await lock.setPassword(PASSWORD);
+    const secret = totp.bytesToBase32(new Uint8Array(20).fill(3));
+    memory.set('qc_totp_secret_v1', secret);
+    memory.set('quatrivium.lock.deviceAuth', '1');
+    memory.set('quatrivium.lock.deviceSecret', '22'.repeat(32));
+    secretMeta.set('quatrivium.lock.deviceSecret', { requireAuthentication: true });
+    await auth.persistAuthenticatorWrap(session.getWalletWrapKey());
+    const first = totp.totpAt(secret, Date.now());
+    expect((await auth.verifyAuthenticator(first)).ok).to.equal(true);
+    for (const key of [...memory.keys()]) {
+      if (String(key).startsWith('quatrivium.lock.gate')) memory.delete(key);
+      if (String(key).includes('totp_step_run')) memory.delete(key);
+    }
+    auth.setTotpRunIdForTests('run-b');
+    memory.set('qc_totp_step_mono_v1', String(performance.now() + 500_000));
+    const future = Date.now() + 10 * 60_000;
+    const later = totp.totpAt(secret, future);
+    const realNow = Date.now;
+    Date.now = () => future;
+    try {
+      const opened = await auth.verifyAuthenticator(later);
+      expect(opened.ok).to.equal(true);
+    } finally {
+      Date.now = realNow;
+    }
+  });
+
+  it('still rejects a used totp after an app restart', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    memory.delete('quatrivium.lock.gate');
+    memory.delete('quatrivium.lock.attempts');
+    await lock.setPassword(PASSWORD);
+    const secret = totp.bytesToBase32(new Uint8Array(20).fill(1));
+    memory.set('qc_totp_secret_v1', secret);
+    memory.set('quatrivium.lock.deviceAuth', '1');
+    memory.set('quatrivium.lock.deviceSecret', '33'.repeat(32));
+    secretMeta.set('quatrivium.lock.deviceSecret', { requireAuthentication: true });
+    await auth.persistAuthenticatorWrap(session.getWalletWrapKey());
+    const code = totp.totpAt(secret, Date.now());
+    expect((await auth.verifyAuthenticator(code)).ok).to.equal(true);
+    memory.delete('qc_totp_step_run_v1');
+    memory.set('qc_totp_step_mono_v1', '1');
+    if (typeof auth.setTotpRunIdForTests === 'function') {
+      auth.setTotpRunIdForTests('run-c');
+    }
+    if (memory.has('quatrivium.lock.gate')) {
+      const row = JSON.parse(memory.get('quatrivium.lock.gate'));
+      row.left = 0;
+      memory.set('quatrivium.lock.gate', JSON.stringify(row));
+    }
+    expect((await auth.verifyAuthenticator(code)).ok).to.equal(false);
+  });
+
+  it('does not open the wallet when a late success arrives after the verify budget', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    await lock.setPassword(PASSWORD);
+    lock.lockNow();
+    const passwordBefore = memory.get('quatrivium.lock.password');
+    for (const key of [...memory.keys()]) {
+      if (String(key).startsWith('quatrivium.lock.gate')) memory.delete(key);
+    }
+    lock.setVerifyBudgetForTests(50);
+    let release = () => {};
+    lock.setLockPhaseForTests({
+      afterMatch: () =>
+        new Promise((done) => {
+          release = () => done();
+        }),
+    });
+    const hung = lock.checkPassword(PASSWORD);
+    await new Promise((done) => setTimeout(done, 150));
+    release();
+    const result = await hung;
+    if (!result.timeout) throw new Error(`timeout-miss ${JSON.stringify(result)}`);
+    expect(result.timeout).to.equal(true);
+    expect(result.ok).to.equal(false);
+    expect(session.getWalletWrapKey()).to.equal(null);
+    expect(memory.get('quatrivium.lock.password')).to.equal(passwordBefore);
+    expect(copy.lockFailureCopy('pin', result).key).to.equal('lockVerifyTimeout');
+    lock.setLockPhaseForTests(null);
+    lock.setVerifyBudgetForTests(null);
+  });
+
+  it('keeps the authenticator wrap when the system prompt is cancelled', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    await lock.setPassword(PASSWORD);
+    const secret = totp.bytesToBase32(new Uint8Array(20).fill(4));
+    memory.set('qc_totp_secret_v1', secret);
+    memory.set('quatrivium.lock.deviceAuth', '1');
+    memory.set('quatrivium.lock.deviceSecret', '44'.repeat(32));
+    secretMeta.set('quatrivium.lock.deviceSecret', { requireAuthentication: true });
+    await auth.persistAuthenticatorWrap(session.getWalletWrapKey());
+    const wrap = memory.get('qc_totp_wrap_v1');
+    expect(wrap).to.be.a('string');
+    rejectDeviceAuth = true;
+    authError = 'user canceled the authentication';
+    lock.lockNow();
+    const cancelled = await auth.unlockWithAuthenticator(totp.totpAt(secret, Date.now()));
+    rejectDeviceAuth = false;
+    expect(cancelled.ok).to.equal(false);
+    expect(memory.get('qc_totp_secret_v1')).to.equal(secret);
+    expect(memory.get('qc_totp_wrap_v1')).to.equal(wrap);
+  });
+
+  it('refuses the legacy totp wrap when the migration mark cannot be read', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    await lock.setPassword(PASSWORD);
+    const secret = totp.bytesToBase32(new Uint8Array(20).fill(5));
+    memory.set('qc_totp_secret_v1', secret);
+    memory.set('quatrivium.lock.deviceAuth', '1');
+    memory.set('quatrivium.lock.deviceSecret', '55'.repeat(32));
+    secretMeta.set('quatrivium.lock.deviceSecret', { requireAuthentication: true });
+    const wrap = session.getWalletWrapKey();
+    const legacyKey = await box.deriveWrapKeyAsync(secret, 'qc.totp.wrap', 8000);
+    memory.set('qc_totp_wrap_v1', box.sealSecret(wrap, legacyKey));
+    memory.delete('qc_totp_wrap_mig_v1');
+    const store = require('expo-secure-store');
+    const previous = store.getItemAsync;
+    store.getItemAsync = async (key, options) => {
+      if (String(key).includes('totp_wrap_mig')) return new Promise(() => {});
+      return previous(key, options);
+    };
+    lock.lockNow();
+    const denied = await auth.unlockWithAuthenticator(totp.totpAt(secret, Date.now()));
+    store.getItemAsync = previous;
+    expect(denied.ok).to.equal(false);
+    expect(session.getWalletWrapKey()).to.equal(null);
   });
 });

@@ -9,7 +9,13 @@ import { migrateSealedValue, type LockStore } from '../utils/lockMigration';
 import { isSealedBlob, openSecret, sealSecret, sealedBlobVersion } from '../utils/secretBox';
 import { allowWalletAsyncFallback } from '../utils/walletVaultPolicy';
 import { assertRestoreFitsThisDevice, lookupBoundWalletOnThisDevice } from './deviceClaim';
-import { bindAppWallet, claimDeviceWallet, clearBoundWallet } from './deviceBinding';
+import {
+  BOUND_UNKNOWN,
+  bindAppWallet,
+  claimDeviceWallet,
+  clearBoundWallet,
+  getBoundWallet,
+} from './deviceBinding';
 import { getWalletWrapKey } from './walletSession';
 import { storeSlot } from '../utils/storeSlot';
 
@@ -50,7 +56,7 @@ function parseStored(raw: string): StoredWallet | null {
   }
 }
 
-async function readRawWallet(): Promise<string | null> {
+export async function readRawWallet(): Promise<string | null> {
   const live = !allowWalletAsyncFallback(getProductMode());
   if (live) {
     const secure = await SecureStore.getItemAsync(WALLET_KEY).catch(() => null);
@@ -135,10 +141,20 @@ async function persistRecord(record: StoredWallet): Promise<void> {
 async function writeStored(record: StoredWallet): Promise<void> {
   const claim = await claimDeviceWallet(record.address);
   if (!claim.ok) {
-    throw new Error('device-bound');
+    throw new Error(claim.bound === BOUND_UNKNOWN ? 'store-unknown' : 'device-bound');
   }
   await persistRecord(record);
-  await bindAppWallet(record.address);
+  try {
+    await bindAppWallet(record.address);
+  } catch (error) {
+    await wipeAppWallet().catch(() => {});
+    throw error instanceof Error ? error : new Error('bind-unconfirmed');
+  }
+  const back = await getBoundWallet();
+  if (back !== record.address.toLowerCase()) {
+    await wipeAppWallet().catch(() => {});
+    throw new Error('bind-unconfirmed');
+  }
 }
 
 export async function walletOpensWith(key: string): Promise<boolean> {
@@ -267,11 +283,6 @@ export async function wipeAppWallet(): Promise<void> {
     // ignore
   }
   await clearBoundWallet();
-}
-
-export async function recreateAppWallet(): Promise<HDNodeWallet> {
-  await wipeAppWallet();
-  return createAppWallet();
 }
 
 function createTwentyFourWordWallet(): HDNodeWallet {

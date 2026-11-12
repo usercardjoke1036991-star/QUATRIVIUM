@@ -49,6 +49,7 @@ import {
   getSecretPhrase,
   isPhraseBackedUp,
   loadAppWallet,
+  readRawWallet,
   wipeAppWallet,
   importFromPhrase,
   isValidSecretPhrase,
@@ -60,6 +61,7 @@ import {
   saveClaimedUsername,
 } from '../services/accountUsername';
 import { lookupBoundWalletOnThisDevice } from '../services/deviceClaim';
+import { BOUND_UNKNOWN, getBoundWallet } from '../services/deviceBinding';
 import { restoreAccountOnDevice } from '../services/restoreAccount';
 import { isAuthenticatorEnabled, unlockWithAuthenticator } from '../services/authenticator';
 import {
@@ -829,7 +831,13 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
       setSetupStage('phraseReveal');
     } catch (err) {
       await abortPasswordSetup().catch(() => {});
-      await wipeAppWallet().catch(() => {});
+      const bound = await getBoundWallet().catch(() => BOUND_UNKNOWN);
+      const raw = await readRawWallet().catch(() => 'unreadable');
+      const passwordLeft = await isPasswordSet().catch(() => true);
+      const pinLeft = await isPinSet().catch(() => true);
+      if (!(bound || raw || passwordLeft || pinLeft)) {
+        await wipeAppWallet().catch(() => {});
+      }
       passwordCommittedRef.current = false;
       const code = err instanceof Error ? err.message : '';
       setError(

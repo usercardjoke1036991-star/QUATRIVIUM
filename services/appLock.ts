@@ -92,8 +92,13 @@ export const PIN_LENGTH = 6;
 export const PIN_FAIL_LIMIT = 10;
 /** Diez TOTP seguidos mal: el autenticador no desbloquea; abren la contraseña o la frase. */
 export const TOTP_FAIL_LIMIT = 10;
-/** Presupuesto interno de una verificación (sin contar avisos del sistema). */
+/**
+ * Presupuesto de 20 s para SecureStore, PBKDF2, rewrap y escrituras.
+ * Empieza cuando vuelve el aviso del sistema (huella o bloqueo del teléfono).
+ * Ese aviso tiene su propio tope de 120 s y no entra en estos 20 s.
+ */
 const VERIFY_INTERNAL_MS = 20_000;
+const SYSTEM_PROMPT_MS = 120_000;
 let verifyBudgetMs = VERIFY_INTERNAL_MS;
 export { PASSWORD_LENGTH, isValidMasterPassword };
 export const PIN_ROUNDS = 20_000;
@@ -137,6 +142,8 @@ interface GateRecord {
 }
 
 let monoClockForTests: (() => number) | null = null;
+let replaceClockForTests: (() => number) | null = null;
+let replaceOffsetForTests = 0;
 let chainStampsForTests: (() => Promise<(number | null)[]> | (number | null)[]) | null = null;
 let beforeVerifyForTests: (() => Promise<void> | void) | null = null;
 let afterMatchForTests: (() => Promise<void> | void) | null = null;
@@ -144,28 +151,66 @@ let anchorTail: Promise<void> = Promise.resolve();
 let anchorTimer: ReturnType<typeof setTimeout> | null = null;
 let lastLockLeft = 0;
 let verifying = false;
-let passwordBackup: { secure: string | null; fallback: string | null } | null = null;
-let passwordReplaceToken: string | null = null;
+let passwordBackup: { secure: string | null; fallback: string | null; token: string } | null = null;
+let passwordReplaceToken: {
+  token: string;
+  address: string;
+  expiresMono: number;
+} | null = null;
+const REPLACE_TOKEN_MS = 60_000;
 const STORE_UNKNOWN = Symbol('store-unknown');
 
 function busyResult(): PinCheck {
   return { ok: false, remainingMs: 0, locked: false, busy: true };
 }
 
-function withVerifyBudget<T>(promise: Promise<T>, ms: number): Promise<T> {
+let armInternalBudget: (() => void) | null = null;
+
+/** El aviso del sistema ya volvió: a partir de aquí corren los 20 s. */
+export function markSystemPromptDone(): void {
+  armInternalBudget?.();
+}
+
+function withVerifyBudget<T>(job: (signal: AbortSignal) => Promise<T>, ms: number): Promise<T> {
+  const controller = new AbortController();
+  let settled = false;
+  let internalTimer: ReturnType<typeof setTimeout> | null = null;
+  let promptTimer: ReturnType<typeof setTimeout> | null = null;
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('lock-verify-timeout')), ms);
-    promise.then(
-      (value) => {
-        clearTimeout(timer);
-        resolve(value);
-      },
-      (error) => {
-        clearTimeout(timer);
-        reject(error);
+    const finish = (ok: boolean, value: T | unknown) => {
+      if (settled) return;
+      settled = true;
+      if (internalTimer) clearTimeout(internalTimer);
+      if (promptTimer) clearTimeout(promptTimer);
+      armInternalBudget = null;
+      if (ok && !controller.signal.aborted) resolve(value as T);
+      else reject(value instanceof Error ? value : new Error('lock-verify-timeout'));
+    };
+    const arm = () => {
+      if (settled || internalTimer) return;
+      if (promptTimer) {
+        clearTimeout(promptTimer);
+        promptTimer = null;
       }
+      internalTimer = setTimeout(() => {
+        controller.abort();
+        finish(false, new Error('lock-verify-timeout'));
+      }, ms);
+    };
+    armInternalBudget = arm;
+    promptTimer = setTimeout(() => {
+      controller.abort();
+      finish(false, new Error('lock-verify-timeout'));
+    }, SYSTEM_PROMPT_MS);
+    job(controller.signal).then(
+      (value) => finish(!controller.signal.aborted, value),
+      (error) => finish(false, error)
     );
   });
+}
+
+function throwIfAborted(signal: AbortSignal): void {
+  if (signal.aborted) throw new Error('lock-verify-timeout');
 }
 
 /** Solo pruebas: acorta el presupuesto interno de withLockVerify. */
@@ -174,11 +219,14 @@ export function setVerifyBudgetForTests(ms: number | null): void {
 }
 
 /** Mientras un PIN, una contraseña o un TOTP se comprueban, el resto no toca el candado. */
-export async function withLockVerify<T>(job: () => Promise<T>, busy: T): Promise<T> {
+export async function withLockVerify<T>(
+  job: (signal: AbortSignal) => Promise<T>,
+  busy: T
+): Promise<T> {
   if (verifying) return busy;
   verifying = true;
   try {
-    return await withVerifyBudget(Promise.resolve().then(job), verifyBudgetMs);
+    return await withVerifyBudget(job, verifyBudgetMs);
   } finally {
     verifying = false;
   }
@@ -189,6 +237,7 @@ function timeoutCheckResult(): PinCheck {
     ok: false,
     remainingMs: lastLockLeft,
     locked: lastLockLeft > 0,
+    timeout: true,
   };
 }
 
@@ -224,6 +273,9 @@ export function setMonoClockForTests(clock: (() => number) | null): void {
   verifyBudgetMs = VERIFY_INTERNAL_MS;
   passwordReplaceToken = null;
   passwordBackup = null;
+  replaceClockForTests = null;
+  replaceOffsetForTests = 0;
+  replaceTokenObserverForTests = null;
   beforeVerifyForTests = null;
   afterMatchForTests = null;
 }
@@ -240,6 +292,34 @@ export function setChainStampsForTests(
 
 function monoNow(): number {
   return monoClockForTests ? monoClockForTests() : performance.now();
+}
+
+function replaceNow(): number {
+  const base = replaceClockForTests ? replaceClockForTests() : performance.now();
+  return base + replaceOffsetForTests;
+}
+
+/** Solo pruebas: adelanta el reloj del token de restaurar. */
+export function advanceReplaceClockForTests(ms: number): void {
+  replaceOffsetForTests += ms;
+}
+
+/** Solo pruebas: sustituye el reloj del token. null vuelve a performance.now(). */
+export function setReplaceClockForTests(clock: (() => number) | null): void {
+  replaceClockForTests = clock;
+  if (!clock) replaceOffsetForTests = 0;
+}
+
+let replaceTokenObserverForTests: ((token: string) => void) | null = null;
+
+/** Solo pruebas: ve el token interno justo después de emitirlo. */
+export function setReplaceTokenObserverForTests(observer: ((token: string) => void) | null): void {
+  replaceTokenObserverForTests = observer;
+}
+
+/** Solo pruebas: deja visible el reloj del token. */
+export function replaceClockNowForTests(): number {
+  return replaceNow();
 }
 
 async function hashSecret(secret: string, salt: string, rounds: number): Promise<string> {
@@ -1109,6 +1189,7 @@ export type PinCheck =
       storeUnknown?: boolean;
       busy?: boolean;
       totpBlocked?: boolean;
+      timeout?: boolean;
     };
 
 function pinReady(record: PinRecord): boolean {
@@ -1133,7 +1214,10 @@ function deviceCheck(error: unknown): PinCheck {
   throw error;
 }
 
-async function checkPinBody(pin: string): Promise<PinCheck> {
+async function checkPinBody(
+  pin: string,
+  signal: AbortSignal = new AbortController().signal
+): Promise<PinCheck> {
   const record = await readPinRecord();
   if (!record) {
     return { ok: false, remainingMs: 0, locked: false };
@@ -1148,6 +1232,8 @@ async function checkPinBody(pin: string): Promise<PinCheck> {
   } catch (error) {
     return deviceCheck(error);
   }
+  markSystemPromptDone();
+  throwIfAborted(signal);
   const reserved = await reserveAttempt('pin');
   if (reserved.status !== 'ok') {
     if (reserved.status === 'unknown') return storeUnknownResult();
@@ -1158,6 +1244,7 @@ async function checkPinBody(pin: string): Promise<PinCheck> {
     return { ok: false, remainingMs: 0, locked: true };
   }
   if (beforeVerifyForTests) await beforeVerifyForTests();
+  throwIfAborted(signal);
   try {
     material = current
       ? await derivePinMaterial(secret, record.salt, record.rounds || PIN_PBKDF2_ROUNDS)
@@ -1226,8 +1313,10 @@ async function checkPinBody(pin: string): Promise<PinCheck> {
         device: PIN_DEVICE,
         deviceAuth: device.authenticated ? 1 : 0,
       };
+      throwIfAborted(signal);
       await SecureStore.setItemAsync(PIN_KEY, JSON.stringify(updated), OPTIONS);
     }
+    throwIfAborted(signal);
     setWalletWrapKey(fresh.wrap);
   } else {
     const oldKeys: string[] = [];
@@ -1256,9 +1345,12 @@ async function checkPinBody(pin: string): Promise<PinCheck> {
       device: PIN_DEVICE,
       deviceAuth: device.authenticated ? 1 : 0,
     };
+    throwIfAborted(signal);
     await SecureStore.setItemAsync(PIN_KEY, JSON.stringify(updated), OPTIONS);
+    throwIfAborted(signal);
     setWalletWrapKey(fresh.wrap);
   }
+  throwIfAborted(signal);
   await clearLockAfterSuccess();
   await persistCompanionWraps();
   await runDeviceRetry(pin);
@@ -1345,7 +1437,7 @@ export async function checkPin(pin: string): Promise<PinCheck> {
     return { ok: false, remainingMs: 0, locked: false };
   }
   try {
-    return await withLockVerify(() => checkPinBody(pin), busyResult());
+    return await withLockVerify((signal) => checkPinBody(pin, signal), busyResult());
   } catch (error) {
     if (error instanceof Error && error.message === 'lock-verify-timeout') {
       return timeoutCheckResult();
@@ -1413,7 +1505,7 @@ export async function clearPin(current: string): Promise<boolean> {
   return true;
 }
 
-async function capturePasswordBackup(): Promise<void> {
+async function capturePasswordBackup(token: string): Promise<void> {
   let secure: string | null = null;
   let fallback: string | null = null;
   try {
@@ -1426,24 +1518,66 @@ async function capturePasswordBackup(): Promise<void> {
   } catch {
     fallback = null;
   }
-  passwordBackup = { secure, fallback };
+  passwordBackup = { secure, fallback, token };
+}
+
+function clearPasswordBackup(): void {
+  passwordBackup = null;
+  passwordReplaceToken = null;
 }
 
 /**
- * Tras comprobar que la frase es de este teléfono, emite un token para sobrescribir
- * la contraseña sin sesión abierta. Guarda una copia exacta del registro anterior.
+ * Comprueba el vínculo en este teléfono y emite un token interno de un solo uso.
+ * 60 s medidos con performance.now(). No se exporta el token.
  */
-export async function preparePasswordReplace(): Promise<string> {
-  await capturePasswordBackup();
+export async function restorePasswordForPhrase(input: {
+  phraseAddress: string;
+  password: string;
+}): Promise<void> {
+  const address = String(input.phraseAddress || '').toLowerCase();
+  const { BOUND_UNKNOWN, getBoundWallet } = await import('./deviceBinding');
+  const { readRawWallet } = await import('./appWallet');
+  const bound = await getBoundWallet();
+  if (bound === BOUND_UNKNOWN) throw new Error('store-unknown');
+  const raw = await readRawWallet();
+  const passwordSet = await isPasswordSet();
+  const pinSet = await isPinSet();
+  const sessionOpen = Boolean(getWalletWrapKey());
+  if (!bound && (raw || passwordSet || pinSet) && !sessionOpen) {
+    throw new Error('store-unknown');
+  }
+  if (bound && bound !== address) throw new Error('wallet-other-app');
   const token = Crypto.randomUUID();
-  passwordReplaceToken = token;
+  const expiresMono = replaceNow() + REPLACE_TOKEN_MS;
+  await capturePasswordBackup(token);
+  passwordReplaceToken = { token, address, expiresMono };
+  lockNow();
+  replaceTokenObserverForTests?.(token);
+  if (replaceNow() > expiresMono) {
+    clearPasswordBackup();
+    throw new Error('password-locked');
+  }
+  await setPassword(input.password, undefined, {
+    replaceToken: token,
+    restoreAddress: address,
+    keepLockCounters: true,
+  });
+}
+
+export function clearRestorePasswordBackup(): void {
+  clearPasswordBackup();
+}
+
+/** Token de un solo uso para abortar el mismo intento de restaurar. */
+export function takeRestoreTokenForAbort(): string {
+  const token = passwordReplaceToken?.token || passwordBackup?.token || '';
   return token;
 }
 
 export async function setPassword(
   password: string,
   conveniencePin?: string,
-  options?: { replaceToken?: string; keepLockCounters?: boolean }
+  options?: { replaceToken?: string; restoreAddress?: string; keepLockCounters?: boolean }
 ): Promise<string> {
   if (!isValidMasterPassword(password)) {
     throw passwordError(password);
@@ -1454,12 +1588,21 @@ export async function setPassword(
   const existing = await readPasswordRecord();
   if (existing) {
     const sessionOpen = Boolean(getWalletWrapKey());
+    const issued = passwordReplaceToken;
     const token = options?.replaceToken || '';
-    const tokenOk = Boolean(token) && token === passwordReplaceToken;
+    const address = String(options?.restoreAddress || '').toLowerCase();
+    const tokenOk = Boolean(
+      issued &&
+        token &&
+        token === issued.token &&
+        address === issued.address &&
+        Number.isFinite(issued.expiresMono) &&
+        replaceNow() <= issued.expiresMono
+    );
     if (!sessionOpen && !tokenOk) throw new Error('password-locked');
-    if (tokenOk) passwordReplaceToken = null;
+    if (tokenOk && issued) passwordReplaceToken = null;
   }
-  if (!passwordBackup) await capturePasswordBackup();
+  if (!passwordBackup) await capturePasswordBackup('');
   const salt = Crypto.randomUUID();
   const material = await derivePinMaterial(password, salt, PIN_PBKDF2_ROUNDS);
   const record: PasswordRecord = {
@@ -1508,12 +1651,16 @@ export async function setPassword(
   }
   await persistCompanionWraps(nextWrap);
   if (!options?.keepLockCounters) await writeGate(emptyGate());
+  if (!options?.keepLockCounters) clearPasswordBackup();
   return nextWrap;
 }
 
-/** Si el alta falla después de guardar la clave, restaura la copia exacta anterior. */
-export async function abortPasswordSetup(): Promise<void> {
+/** Si el alta falla después de guardar la clave, restaura la copia del mismo token. */
+export async function abortPasswordSetup(token?: string): Promise<void> {
   const backup = passwordBackup;
+  const issued = passwordReplaceToken?.token || '';
+  const same = Boolean(backup && token && (backup.token === token || issued === token));
+  if (!same) return;
   passwordBackup = null;
   passwordReplaceToken = null;
   if (backup) {
@@ -1539,7 +1686,12 @@ export async function abortPasswordSetup(): Promise<void> {
   clearWalletSession();
 }
 
-async function checkPasswordBody(password: string): Promise<PinCheck> {
+async function checkPasswordBody(
+  password: string,
+  signal: AbortSignal = new AbortController().signal
+): Promise<PinCheck> {
+  markSystemPromptDone();
+  throwIfAborted(signal);
   const record = await readPasswordRecord();
   if (!record) {
     return { ok: false, remainingMs: 0, locked: false };
@@ -1554,6 +1706,7 @@ async function checkPasswordBody(password: string): Promise<PinCheck> {
     return { ok: false, remainingMs: 0, locked: true };
   }
   if (beforeVerifyForTests) await beforeVerifyForTests();
+  throwIfAborted(signal);
   const modern = record.kdf === PIN_KDF;
   const current = modern && record.split === PIN_SPLIT;
   const wide = isWideKdf(record);
@@ -1573,8 +1726,11 @@ async function checkPasswordBody(password: string): Promise<PinCheck> {
     scheduleAnchor(reserved.fails);
     return { ok: false, remainingMs: reserved.left, locked: reserved.left > 0 };
   }
+  throwIfAborted(signal);
   if (afterMatchForTests) await afterMatchForTests();
+  throwIfAborted(signal);
   if (material && ready) {
+    throwIfAborted(signal);
     setWalletWrapKey(material.wrap);
   } else if (material) {
     const fresh = await derivePinMaterial(password, record.salt, PIN_PBKDF2_ROUNDS);
@@ -1588,7 +1744,9 @@ async function checkPasswordBody(password: string): Promise<PinCheck> {
       kdf: PIN_KDF,
       split: PIN_SPLIT,
     };
+    throwIfAborted(signal);
     await SecureStore.setItemAsync(PASSWORD_KEY, JSON.stringify(next), OPTIONS);
+    throwIfAborted(signal);
     setWalletWrapKey(fresh.wrap);
   } else if (modern) {
     const oldWrap = await wrapKeyFromPbkdf2(password, record.salt, rounds);
@@ -1603,7 +1761,9 @@ async function checkPasswordBody(password: string): Promise<PinCheck> {
       kdf: PIN_KDF,
       split: PIN_SPLIT,
     };
+    throwIfAborted(signal);
     await SecureStore.setItemAsync(PASSWORD_KEY, JSON.stringify(next), OPTIONS);
+    throwIfAborted(signal);
     setWalletWrapKey(fresh.wrap);
   } else {
     const oldWrap = await legacyPasswordWrap(password, record.salt, rounds);
@@ -1618,9 +1778,12 @@ async function checkPasswordBody(password: string): Promise<PinCheck> {
       kdf: PIN_KDF,
       split: PIN_SPLIT,
     };
+    throwIfAborted(signal);
     await SecureStore.setItemAsync(PASSWORD_KEY, JSON.stringify(next), OPTIONS);
+    throwIfAborted(signal);
     setWalletWrapKey(fresh.wrap);
   }
+  throwIfAborted(signal);
   await clearLockAfterSuccess();
   await ackDeviceRepair();
   void persistCompanionWraps();
@@ -1633,7 +1796,7 @@ export async function checkPassword(password: string): Promise<PinCheck> {
     return { ok: false, remainingMs: 0, locked: false };
   }
   try {
-    return await withLockVerify(() => checkPasswordBody(password), busyResult());
+    return await withLockVerify((signal) => checkPasswordBody(password, signal), busyResult());
   } catch (error) {
     if (error instanceof Error && error.message === 'lock-verify-timeout') {
       return timeoutCheckResult();
