@@ -614,6 +614,57 @@ describe('app lock PBKDF2', function () {
     }
   });
 
+  it('keeps the unlock when the protection retry is cancelled', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    memory.delete('quatrivium.lock.gate');
+    memory.delete('quatrivium.lock.attempts');
+    memory.delete(SECRET_KEY);
+    memory.delete('quatrivium.lock.deviceAuth');
+    secretMeta.clear();
+    rejectDeviceAuth = true;
+    try {
+      await lock.setPin(PIN);
+    } finally {
+      rejectDeviceAuth = false;
+    }
+    const hex = memory.get(SECRET_KEY);
+    device.setScreenLockForTests(async () => true);
+    expect(await device.armDeviceRetry()).to.equal('ready');
+    rejectDeviceAuth = true;
+    try {
+      const opened = await lock.checkPin(PIN);
+      expect(opened.ok).to.equal(true);
+    } finally {
+      rejectDeviceAuth = false;
+    }
+    expect(memory.get('quatrivium.lock.deviceRetry')).to.equal('1');
+    expect(memory.get(SECRET_KEY)).to.equal(hex);
+    expect(memory.get('quatrivium.lock.deviceAuth')).to.equal('0');
+    expect(await device.refreshDeviceNotice()).to.equal('lockDeviceOpen');
+  });
+
+  it('retries protection after a correct password when there is no pin', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    memory.delete('quatrivium.lock.gate');
+    memory.delete('quatrivium.lock.attempts');
+    memory.delete(PIN_RECORD);
+    memory.delete(SECRET_KEY);
+    memory.delete('quatrivium.lock.deviceAuth');
+    secretMeta.clear();
+    await lock.setPassword(PASSWORD);
+    device.setScreenLockForTests(async () => true);
+    expect(await device.armDeviceRetry()).to.equal('ready');
+    randomByte = 6;
+    const opened = await lock.checkPassword(PASSWORD);
+    expect(opened.ok).to.equal(true);
+    expect(memory.get('quatrivium.lock.deviceAuth')).to.equal('1');
+    expect(memory.get(SECRET_KEY)).to.equal('06'.repeat(32));
+    expect(memory.has('quatrivium.lock.deviceRetry')).to.equal(false);
+    expect(memory.has(PIN_RECORD)).to.equal(false);
+  });
+
   it('keeps the global counter until a wallet is bound', async function () {
     const { sha256 } = require('@noble/hashes/sha2');
     kdf.setPbkdf2ForTests(async (secret) => sha256(secret));

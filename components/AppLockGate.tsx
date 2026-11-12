@@ -690,20 +690,25 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
     if (next.length < PIN_LENGTH) return;
 
     setBusy(true);
-    const result = await checkPin(next);
-    setBusy(false);
-    if (result.ok) {
-      setPinBlocked(false);
-      await finishUnlock(next);
-      return;
+    try {
+      const result = await checkPin(next);
+      if (result.ok) {
+        setPinBlocked(false);
+        await finishUnlock(next);
+        return;
+      }
+      if (result.pinBlocked || result.deviceKeyReset || result.deviceSecretLost) {
+        setPinBlocked(result.pinBlocked === true);
+        setUnlockMode('password');
+      }
+      setLockMs(result.remainingMs);
+      setError(describeLockFailure('pin', result, t));
+      setPinDigits('');
+    } catch {
+      // El PIN ya pudo abrir. Cancelar la huella no deshace el desbloqueo ni deja el spinner.
+    } finally {
+      setBusy(false);
     }
-    if (result.pinBlocked || result.deviceKeyReset || result.deviceSecretLost) {
-      setPinBlocked(result.pinBlocked === true);
-      setUnlockMode('password');
-    }
-    setLockMs(result.remainingMs);
-    setError(describeLockFailure('pin', result, t));
-    setPinDigits('');
   };
 
   const submitUnlockAuthenticator = async () => {

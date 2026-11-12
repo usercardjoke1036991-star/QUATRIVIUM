@@ -27,10 +27,11 @@ import {
   ensureDeviceSecret,
   loadDeviceSecret,
   phoneHasScreenLock,
+  peekDeviceRetry,
   readDeviceGuard,
   readStagedDeviceSecret,
+  restoreDeviceRetry,
   stageNewDeviceSecret,
-  takeDeviceRetry,
 } from '../utils/deviceSecret';
 import {
   assertSessionBeforePinWrite,
@@ -885,8 +886,36 @@ export async function checkPin(pin: string): Promise<PinCheck> {
   }
   await writeAttempts({ pin: 0, password: 0 });
   await persistCompanionWraps();
-  if (await takeDeviceRetry()) await retryDeviceProtection(pin);
+  await runDeviceRetry(pin);
   return { ok: true };
+}
+
+/**
+ * El desbloqueo ya está hecho. Si la huella se cancela, la marca vuelve y el aviso sigue.
+ * Sin PIN, la contraseña también sella un secreto nuevo: el viejo estuvo en claro.
+ */
+async function runDeviceRetry(pin: string | null): Promise<void> {
+  if (!(await peekDeviceRetry())) return;
+  try {
+    const outcome = pin ? await retryDeviceProtection(pin) : await retryPasswordProtection();
+    if (outcome === 'bound') {
+      await SecureStore.deleteItemAsync(storeSlot(['quatrivium', 'lock', 'deviceRetry'])).catch(
+        () => {}
+      );
+    }
+  } catch {
+    await restoreDeviceRetry();
+  }
+}
+
+async function retryPasswordProtection(): Promise<'bound' | 'open' | 'no-lock' | 'lost'> {
+  const guard = await readDeviceGuard();
+  if (guard === 'bound') return 'bound';
+  if (!(await phoneHasScreenLock())) return 'no-lock';
+  if (await readPinRecord()) return 'lost';
+  const hex = await stageNewDeviceSecret();
+  await commitStagedDeviceSecret(hex);
+  return 'bound';
 }
 
 /**
@@ -1152,6 +1181,7 @@ export async function checkPassword(password: string): Promise<PinCheck> {
   await writeAttempts({ pin: 0, password: 0 });
   await ackDeviceRepair();
   void persistCompanionWraps();
+  await runDeviceRetry(null);
   return { ok: true };
 }
 

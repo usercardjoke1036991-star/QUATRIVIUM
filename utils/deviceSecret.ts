@@ -208,11 +208,21 @@ export async function armDeviceRetry(): Promise<'ready' | 'no-lock' | 'bound'> {
   return 'ready';
 }
 
-export async function takeDeviceRetry(): Promise<boolean> {
+export async function peekDeviceRetry(): Promise<boolean> {
   const armed = await SecureStore.getItemAsync(RETRY_KEY).catch(() => null);
-  if (armed !== '1') return false;
+  return armed === '1';
+}
+
+export async function takeDeviceRetry(): Promise<boolean> {
+  const armed = await peekDeviceRetry();
+  if (!armed) return false;
   await SecureStore.deleteItemAsync(RETRY_KEY).catch(() => {});
   return true;
+}
+
+/** Si el reintento se cancela, la marca vuelve: el aviso sigue y el próximo desbloqueo lo intenta. */
+export async function restoreDeviceRetry(): Promise<void> {
+  await SecureStore.setItemAsync(RETRY_KEY, '1', PLAIN);
 }
 
 /**
