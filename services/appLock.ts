@@ -1298,9 +1298,7 @@ async function retryPasswordProtection(): Promise<'bound' | 'open' | 'no-lock' |
  * El registro nuevo se guarda antes de sustituir el secreto. Si el proceso cae en medio,
  * el siguiente PIN abre con el borrador y termina el cambio.
  */
-async function retryDeviceProtection(
-  pin: string
-): Promise<'bound' | 'open' | 'no-lock' | 'lost'> {
+async function retryDeviceProtection(pin: string): Promise<'bound' | 'open' | 'no-lock' | 'lost'> {
   const guard = await readDeviceGuard();
   if (guard === 'bound') return 'bound';
   if (!(await phoneHasScreenLock())) return 'no-lock';

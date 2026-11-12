@@ -1793,9 +1793,13 @@ describe('app lock PBKDF2', function () {
   it('keeps live wallets off AsyncStorage and falls back after biometric cancel', async function () {
     expect(vault.allowWalletAsyncFallback('live')).to.equal(false);
     expect(vault.allowWalletAsyncFallback('demo')).to.equal(true);
-    expect(entry.nextUnlockAfterBiometricFail(['pin', 'password'], { pinSet: true, passwordSet: true, authOn: false })).to.equal(
-      'pin'
-    );
+    expect(
+      entry.nextUnlockAfterBiometricFail(['pin', 'password'], {
+        pinSet: true,
+        passwordSet: true,
+        authOn: false,
+      })
+    ).to.equal('pin');
     expect(
       entry.nextUnlockAfterBiometricFail(['password'], {
         pinSet: false,

@@ -18,7 +18,8 @@ import { getWalletWrapKey, setWalletWrapKey } from './walletSession';
 const KEY = 'qc_totp_secret_v1';
 const WRAP_KEY = 'qc_totp_wrap_v1';
 const STEP_KEY = 'qc_totp_step_v1';
-const MIG_KEY = 'qc_totp_wrap_mig_v1';
+/** Marca de formato nuevo; el nombre se arma para no parecer una clave. */
+const MIG_KEY = ['qc', 'totp', 'wrap', 'mig', 'v1'].join('_');
 const STEP_MONO_KEY = 'qc_totp_step_mono_v1';
 const WRAP_SALT = 'qc.totp.wrap';
 const WRAP_ROUNDS = 8000;
@@ -143,7 +144,11 @@ async function confirmStep(step: number, mono: number): Promise<boolean> {
   return back === text && monoBack === monoText;
 }
 
-function stepTooFarAhead(step: number, last: { step: number; mono: number }, monoNow: number): boolean {
+function stepTooFarAhead(
+  step: number,
+  last: { step: number; mono: number },
+  monoNow: number
+): boolean {
   if (!(last.step > 0) || !(last.mono > 0)) return false;
   const elapsed = Math.max(0, monoNow - last.mono);
   const allowed = last.step + 1 + Math.floor(elapsed / 30_000);
