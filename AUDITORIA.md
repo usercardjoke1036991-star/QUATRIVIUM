@@ -6,7 +6,7 @@ Esta revisión la hicieron herramientas de IA en el IDE (lectura del código, Ha
 
 ## Medición de esta rama
 
-Rama `cursor/soberania-contratos-8e15`. Commits de esta entrega: `8d4e1b2` (candado), `e8ba5f1` (recibos), `358ade7` (los tests nombran el revert). La limpieza de Arbitrum, el ejemplo de entorno y este párrafo van en el commit de esta parte.
+Rama `cursor/soberania-contratos-8e15`. Commits de esta entrega: `8d4e1b2` (candado), `e8ba5f1` (recibos), `358ade7` (los tests nombran el revert), `58fcab8` (Arbitrum), `ffb608d` (espera), `4b38faa` (reintento). Este párrafo va en el commit de la limpieza de la auditoría.
 
 `allowUnlimitedContractSize` está en `false`. El tamaño es el `deployedBytecode` del artifact de Hardhat, sin el hash de metadata (`bytecodeHash: none`, `appendCBOR: false`). Límite EIP-170: 24576.
 
@@ -15,15 +15,31 @@ Rama `cursor/soberania-contratos-8e15`. Commits de esta entrega: `8d4e1b2` (cand
 | QuatriviumCredit | 23317 | 1259 |
 | QuatriviumCreditHarness | 24528 | 48 |
 
-Un pago de 40 generaciones usó 1246495 de gas (el test lo imprime y exige menos de 3 000 000). Foundry con `FOUNDRY_PROFILE=ci`: 56 pruebas en verde. Los invariantes de Credit y de Reserva corrieron 256 veces, profundidad 800, 204800 llamadas y 0 reverts cada uno. Hardhat: 362 pruebas en verde.
+Un pago de 40 generaciones usó 1246495 de gas (el test lo imprime y exige menos de 3 000 000). Foundry con `FOUNDRY_PROFILE=ci`: 56 pruebas en verde. Los invariantes de Credit y de Reserva corrieron 256 veces, profundidad 800, 204800 llamadas y 0 reverts cada uno. Hardhat: 366 pruebas en verde.
 
-Slither, compilación nueva, `fail_on: high`: 0 altos, 0 medios, 13 bajos, 10 de optimización. Los medios que no eran un fallo llevan `slither-disable-next-line` con el motivo en la misma línea. No se cambió la lógica de `_soloEOA`, Alta ni Reserva. Quedan, como bajos u optimización y sin tocarlos: `missing-zero-check`, `calls-loop`, `reentrancy-benign`, `reentrancy-events`, `return-bomb`, variables que podrían ser `constant` o `immutable`.
+Slither, compilación nueva, `fail_on: high`: 0 altos, 0 medios, 13 bajos, 10 de optimización. Los medios que no eran un fallo llevan `slither-disable-next-line` con el motivo en la misma línea. No se cambió la lógica de `_soloEOA`, Alta ni Reserva. Los 13 bajos, uno por uno:
 
-`npm audit` del árbol completo, después de subir `handlebars` a 4.7.10: 37 avisos (15 bajos, 20 moderados, 2 altos, 0 críticos). Solo producción (`npm audit --omit=dev`): 21 (9 bajos, 11 moderados, 1 alto). El alto de producción es `image-size`. `handlebars` 4.7.9 era crítico y solo lo usaba `solidity-coverage` → `sc-istanbul`; 4.7.10 sale de ese aviso. La herramienta 0.8.17 compiló el árbol y escribió el informe de cobertura. El único test instrumentado se quedó sin gas al desplegar: Credit ya está cerca del límite y la instrumentación lo pasa. No es un fallo de la librería de plantillas. `tmp` sigue alto porque lo arrastra `solc`; no se forzó.
+1. `missing-zero-check` en `QuatriviumReserva.constructor`, `famaCaja`. Aceptado. Token, fundador, credit y alta ya revierten si son cero. La caja de fama puede ir vacía en el deploy. No se toca Reserva.
+2. `missing-zero-check` en `QuatriviumFamaLib.altaRegistrada`, el usuario. Aceptado. Es una lectura: si el usuario es cero, `registroHecho` no está y la función devuelve false. No escribe.
+3. `missing-zero-check` en `QuatriviumCredit.obtenerRedReputacion`, el usuario. Aceptado. Es `view`. Un usuario cero solo lee fama vacía y no mueve fondos.
+4. `calls-loop` en `acreditarFamaRed`, la llamada a `dispersionCongelada`. Aceptado. El bucle corta a las 40 generaciones y solo lo llama Credit.
+5. `calls-loop` en `acreditarFamaRed`, la llamada a `redGenealogica`. Aceptado. La misma cota de 40. Solo sigue al padre.
+6. `reentrancy-benign` en `QuatriviumCredit._pagarComo`. Aceptado. `pagarPrestamo` ya lleva `nonReentrant`. Lo que se escribe después limpia el préstamo ya cobrado. No se reordena el pago.
+7. `reentrancy-benign` en `QuatriviumAlta.vencerPadrinoAlPool`. Aceptado. La función es `nonReentrant` y el apartado pasa a cero antes de la llamada. `cargoDe` se borra al volver. No se toca Alta.
+8. `reentrancy-events` en `QuatriviumFamaLib._avisarReserva`. Aceptado. `ReservaBoostFallido` sale después de la llamada y no mueve saldo.
+9. `reentrancy-events` en `dispersarInteres`, la comisión y la reputación del padre. Aceptado. El evento registra el pago ya hecho.
+10. `reentrancy-events` en `dispersarInteres`, `BonoActivacionPagado`. Aceptado. Cuenta el bono ya calculado y no cambia el token.
+11. `reentrancy-events` en `dispersarInteres`, la comisión generacional y lo retenido al pool. Aceptado. El evento sigue al pago ya hecho.
+12. `reentrancy-events` en `QuatriviumAlta.soltarPadrino`. Aceptado. El apartado ya está en cero antes de `ingresarAlPool`. El evento no mueve el LUSD. No se toca Alta.
+13. `return-bomb` en `QuatriviumFamaLib._avisarReserva`. Aceptado. La llamada lleva tope de gas (180000) y no decodifica el retorno. Una bomba solo puede gastar ese estipendio.
+
+Ninguno de los 13 se marcó como arreglado: cambiarlos o reordenar el cobro movería Alta, Reserva o el pago. Los 10 de optimización (`constant` / `immutable`) no cambian el comportamiento.
+
+`npm audit` del árbol completo, el mismo recuento que el CI: 39 avisos (15 bajos, 22 moderados, 2 altos, 0 críticos). El alto de producción es `image-size`: hace falta un SDK de Expo nuevo y no se subió Expo. El otro alto es `tmp`, que llega por `solc`; no se forzó. `handlebars` de desarrollo está en 4.7.10, fuera del rango vulnerable.
 
 ### Candado
 
-Una contraseña mal no borra la billetera. La espera crece: 30 s, 1 min, 5 min, 15 min, 1 h y después 24 h en cada fallo extra. Cambiar la hora no la acorta: se guarda la última hora vista y, si el reloj va hacia atrás o salta más que la espera, se cuenta otra vez desde el fallo. El PIN se bloquea a los 10 fallos (`PIN_FAIL_LIMIT`) y no hay borrado. El secreto del teléfono no se lee para pintar el aviso: bastan las marcas guardadas (`deviceAuth` y la de reparación). En demo el aviso no sale. Si la protección se reintenta con éxito, se genera un secreto nuevo y se vuelve a sellar el PIN, porque los bytes viejos estuvieron sin candado. Si no hay billetera ligada, el contador global no se mueve a `none`.
+Una contraseña mal no borra la billetera. La espera crece: 30 s, 1 min, 5 min, 15 min, 1 h y después 24 h en cada fallo extra. `Date.now()` solo no la cumple. Con red, manda el timestamp del último bloque de Arbitrum si 2 de los RPC públicos coinciden con un margen de tres minutos; al fallar se guarda esa hora. Sin red, solo cuenta `performance.now()` con la app abierta y lo que queda se guarda en el llavero. El PIN se bloquea a los 10 fallos (`PIN_FAIL_LIMIT`) y no hay borrado. El secreto del teléfono no se lee para pintar el aviso: bastan las marcas guardadas (`deviceAuth` y la de reparación). En demo el aviso no sale. Si la protección se reintenta con éxito, se genera un secreto nuevo y se vuelve a sellar el PIN, porque los bytes viejos estuvieron sin candado. Si el usuario cancela la huella, el desbloqueo ya hecho sigue y la marca de reintento vuelve. Quien solo tiene contraseña también dispara ese reintento. Si no hay billetera ligada, el contador global no se mueve a `none`.
 
 ### 9000 vueltas
 
@@ -305,7 +321,8 @@ Si LUSD se detiene o un RPC miente, la app rota RPC públicos (`constants/rpcCon
 
 ## Qué no se pudo revisar
 
-- Slither sí corrió en esta rama. El detalle está en «Medición de esta rama». No se revisó cada bajo como si fuera un bug.
+- Slither sí corrió en esta rama. Los 13 bajos están en «Medición de esta rama», cada uno aceptado con su motivo. Los 10 de optimización no se tocan.
+- No hay cobertura instrumentada de Credit. `solidity-coverage` 0.8.17 compila y escribe el informe, pero el Credit instrumentado no cabe en el gas de despliegue. No es un fallo de `handlebars`.
 - Ninguna pantalla en un teléfono, ni modo oscuro, ni contraste, ni un dedo sobre un botón. El usuario prohibió compilar la app.
 - Los 17 idiomas, frase por frase.
 - Cada PNG de `assets/` como imagen. Se contaron como archivos del repo, sin lógica.
