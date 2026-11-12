@@ -44,21 +44,21 @@ let kdfCalls = 0;
 let kdfBlocks = 0;
 
 /** Solo pruebas: null simula un teléfono sin PBKDF2. */
-export function setPbkdf2(next: DeriveFn | null): void {
+function setPbkdf2(next: DeriveFn | null): void {
   derive = next;
 }
 
-export function resetPbkdf2(): void {
+function resetPbkdf2(): void {
   derive = nobleDerive;
 }
 
-export function takeKdfCalls(): number {
+function takeKdfCalls(): number {
   const seen = kdfCalls;
   kdfCalls = 0;
   return seen;
 }
 
-export function takeKdfBlocks(): number {
+function takeKdfBlocks(): number {
   const seen = kdfBlocks;
   kdfBlocks = 0;
   return seen;
@@ -171,4 +171,9 @@ export type WrapStoreMode = 'hardware' | 'software';
 /** Con hardware seguro, la clave pide autenticación. Si no hay, se queda el almacén actual. */
 export function wrapStoreMode(hardwareSecure: boolean): WrapStoreMode {
   return hardwareSecure ? 'hardware' : 'software';
+}
+
+if (__DEV__) {
+  const host = globalThis as { __qcDev?: Record<string, Record<string, unknown>> };
+  (host.__qcDev ??= {}).kdf = { setPbkdf2, resetPbkdf2, takeKdfCalls, takeKdfBlocks };
 }

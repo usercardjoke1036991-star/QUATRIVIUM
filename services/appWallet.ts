@@ -134,38 +134,72 @@ async function persistRecord(record: StoredWallet): Promise<string> {
   return sealed;
 }
 
-/** Solo lo que esta llamada escribió, y solo si el teléfono no tenía vínculo. */
-async function dropFreshWallet(): Promise<void> {
+/** Borra el blob solo si sigue siendo exactamente el que escribió esta llamada. */
+async function dropFreshWallet(written: string | null): Promise<void> {
+  let secure: string | null = null;
+  let fallback: string | null = null;
   try {
-    await SecureStore.deleteItemAsync(WALLET_KEY);
+    secure = await SecureStore.getItemAsync(WALLET_KEY);
   } catch {
-    // ignore
+    secure = null;
   }
   try {
-    await AsyncStorage.removeItem(WALLET_FALLBACK);
+    fallback = await AsyncStorage.getItem(WALLET_FALLBACK);
   } catch {
-    // ignore
+    fallback = null;
+  }
+  const other =
+    (secure != null && secure !== '' && secure !== written) ||
+    (fallback != null && fallback !== '' && fallback !== written);
+  if (written == null || other) {
+    if (other) reportLockFault();
+    return;
+  }
+  if (secure === written) {
+    try {
+      await SecureStore.deleteItemAsync(WALLET_KEY);
+    } catch {
+      // ignore
+    }
+  }
+  if (fallback === written) {
+    try {
+      await AsyncStorage.removeItem(WALLET_FALLBACK);
+    } catch {
+      // ignore
+    }
   }
   await clearBoundWallet();
 }
 
 async function writeStored(record: StoredWallet): Promise<void> {
+  const previousSecure = await SecureStore.getItemAsync(WALLET_KEY).catch(() => null);
+  const previousFallback = await AsyncStorage.getItem(WALLET_FALLBACK).catch(() => null);
   const bound = await getBoundWallet();
   if (bound === BOUND_UNKNOWN) throw new Error('store-unknown');
   const next = record.address.toLowerCase();
   if (bound && bound !== next) throw new Error('device-bound');
   const wasEmpty = !bound;
-  const previous = wasEmpty ? null : await readRawWallet();
+  let written: string | null = null;
   try {
-    const sealed = await persistRecord(record);
+    written = await persistRecord(record);
     const back = await readRawWallet();
-    if (back !== sealed) throw new Error('wallet-persist');
+    if (back !== written) throw new Error('wallet-persist');
     await bindAppWallet(next);
   } catch (error) {
     if (wasEmpty) {
-      await dropFreshWallet();
-    } else if (previous && (await readRawWallet()) !== previous) {
-      await SecureStore.setItemAsync(WALLET_KEY, previous, OPTIONS).catch(() => {});
+      await dropFreshWallet(written);
+    } else {
+      const now = await SecureStore.getItemAsync(WALLET_KEY).catch(() => null);
+      if (previousSecure && now !== previousSecure) {
+        await SecureStore.setItemAsync(WALLET_KEY, previousSecure, OPTIONS).catch(() => {});
+      }
+      if (previousFallback) {
+        const backFallback = await AsyncStorage.getItem(WALLET_FALLBACK).catch(() => null);
+        if (backFallback !== previousFallback) {
+          await AsyncStorage.setItem(WALLET_FALLBACK, previousFallback).catch(() => {});
+        }
+      }
     }
     throw error instanceof Error ? error : new Error('wallet-persist');
   }

@@ -33,7 +33,7 @@ export type DeviceGuard = 'bound' | 'open' | 'repair' | 'reset' | 'lost' | 'conf
 let screenLockProbe: (() => Promise<boolean>) | null = null;
 
 /** Solo pruebas. En el teléfono se usa el nivel de bloqueo de Expo. */
-export function setScreenLockProbe(probe: (() => Promise<boolean>) | null): void {
+function setScreenLockProbe(probe: (() => Promise<boolean>) | null): void {
   screenLockProbe = probe;
 }
 
@@ -271,4 +271,9 @@ export async function commitStagedDeviceSecret(hex: string): Promise<void> {
 /** La contraseña correcta cierra el aviso. El secreto que abre el PIN no cambia. */
 export async function ackDeviceRepair(): Promise<void> {
   await SecureStore.deleteItemAsync(REPAIR_KEY).catch(() => {});
+}
+
+if (__DEV__) {
+  const host = globalThis as { __qcDev?: Record<string, Record<string, unknown>> };
+  (host.__qcDev ??= {}).device = { setScreenLockProbe };
 }

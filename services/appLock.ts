@@ -214,7 +214,7 @@ function throwIfAborted(signal: AbortSignal): void {
 }
 
 /** Solo pruebas: acorta el presupuesto interno de withLockVerify. */
-export function setVerifyBudget(ms: number | null): void {
+function setVerifyBudget(ms: number | null): void {
   verifyBudgetMs = ms == null ? VERIFY_INTERNAL_MS : Math.max(50, ms);
 }
 
@@ -242,7 +242,7 @@ function timeoutCheckResult(): PinCheck {
 }
 
 /** Solo pruebas: cortar entre el intento guardado y PBKDF2, o entre el acierto y la limpieza. */
-export function setLockPhase(
+function setLockPhase(
   phase: {
     beforeVerify?: (() => Promise<void> | void) | null;
     afterMatch?: (() => Promise<void> | void) | null;
@@ -258,7 +258,7 @@ export function whenLockAnchorSettled(): Promise<void> {
 }
 
 /** Solo pruebas: performance.now() mientras la app está abierta. */
-export function setMonoClock(clock: (() => number) | null): void {
+function setMonoClock(clock: (() => number) | null): void {
   monoClock = clock;
   lastChainMono = -CHAIN_POLL_MS;
   chainFlight = null;
@@ -284,7 +284,7 @@ export function setMonoClock(clock: (() => number) | null): void {
  * Solo pruebas: sellos de bloque ya en milisegundos.
  * null vuelve a leer los RPC públicos.
  */
-export function setChainStamps(
+function setChainStamps(
   reader: (() => Promise<(number | null)[]> | (number | null)[]) | null
 ): void {
   chainStamps = reader;
@@ -300,12 +300,12 @@ function replaceNow(): number {
 }
 
 /** Solo pruebas: adelanta el reloj del token de restaurar. */
-export function advanceReplaceClock(ms: number): void {
+function advanceReplaceClock(ms: number): void {
   replaceOffset += ms;
 }
 
 /** Solo pruebas: sustituye el reloj del token. null vuelve a performance.now(). */
-export function setReplaceClock(clock: (() => number) | null): void {
+function setReplaceClock(clock: (() => number) | null): void {
   replaceClock = clock;
   if (!clock) replaceOffset = 0;
 }
@@ -313,12 +313,12 @@ export function setReplaceClock(clock: (() => number) | null): void {
 let replaceTokenObserver: ((token: string) => void) | null = null;
 
 /** Solo pruebas: ve el token interno justo después de emitirlo. */
-export function setReplaceTokenObserver(observer: ((token: string) => void) | null): void {
+function setReplaceTokenObserver(observer: ((token: string) => void) | null): void {
   replaceTokenObserver = observer;
 }
 
 /** Solo pruebas: deja visible el reloj del token. */
-export function replaceClockNow(): number {
+function replaceClockNow(): number {
   return replaceNow();
 }
 
@@ -1426,7 +1426,7 @@ async function retryDeviceProtection(pin: string): Promise<'bound' | 'open' | 'n
 }
 
 /** Solo pruebas: el producto llama al reintento desde el acierto del PIN. */
-export function probeDeviceProtection(pin: string): Promise<'bound' | 'open' | 'no-lock' | 'lost'> {
+function probeDeviceProtection(pin: string): Promise<'bound' | 'open' | 'no-lock' | 'lost'> {
   return retryDeviceProtection(pin);
 }
 
@@ -1581,7 +1581,7 @@ export function clearRestorePasswordBackup(): void {
 }
 
 /** Token de un solo uso para abortar el mismo intento de restaurar. */
-export function currentUndoToken(): string {
+function currentUndoToken(): string {
   const token = passwordReplaceToken?.token || passwordBackup?.token || '';
   return token;
 }
@@ -1589,7 +1589,12 @@ export function currentUndoToken(): string {
 export async function setPassword(
   password: string,
   conveniencePin?: string,
-  options?: { replaceToken?: string; restoreAddress?: string; keepLockCounters?: boolean }
+  options?: {
+    replaceToken?: string;
+    restoreAddress?: string;
+    keepLockCounters?: boolean;
+    undoable?: boolean;
+  }
 ): Promise<string> {
   if (!isValidMasterPassword(password)) {
     throw passwordError(password);
@@ -1598,7 +1603,6 @@ export async function setPassword(
     throw new Error('wrong-pin');
   }
   const existing = await readPasswordRecord();
-  const fresh = !existing;
   if (existing) {
     const sessionOpen = Boolean(getWalletWrapKey());
     const issued = passwordReplaceToken;
@@ -1622,6 +1626,12 @@ export async function setPassword(
       address: '',
       expiresMono: replaceNow() + REPLACE_TOKEN_MS,
     };
+    try {
+      replaceTokenObserver?.(freshToken);
+    } catch (error) {
+      clearPasswordBackup();
+      throw error;
+    }
   }
   if (!passwordBackup) await capturePasswordBackup('');
   const salt = Crypto.randomUUID();
@@ -1672,16 +1682,18 @@ export async function setPassword(
   }
   await persistCompanionWraps(nextWrap);
   if (!options?.keepLockCounters) await writeGate(emptyGate());
-  if (!options?.keepLockCounters && !fresh) clearPasswordBackup();
+  if (!options?.undoable && !options?.keepLockCounters) clearPasswordBackup();
   return nextWrap;
 }
 
 /** Si el alta falla después de guardar la clave, restaura la copia del mismo token. */
 export async function abortPasswordSetup(token?: string): Promise<void> {
   const backup = passwordBackup;
-  const issued = passwordReplaceToken?.token || '';
-  const same = Boolean(backup && token && (backup.token === token || issued === token));
+  const issued = passwordReplaceToken;
+  const issuedToken = issued?.token || '';
+  const same = Boolean(backup && token && (backup.token === token || issuedToken === token));
   if (!same) return;
+  if (issued && Number.isFinite(issued.expiresMono) && replaceNow() > issued.expiresMono) return;
   passwordBackup = null;
   passwordReplaceToken = null;
   if (backup) {
@@ -1705,6 +1717,11 @@ export async function abortPasswordSetup(token?: string): Promise<void> {
     }
   }
   clearWalletSession();
+}
+
+/** Deshace el alta o el restaurar que todavía tiene la copia de esta llamada. */
+export async function abortOpenAttempt(): Promise<void> {
+  await abortPasswordSetup(currentUndoToken());
 }
 
 async function checkPasswordBody(
@@ -1989,4 +2006,20 @@ export function shouldRelockAfterBackground(
   if (monoAt == null) return false;
   if (mono < monoAt) return true;
   return mono - monoAt >= BACKGROUND_LOCK_MS;
+}
+
+if (__DEV__) {
+  const host = globalThis as { __qcDev?: Record<string, Record<string, unknown>> };
+  (host.__qcDev ??= {}).lock = {
+    setVerifyBudget,
+    setLockPhase,
+    setMonoClock,
+    setChainStamps,
+    advanceReplaceClock,
+    setReplaceClock,
+    setReplaceTokenObserver,
+    replaceClockNow,
+    probeDeviceProtection,
+    currentUndoToken,
+  };
 }

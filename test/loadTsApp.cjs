@@ -27,6 +27,7 @@ function installHooks() {
 
 function loadTs(absPath) {
   installHooks();
+  globalThis.__DEV__ = true;
   const filename = path.resolve(absPath);
   const cached = Module._cache[filename];
   if (cached) return cached.exports;
@@ -43,7 +44,10 @@ function loadTs(absPath) {
   loaded.filename = filename;
   loaded.paths = Module._nodeModulePaths(path.dirname(filename));
   Module._cache[filename] = loaded;
-  loaded._compile(js, filename);
+  const body = js.startsWith('"use strict"')
+    ? `"use strict";\nvar __DEV__ = globalThis.__DEV__;\n${js.slice('"use strict";'.length)}`
+    : `var __DEV__ = globalThis.__DEV__;\n${js}`;
+  loaded._compile(body, filename);
   loaded.loaded = true;
   return loaded.exports;
 }

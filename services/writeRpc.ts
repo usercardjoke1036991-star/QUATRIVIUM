@@ -48,7 +48,7 @@ export type ReceiptNode = {
 };
 
 /** Solo pruebas de WalletConnect: los recibos salen de estos nodos, no de la billetera. */
-export function setReceiptNodes(nodes: ReceiptNode[] | null): void {
+function setReceiptNodes(nodes: ReceiptNode[] | null): void {
   receiptNodes = nodes;
 }
 
@@ -120,7 +120,7 @@ export async function firstConfirmedReceipt(
 }
 
 /** Solo pruebas: la segunda consulta del hash no tiene que esperar un segundo. */
-export function setUnseenRecheck(ms: number): void {
+function setUnseenRecheck(ms: number): void {
   unseenRecheckMs = ms;
 }
 
@@ -143,7 +143,7 @@ const holdStore: HoldStore = {
 let holdStoreOverride: HoldStore | null = null;
 
 /** Solo pruebas: el módulo ya cargado no puede cambiar de AsyncStorage a mitad de la suite. */
-export function setHoldStore(store: HoldStore | null): void {
+function setHoldStore(store: HoldStore | null): void {
   holdStoreOverride = store;
 }
 
@@ -372,4 +372,9 @@ export function createWriteProvider(
   };
 
   return provider;
+}
+
+if (__DEV__) {
+  const host = globalThis as { __qcDev?: Record<string, Record<string, unknown>> };
+  (host.__qcDev ??= {}).write = { setReceiptNodes, setUnseenRecheck, setHoldStore };
 }

@@ -38,12 +38,12 @@ function totpMonoNow(): number {
 }
 
 /** Solo pruebas: simula que performance.now() volvió a cero tras reiniciar. */
-export function rewindTotpMono(ms: number): void {
+function rewindTotpMono(ms: number): void {
   totpMonoOffset -= ms;
 }
 
 /** Solo pruebas: simula otra ejecución de la app. */
-export function setTotpRunId(id: string | null): void {
+function setTotpRunId(id: string | null): void {
   runIdOverride = id;
 }
 const WRAP_SALT = 'qc.totp.wrap';
@@ -370,4 +370,9 @@ export async function clearAuthenticator(): Promise<void> {
   } catch {
     /* ignore */
   }
+}
+
+if (__DEV__) {
+  const host = globalThis as { __qcDev?: Record<string, Record<string, unknown>> };
+  (host.__qcDev ??= {}).auth = { rewindTotpMono, setTotpRunId };
 }

@@ -30,12 +30,11 @@ import {
   resumeLockWait,
   tickLockWait,
   isBiometricEnabled,
-  abortPasswordSetup,
+  abortOpenAttempt,
   clearRestorePasswordBackup,
   discardCreatedPin,
   isPasswordSet,
   isPinSet,
-  currentUndoToken,
   probePasswordSet,
   probePinSet,
   loadWrapFromBiometric,
@@ -45,6 +44,7 @@ import {
 } from '../services/appLock';
 import { describeLockFailure, lockWaitCopy } from '../utils/lockFailureCopy';
 import { raceMs, reportLockFault, setLockFaultReporter } from '../utils/lockRace';
+import { beginTap, endTap } from '../utils/tapGuard';
 import { isValidMasterPassword } from '../utils/passwordPolicy';
 import {
   ensureAppWallet,
@@ -221,6 +221,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
   const backgroundMono = useRef<number | null>(null);
   const passwordCommittedRef = useRef(false);
   const attemptGuard = useRef(false);
+  const createGuard = useRef(false);
 
   useEffect(() => {
     setLockFaultReporter(() => setError(t('lockUnexpected')));
@@ -807,6 +808,15 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
   };
 
   const submitDeviceCredentials = async () => {
+    if (!beginTap(createGuard)) return;
+    try {
+      await submitDeviceCredentialsBody();
+    } finally {
+      endTap(createGuard);
+    }
+  };
+
+  const submitDeviceCredentialsBody = async () => {
     const username = normalizeUsername(accountUsername);
     if (!canSubmitDeviceCredentials(passwordInput, username)) {
       setError(isValidUsername(username) ? t('lockPasswordWeak') : t('usernameInvalid'));
@@ -826,7 +836,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
     const hadRaw = await readRawWallet().catch(() => 'unreadable' as const);
     try {
       const created = generateSecretPhrase();
-      const wrap = await setPassword(passwordInput, pendingPin || undefined);
+      const wrap = await setPassword(passwordInput, pendingPin || undefined, { undoable: true });
       if (!wrap && !getWalletWrapKey()) {
         throw new Error('locked');
       }
@@ -843,7 +853,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
       clearRestorePasswordBackup();
     } catch (err) {
       if (!hadPassword) {
-        await abortPasswordSetup(currentUndoToken()).catch(() => {});
+        await abortOpenAttempt().catch(() => {});
       }
       if (!hadPin) {
         await discardCreatedPin().catch(() => {});
