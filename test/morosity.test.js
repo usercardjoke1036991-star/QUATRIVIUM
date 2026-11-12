@@ -156,7 +156,9 @@ describe('QuatriviumCredit - Morosity', function () {
       ethers.parseUnits('1', 18)
     );
     expect(await contract.totalLiquidity(tokenAddr)).to.equal(liqBefore);
-    await expect(contract.connect(owner).solicitarPrestamo(tokenAddr, 0)).to.be.reverted;
+    await expect(
+      contract.connect(owner).solicitarPrestamo(tokenAddr, 0)
+    ).to.be.revertedWithoutReason();
     const cash = await token.balanceOf(contractAddr);
     const outstanding = await contract.outstandingLoans(tokenAddr);
     const liquidity = await contract.totalLiquidity(tokenAddr);
@@ -173,7 +175,9 @@ describe('QuatriviumCredit - Morosity', function () {
     await contract.connect(owner).pagarPrestamo(tokenAddr, debt.total);
     const progreso = await contract.obtenerProgresoUsuario(owner.address);
     expect(progreso[2]).to.be.gt(0n);
-    await expect(contract.connect(owner).solicitarPrestamo(tokenAddr, 0)).to.be.reverted;
+    await expect(
+      contract.connect(owner).solicitarPrestamo(tokenAddr, 0)
+    ).to.be.revertedWithoutReason();
     await advanceCooldown();
     await expect(contract.connect(owner).solicitarPrestamo(tokenAddr, 0)).to.not.be.reverted;
     expect(await token.balanceOf(contractAddr)).to.be.gt(0n);

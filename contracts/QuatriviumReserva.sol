@@ -188,6 +188,7 @@ contract QuatriviumReserva is ReentrancyGuard {
 
         bool enRed = false;
         if (credit != address(0)) {
+            // slither-disable-next-line unused-return // de la red solo importa el padre
             (address padre,) = IQuatriviumCreditView(credit).redGenealogica(msg.sender);
             enRed = padre != address(0);
         }
@@ -244,6 +245,7 @@ contract QuatriviumReserva is ReentrancyGuard {
         }
 
         (uint256 extra, uint256 founderCut) = extraComisionDe(beneficiario, montoBase);
+        // slither-disable-next-line incorrect-equality // cero es "no hay extra que mover", no un saldo
         if (extra == 0) revert NadaQueMover();
         _consumirTopeDia(extra);
 
@@ -261,12 +263,14 @@ contract QuatriviumReserva is ReentrancyGuard {
         Posicion memory p = posiciones[beneficiario];
         if (!p.activa || montoBase == 0) return (0, 0);
         uint256 t = tramo(p.principal);
+        // slither-disable-next-line divide-before-multiply // el corte se calcula sobre el extra ya redondeado
         extra = (montoBase * boostRedBp(t)) / 10000;
         uint256 tope = (p.principal * boostRedBp(t)) / 10000;
         uint256 ya = boostPagado[beneficiario];
         if (ya >= tope) return (0, 0);
         uint256 room = tope - ya;
         if (extra > room) extra = room;
+        // slither-disable-next-line divide-before-multiply // el fundador cobra un corte del extra ya pagable
         founderCut = (extra * corteFundadorBp(t)) / 10000;
     }
 
@@ -332,6 +336,7 @@ contract QuatriviumReserva is ReentrancyGuard {
     }
 
     function _consumirTopeDia(uint256 extra) internal {
+        // slither-disable-next-line incorrect-equality // cero significa que la ventana del dia aun no empezo
         if (boostDiaInicio == 0 || block.timestamp >= boostDiaInicio + 1 days) {
             boostDiaInicio = block.timestamp;
             boostDiaAcumulado = 0;
@@ -345,6 +350,7 @@ contract QuatriviumReserva is ReentrancyGuard {
         if (credit == address(0)) return;
         IQuatriviumCreditView vista = IQuatriviumCreditView(credit);
         if (vista.esMoroso(msg.sender)) revert EnMora();
+        // slither-disable-next-line unused-return // del progreso solo importa el nivel
         (uint256 nivel,,) = vista.obtenerProgresoUsuario(msg.sender);
         if (nivel < NIVEL_MINIMO) revert NivelInsuficiente();
     }
@@ -361,6 +367,7 @@ contract QuatriviumReserva is ReentrancyGuard {
             p.desde = block.timestamp;
             boostPagado[msg.sender] = 0;
             if (credit != address(0)) {
+                // slither-disable-next-line unused-return // de la red solo importa el padre
                 (address padre,) = IQuatriviumCreditView(credit).redGenealogica(msg.sender);
                 p.enRed = padre != address(0);
             }

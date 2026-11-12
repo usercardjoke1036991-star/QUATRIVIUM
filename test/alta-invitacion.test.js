@@ -106,7 +106,9 @@ describe('Alta: invitación, sin invitación y conservación', function () {
     const quienes = [user.address, extra.address, owner.address];
     const antesUser = await token.balanceOf(user.address);
     const antes = await caja(token, quienes);
-    await expect(contract.connect(user).registrarHumanoConPadre(extra.address)).to.be.reverted;
+    await expect(
+      contract.connect(user).registrarHumanoConPadre(extra.address)
+    ).to.be.revertedWithoutReason();
     expect(await contract.humanosVerificados(user.address)).to.equal(false);
     expect(await token.balanceOf(user.address)).to.equal(antesUser);
     expect(await caja(token, quienes)).to.equal(antes);
@@ -114,7 +116,9 @@ describe('Alta: invitación, sin invitación y conservación', function () {
 
   it('no deja invitarse a sí mismo', async () => {
     const { contract, user } = await deployProtocol();
-    await expect(contract.connect(user).registrarHumanoConPadre(user.address)).to.be.reverted;
+    await expect(
+      contract.connect(user).registrarHumanoConPadre(user.address)
+    ).to.be.revertedWithoutReason();
     expect(await contract.humanosVerificados(user.address)).to.equal(false);
   });
 

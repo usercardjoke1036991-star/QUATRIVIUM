@@ -81,7 +81,9 @@ describe('QuatriviumCredit - 1000 loan levels', function () {
 
   it('rejects a level above 1000', async () => {
     const { contract, user, tokenAddr } = await deployProtocol();
-    await expect(contract.connect(user).solicitarPrestamo(tokenAddr, 1001)).to.be.reverted;
+    await expect(
+      contract.connect(user).solicitarPrestamo(tokenAddr, 1001)
+    ).to.be.revertedWithoutReason();
   });
 
   it('does not treat 101 as missing', async () => {

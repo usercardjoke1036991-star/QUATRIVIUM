@@ -33,7 +33,9 @@ describe('QuatriviumCredit - Accounting', function () {
     const pool = ethers.parseUnits('475', 18);
     expect(value).to.equal(pool);
 
-    await expect(contract.connect(owner).retirarLiquidez(tokenAddr, value)).to.be.reverted;
+    await expect(
+      contract.connect(owner).retirarLiquidez(tokenAddr, value)
+    ).to.be.revertedWithoutReason();
     expect(await contract.valorLp(owner.address, tokenAddr)).to.equal(pool);
     expect(await contract.lpShares(owner.address, tokenAddr)).to.equal(pool);
     expect(await contract.fondoSeguro(tokenAddr)).to.equal(ethers.parseUnits('25', 18));
@@ -45,6 +47,8 @@ describe('QuatriviumCredit - Accounting', function () {
     await contract.connect(user).solicitarPrestamo(tokenAddr, 0);
 
     const lpValue = await contract.valorLp(owner.address, tokenAddr);
-    await expect(contract.connect(owner).retirarLiquidez(tokenAddr, lpValue)).to.be.reverted;
+    await expect(
+      contract.connect(owner).retirarLiquidez(tokenAddr, lpValue)
+    ).to.be.revertedWithoutReason();
   });
 });

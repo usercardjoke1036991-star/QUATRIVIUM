@@ -63,7 +63,10 @@ describe('Quatrivium Finance - uncollateralized credit and admin locks', functio
     await contract.connect(owner).proposeAdminAction(data);
     await ethers.provider.send('evm_increaseTime', [72 * 60 * 60]);
     await ethers.provider.send('evm_mine');
-    await expect(contract.connect(owner).executeAdminAction(1)).to.be.reverted;
+    await expect(contract.connect(owner).executeAdminAction(1)).to.be.revertedWithCustomError(
+      contract,
+      'VotosInsuficientes'
+    );
     await contract.connect(user).confirmAdminAction(1);
     await contract.connect(owner).executeAdminAction(1);
     expect(await contract.admins(extra.address)).to.equal(false);
@@ -87,7 +90,9 @@ describe('Quatrivium Finance - uncollateralized credit and admin locks', functio
     await expect(contract.connect(user).pagarPrestamo(tokenAddr, debt.total)).to.not.be.reverted;
     await ethers.provider.send('evm_increaseTime', [48 * 60 * 60]);
     await ethers.provider.send('evm_mine');
-    await expect(contract.connect(user).solicitarPrestamo(tokenAddr, 0)).to.be.reverted;
+    await expect(
+      contract.connect(user).solicitarPrestamo(tokenAddr, 0)
+    ).to.be.revertedWithoutReason();
     await ethers.provider.send('evm_increaseTime', [7 * 24 * 60 * 60]);
     await ethers.provider.send('evm_mine');
     await expect(contract.connect(user).solicitarPrestamo(tokenAddr, 0)).to.not.be.reverted;
@@ -95,10 +100,12 @@ describe('Quatrivium Finance - uncollateralized credit and admin locks', functio
 
   it('lets only the current founder rotate the founder wallet after 72h', async () => {
     const { contract, owner, user, extra } = await deployProtocol();
-    await expect(contract.connect(user).proponerFundador(extra.address)).to.be.reverted;
+    await expect(
+      contract.connect(user).proponerFundador(extra.address)
+    ).to.be.revertedWithoutReason();
     await contract.connect(owner).proponerFundador(extra.address);
     await contract.connect(owner).cancelarFundador();
-    await expect(contract.connect(owner).aplicarFundador()).to.be.reverted;
+    await expect(contract.connect(owner).aplicarFundador()).to.be.revertedWithoutReason();
     await contract.connect(owner).proponerFundador(extra.address);
     await ethers.provider.send('evm_increaseTime', [72 * 60 * 60]);
     await ethers.provider.send('evm_mine');

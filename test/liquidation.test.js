@@ -153,6 +153,8 @@ describe('QuatriviumCredit - Liquidation', function () {
     await ethers.provider.send('evm_mine');
     await token.mint(user.address, ethers.parseUnits('10', 18));
     await token.connect(user).approve(contractAddr, ethers.MaxUint256);
-    await expect(contract.connect(user).liquidate(user.address, tokenAddr)).to.be.reverted;
+    await expect(
+      contract.connect(user).liquidate(user.address, tokenAddr)
+    ).to.be.revertedWithoutReason();
   });
 });

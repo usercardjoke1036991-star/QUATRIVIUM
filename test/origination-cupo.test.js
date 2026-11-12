@@ -41,7 +41,9 @@ describe('QuatriviumCredit - el pool manda', function () {
     await registerAndFund(token, contract, user, '80');
     await registerAndFund(token, contract, extra, '80');
     await contract.forceNivel(user.address, 8);
-    await expect(contract.connect(user).solicitarPrestamo(tokenAddr, 8)).to.be.reverted;
+    await expect(
+      contract.connect(user).solicitarPrestamo(tokenAddr, 8)
+    ).to.be.revertedWithoutReason();
     await expect(contract.connect(extra).solicitarPrestamo(tokenAddr, 0)).to.not.be.reverted;
   });
 
@@ -65,8 +67,9 @@ describe('QuatriviumCredit - el pool manda', function () {
     await seedPool(token, contract, owner, '500');
     await registerAndFund(token, contract, user);
     expect(await contract.reservaPrimera(user.address)).to.equal(ethers.parseUnits('1', 18));
-    await expect(contract.connect(user).pagarVerificacion(tokenAddr, ethers.parseUnits('0.5', 18)))
-      .to.be.reverted;
+    await expect(
+      contract.connect(user).pagarVerificacion(tokenAddr, ethers.parseUnits('0.5', 18))
+    ).to.be.revertedWithoutReason();
   });
 
   it('releases the stamp after 7 days so unused USDT returns to the general pool', async () => {
@@ -84,7 +87,9 @@ describe('QuatriviumCredit - el pool manda', function () {
     await ethers.provider.send('evm_mine');
     await contract.liberarSelloPrimeraSiExpiro(tokenAddr, third.address);
     expect(await contract.reservaPrimera(third.address)).to.equal(0n);
-    await expect(contract.connect(third).solicitarPrestamo(tokenAddr, 0)).to.be.reverted;
+    await expect(
+      contract.connect(third).solicitarPrestamo(tokenAddr, 0)
+    ).to.be.revertedWithoutReason();
   });
 
   it('after the first stamped loan, 48h and the 80% cap apply', async () => {
@@ -98,11 +103,15 @@ describe('QuatriviumCredit - el pool manda', function () {
     await contract.connect(user).solicitarPrestamo(tokenAddr, 7);
     await contract.connect(extra).solicitarPrestamo(tokenAddr, 7);
     await contract.connect(third).solicitarPrestamo(tokenAddr, 0);
-    await expect(contract.connect(third).solicitarPrestamo(tokenAddr, 0)).to.be.reverted;
+    await expect(
+      contract.connect(third).solicitarPrestamo(tokenAddr, 0)
+    ).to.be.revertedWithoutReason();
     const deuda = await contract.obtenerDeuda(third.address);
     await token.mint(third.address, deuda.total);
     await contract.connect(third).pagarPrestamo(tokenAddr, deuda.total);
-    await expect(contract.connect(third).solicitarPrestamo(tokenAddr, 0)).to.be.reverted;
+    await expect(
+      contract.connect(third).solicitarPrestamo(tokenAddr, 0)
+    ).to.be.revertedWithoutReason();
     await ethers.provider.send('evm_increaseTime', [48 * 60 * 60 + 1]);
     await ethers.provider.send('evm_mine');
     await expect(contract.connect(third).solicitarPrestamo(tokenAddr, 0)).to.not.be.reverted;
@@ -114,10 +123,14 @@ describe('QuatriviumCredit - el pool manda', function () {
     await registerAndFund(token, contract, user, '80');
     await registerAndFund(token, contract, extra, '80');
     await contract.forceNivel(user.address, 8);
-    await expect(contract.connect(user).solicitarPrestamo(tokenAddr, 8)).to.be.reverted;
+    await expect(
+      contract.connect(user).solicitarPrestamo(tokenAddr, 8)
+    ).to.be.revertedWithoutReason();
     await ethers.provider.send('evm_increaseTime', [24 * 60 * 60 + 1]);
     await ethers.provider.send('evm_mine');
-    await expect(contract.connect(user).solicitarPrestamo(tokenAddr, 8)).to.be.reverted;
+    await expect(
+      contract.connect(user).solicitarPrestamo(tokenAddr, 8)
+    ).to.be.revertedWithoutReason();
     await expect(contract.connect(extra).solicitarPrestamo(tokenAddr, 0)).to.not.be.reverted;
   });
 });

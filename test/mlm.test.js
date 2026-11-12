@@ -41,8 +41,12 @@ describe('QuatriviumCredit - Unilevel MLM', function () {
     expect(raiz).to.equal(owner.address);
     expect(await contract.humanosVerificados(owner.address)).to.equal(true);
 
-    await expect(contract.connect(user).registrarHumanoConPadre(user.address)).to.be.reverted;
-    await expect(contract.connect(user).registrarHumanoConPadre(extra.address)).to.be.reverted;
+    await expect(
+      contract.connect(user).registrarHumanoConPadre(user.address)
+    ).to.be.revertedWithoutReason();
+    await expect(
+      contract.connect(user).registrarHumanoConPadre(extra.address)
+    ).to.be.revertedWithoutReason();
 
     await contract.connect(user).registrarHumanoConPadre(ethers.ZeroAddress);
     expect((await contract.redGenealogica(user.address)).padre).to.equal(owner.address);
@@ -269,7 +273,9 @@ describe('QuatriviumCredit - Unilevel MLM', function () {
 
   it('rejects setFundador for a wallet that is not an admin', async () => {
     const { contract, user } = await deployProtocol();
-    await expect(contract.connect(user).proponerFundador(user.address)).to.be.reverted;
+    await expect(
+      contract.connect(user).proponerFundador(user.address)
+    ).to.be.revertedWithoutReason();
   });
 
   it('keeps paying the upline during the grace month and restores the debtor after pay', async () => {

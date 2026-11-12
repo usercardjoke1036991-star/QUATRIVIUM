@@ -50,7 +50,9 @@ describe('QuatriviumCredit - security hardening', function () {
 
     await token.mint(liquidator.address, ethers.parseUnits('100', 18));
     await token.connect(liquidator).approve(contractAddr, ethers.MaxUint256);
-    await expect(contract.connect(liquidator).liquidate(user.address, tokenAddr)).to.be.reverted;
+    await expect(
+      contract.connect(liquidator).liquidate(user.address, tokenAddr)
+    ).to.be.revertedWithoutReason();
 
     await ethers.provider.send('evm_setNextBlockTimestamp', [
       Number(userInfo.vencimiento) + 48 * 60 * 60 + 10,

@@ -173,7 +173,7 @@ describe('QuatriviumCredit - bono de hito cada 100 niveles', function () {
     const { contract, user, token, tokenAddr } = await deployProtocol();
     await seedPool(token, contract, (await ethers.getSigners())[0], '5000');
     await registerAndFund(token, contract, user);
-    await expect(contract.connect(user).cobrarBonoHito(tokenAddr)).to.be.reverted;
+    await expect(contract.connect(user).cobrarBonoHito(tokenAddr)).to.be.revertedWithoutReason();
   });
 
   it('pays a proportional bonus one milestone at a time from free cash above the floor', async () => {
@@ -196,7 +196,7 @@ describe('QuatriviumCredit - bono de hito cada 100 niveles', function () {
       .to.emit(contract, 'BonoHitoPagado')
       .withArgs(user.address, 200n, bonusOf(200), tokenAddr);
     expect(await contract.hitoCobrado(user.address)).to.equal(200n);
-    await expect(contract.connect(user).cobrarBonoHito(tokenAddr)).to.be.reverted;
+    await expect(contract.connect(user).cobrarBonoHito(tokenAddr)).to.be.revertedWithoutReason();
     await assertNavInvariant(token, contract, tokenAddr, contractAddr);
   });
 
@@ -205,7 +205,7 @@ describe('QuatriviumCredit - bono de hito cada 100 niveles', function () {
     await seedPool(token, contract, owner, '300');
     await registerAndFund(token, contract, user);
     await contract.forceNivel(user.address, 100);
-    await expect(contract.connect(user).cobrarBonoHito(tokenAddr)).to.be.reverted;
+    await expect(contract.connect(user).cobrarBonoHito(tokenAddr)).to.be.revertedWithoutReason();
     expect(await contract.hitoCobrado(user.address)).to.equal(0n);
   });
 

@@ -32,7 +32,9 @@ describe('Fase 1 — soberanía de cobros, racha, alta, liquidación y oráculo'
     const { contract, user, tokenAddr, owner, token } = await deployProtocol();
     await seedPool(token, contract, owner, '50');
     await contract.connect(user).registrarHumanoConPadre(ethers.ZeroAddress);
-    await expect(contract.connect(user).solicitarPrestamo(tokenAddr, 0)).to.be.reverted;
+    await expect(
+      contract.connect(user).solicitarPrestamo(tokenAddr, 0)
+    ).to.be.revertedWithoutReason();
   });
 
   it('does not farm a streak with a pair of level-1 accounts', async () => {
@@ -54,7 +56,10 @@ describe('Fase 1 — soberanía de cobros, racha, alta, liquidación y oráculo'
     await contract.connect(hijo).solicitarPrestamo(tokenAddr, 0);
     const debt = await contract.obtenerDeuda(hijo.address);
     await contract.connect(hijo).pagarPrestamo(tokenAddr, debt.total);
-    await expect(fama.connect(hijo).notificarRacha(hijo.address)).to.be.reverted;
+    await expect(fama.connect(hijo).notificarRacha(hijo.address)).to.be.revertedWithCustomError(
+      fama,
+      'SinCierre'
+    );
     expect((await fama.obtenerRacha(padre.address)).dias).to.equal(0);
 
     await advance(48 * 60 * 60);
@@ -108,9 +113,15 @@ describe('Fase 1 — soberanía de cobros, racha, alta, liquidación y oráculo'
     await alta.connect(user).pagarRegistro();
     await contract.connect(user).donar(tokenAddr, ethers.parseUnits('5', 18));
     const liq = await contract.totalLiquidity(tokenAddr);
-    await expect(fama.connect(user).canjearFama(250n)).to.be.reverted;
+    await expect(fama.connect(user).canjearFama(250n)).to.be.revertedWithCustomError(
+      fama,
+      'NoHumano'
+    );
     expect(await contract.totalLiquidity(tokenAddr)).to.equal(liq);
-    await expect(fama.connect(user).cobrarBonoRacha()).to.be.reverted;
+    await expect(fama.connect(user).cobrarBonoRacha()).to.be.revertedWithCustomError(
+      fama,
+      'NoHumano'
+    );
     expect(await contract.totalLiquidity(tokenAddr)).to.equal(liq);
   });
 

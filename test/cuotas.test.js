@@ -58,7 +58,9 @@ describe('QuatriviumCredit - cuotas desde $50', function () {
     const cuota = montoCuota(full.total, plan.pagado, plan.totales, plan.pagadas);
     expect(cuota).to.equal(full.total / 2n);
 
-    await expect(contract.connect(user).pagarPrestamo(tokenAddr, cuota - 1n)).to.be.reverted;
+    await expect(
+      contract.connect(user).pagarPrestamo(tokenAddr, cuota - 1n)
+    ).to.be.revertedWithoutReason();
 
     await contract.connect(user).pagarPrestamo(tokenAddr, cuota);
     expect((await contract.usuarios(user.address)).montoActivo).to.equal(
@@ -132,7 +134,9 @@ describe('QuatriviumCredit - cuotas desde $50', function () {
     await seedPool(token, contract, owner, '500');
     await registerAndFund(token, contract, user, '200');
 
-    await expect(contract.connect(user).solicitarPrestamo(tokenAddr, 2)).to.be.reverted;
+    await expect(
+      contract.connect(user).solicitarPrestamo(tokenAddr, 2)
+    ).to.be.revertedWithoutReason();
 
     await contract.connect(user).solicitarPrestamo(tokenAddr, 1);
     let debt = await contract.obtenerDeuda(user.address);
@@ -172,7 +176,7 @@ describe('QuatriviumCredit - cuotas desde $50', function () {
 
     await ethers.provider.send('evm_setNextBlockTimestamp', [Number(plan.venceCuota) + 10]);
     await ethers.provider.send('evm_mine');
-    await expect(contract.marcarMorosoSiVencido(user.address)).to.be.reverted;
+    await expect(contract.marcarMorosoSiVencido(user.address)).to.be.revertedWithoutReason();
 
     debt = await contract.obtenerDeuda(user.address);
     await contract.connect(user).pagarPrestamo(tokenAddr, debt.total);

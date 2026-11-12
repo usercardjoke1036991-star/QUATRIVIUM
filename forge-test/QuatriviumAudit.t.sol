@@ -147,7 +147,7 @@ contract QuatriviumAuditForgeTest is Test {
         vm.warp(vencimiento + 48 hours + 10);
         token.mint(user, 20 ether);
         vm.prank(user, user);
-        vm.expectRevert();
+        vm.expectRevert(bytes(""));
         credit.liquidate(user, address(token));
         (, uint256 montoActivo,,,,) = credit.usuarios(user);
         assertGt(montoActivo, 0);
@@ -224,7 +224,7 @@ contract QuatriviumAuditForgeTest is Test {
         uint256 id = credit.proposeAdminAction(data);
         vm.warp(block.timestamp + 72 hours + 1);
         vm.prank(owner);
-        vm.expectRevert();
+        vm.expectRevert(QuatriviumCredit.VotosInsuficientes.selector);
         credit.executeAdminAction(id);
         (,,,, bool executed,) = credit.proposals(id);
         assertFalse(executed);
@@ -275,7 +275,7 @@ contract QuatriviumAuditForgeTest is Test {
 
     function test_pagarCanje_only_fama_sibling() public {
         vm.prank(user, user);
-        vm.expectRevert();
+        vm.expectRevert(bytes(""));
         credit.pagarCanje(address(token), user, 1 ether);
     }
 
@@ -287,13 +287,13 @@ contract QuatriviumAuditForgeTest is Test {
     function test_founder_cannot_self_donate() public {
         token.mint(owner, 5 ether);
         vm.prank(owner, owner);
-        vm.expectRevert();
+        vm.expectRevert(bytes(""));
         credit.donar(address(token), 5 ether);
     }
 
     function test_contract_cannot_borrow() public {
         BorrowProxy proxy = new BorrowProxy(credit);
-        vm.expectRevert();
+        vm.expectRevert(QuatriviumCredit.NoEsEOA.selector);
         proxy.borrow();
     }
 
@@ -427,13 +427,13 @@ contract FamaLibPtsTest is Test {
 
     function test_acceso_grande_para_en_70() public {
         this.wrapAcceso(1000 ether, 0, 0, 50 ether, 8000, true);
-        vm.expectRevert();
+        vm.expectRevert(bytes(""));
         this.wrapAcceso(85 ether, 0, 0, 60 ether, 8000, false);
     }
 
     function test_acceso_chico_para_en_80() public {
         this.wrapAcceso(100 ether, 0, 79 ether, 1 ether, 8000, true);
-        vm.expectRevert();
+        vm.expectRevert(bytes(""));
         this.wrapAcceso(100 ether, 0, 80 ether, 1 ether, 8000, true);
     }
 

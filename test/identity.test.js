@@ -37,7 +37,9 @@ describe('QuatriviumCredit - Sovereign wallet-only onboarding (no attester / pho
     await seedPool(token, contract, owner, '500');
 
     await contract.connect(user).registrarHumanoConPadre(ethers.ZeroAddress);
-    await expect(contract.connect(user).solicitarPrestamo(tokenAddr, 0)).to.be.reverted;
+    await expect(
+      contract.connect(user).solicitarPrestamo(tokenAddr, 0)
+    ).to.be.revertedWithoutReason();
 
     await token.mint(user.address, ethers.parseUnits('10', 18));
     await token.connect(user).approve(await alta.getAddress(), ethers.MaxUint256);

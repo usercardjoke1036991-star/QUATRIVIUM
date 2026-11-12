@@ -58,13 +58,16 @@ describe('Alta 4 USDT', function () {
 
   it('con Alta el sello no entra por pagarVerificacion directo', async () => {
     const { contract, user, tokenAddr } = await deployAltaStack();
-    await expect(contract.connect(user).pagarVerificacion(tokenAddr, ethers.parseUnits('1', 18))).to
-      .be.reverted;
+    await expect(
+      contract.connect(user).pagarVerificacion(tokenAddr, ethers.parseUnits('1', 18))
+    ).to.be.revertedWithoutReason();
   });
 
   it('onAlta solo lo llama el contrato Alta y exige tokens en caja', async () => {
     const { reserva, owner } = await deployAltaStack();
-    await expect(reserva.connect(owner).onAlta(ethers.parseUnits('1', 18))).to.be.reverted;
+    await expect(
+      reserva.connect(owner).onAlta(ethers.parseUnits('1', 18))
+    ).to.be.revertedWithCustomError(reserva, 'SoloAdmin');
   });
 
   it('con Alta, sin pagarRegistro el préstamo revierte', async () => {
@@ -72,7 +75,9 @@ describe('Alta 4 USDT', function () {
     await seedPool(token, contract, owner, '500');
     await registerAndFund(token, contract, extra, '20');
     await contract.connect(user).registrarHumanoConPadre(extra.address);
-    await expect(contract.connect(user).solicitarPrestamo(tokenAddr, 0)).to.be.reverted;
+    await expect(
+      contract.connect(user).solicitarPrestamo(tokenAddr, 0)
+    ).to.be.revertedWithoutReason();
   });
 
   it('al vencer, el USDT del padrino se anota al deudor', async () => {
@@ -101,7 +106,9 @@ describe('Alta 4 USDT', function () {
     const liqBefore = await contract.totalLiquidity(tokenAddr);
     const fondoBefore = await contract.fondoSeguro(tokenAddr);
     const padreBefore = await token.balanceOf(extra.address);
-    await expect(alta.connect(user).vencerPadrinoAlPool(user.address)).to.be.reverted;
+    await expect(
+      alta.connect(user).vencerPadrinoAlPool(user.address)
+    ).to.be.revertedWithCustomError(alta, 'PadrinoVivo');
     await ethers.provider.send('evm_increaseTime', [7 * 24 * 60 * 60 + 1]);
     await ethers.provider.send('evm_mine', []);
     await alta.connect(user).vencerPadrinoAlPool(user.address);
@@ -128,6 +135,9 @@ describe('Alta 4 USDT', function () {
     await contract.connect(user).pagarPrestamo(tokenAddr, deuda[2]);
     expectAmt(await alta.padrinoApartado(user.address), 0n);
     expect(await alta.registroHecho(user.address)).to.equal(true);
-    await expect(alta.connect(user).pagarRegistro()).to.be.reverted;
+    await expect(alta.connect(user).pagarRegistro()).to.be.revertedWithCustomError(
+      alta,
+      'YaRegistro'
+    );
   });
 });

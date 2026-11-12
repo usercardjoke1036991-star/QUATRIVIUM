@@ -55,7 +55,7 @@ contract QuatriviumBlindajesTest is Test {
     function test_con_alta_el_sello_no_entra_por_verificar() public {
         _onboard(hijo, address(0));
         vm.prank(hijo, hijo);
-        vm.expectRevert();
+        vm.expectRevert(bytes(""));
         credit.pagarVerificacion(address(token), 1 ether);
     }
 
@@ -63,7 +63,7 @@ contract QuatriviumBlindajesTest is Test {
         _onboard(padre, address(0));
         _onboard(hijo, padre);
         vm.prank(hijo, hijo);
-        vm.expectRevert();
+        vm.expectRevert(bytes(""));
         credit.solicitarPrestamo(address(token), 1);
     }
 

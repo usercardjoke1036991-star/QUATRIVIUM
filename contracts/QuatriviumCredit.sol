@@ -401,9 +401,11 @@ contract QuatriviumCredit is ReentrancyGuard {
         if (!humanosVerificados[fundador]) {
             humanosVerificados[fundador] = true;
             redGenealogica[fundador] = Usuario({ padre: address(0), bonoActivacionCobrado: true });
+            // slither-disable-next-line incorrect-equality // cero significa que el fundador aun no tiene nivel
             if (progresoUsuarios[fundador].nivelActual == 0) {
                 progresoUsuarios[fundador].nivelActual = 1;
             }
+            // slither-disable-next-line incorrect-equality // cero significa que la reputacion inicial aun no se anoto
             if (reputacion[fundador] == 0) reputacion[fundador] = REPUTACION_INICIAL;
             emit HumanoVerificado(fundador);
             emit AfiliadoRegistrado(fundador, address(0));
@@ -734,6 +736,7 @@ contract QuatriviumCredit is ReentrancyGuard {
             : (interesDue * pago) / totalDue;
         if (interesParte > pago) interesParte = pago;
         _reducirOutstanding(token, pago - interesParte);
+        // slither-disable-next-line reentrancy-no-eth // pagarPrestamo ya sostiene nonReentrant durante estas llamadas
         uint256 comisionesRed = _repartirPago(deudor, token, interesParte);
 
         plan.pagado = uint128(pagadoAntes + pago);
@@ -853,6 +856,7 @@ contract QuatriviumCredit is ReentrancyGuard {
     ///      Sin feed solo cuenta la gracia de 48 h. Un feed que revierte o trae startedAt en cero pospone.
     function _syncSequencer(uint256 vencimiento) internal view returns (uint256 extra, bool posponer) {
         if (address(sequencerFeed) == address(0)) return (0, false);
+        // slither-disable-next-line unused-return // updatedAt y answeredInRound no cambian la gracia
         try sequencerFeed.latestRoundData() returns (
             uint80 roundId,
             int256 answer,
@@ -872,6 +876,7 @@ contract QuatriviumCredit is ReentrancyGuard {
     }
 
     function _caidaPrevia(uint80 roundId, uint256 vuelta) internal view returns (uint256 caida) {
+        // slither-disable-next-line unused-return // de la ronda previa solo importan answer y startedAt
         try sequencerFeed.getRoundData(roundId - 1) returns (
             uint80,
             int256 prevAnswer,

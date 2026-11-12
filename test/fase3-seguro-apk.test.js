@@ -13,7 +13,9 @@ describe('Fase 3 — fondo, sequencer y APK', function () {
     for (const name of ['sweep', 'retirarComisiones', 'rescueTokens', 'retirarFondoSeguro']) {
       expect(contract.interface.hasFunction(name), name).to.equal(false);
     }
-    await expect(owner.sendTransaction({ to: contractAddr, value: 1n })).to.be.reverted;
+    await expect(
+      owner.sendTransaction({ to: contractAddr, value: 1n })
+    ).to.be.revertedWithoutReason();
   });
 
   it('allows a zero sequencer feed on the hardhat chain', async () => {

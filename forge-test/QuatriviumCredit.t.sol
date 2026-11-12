@@ -80,7 +80,7 @@ contract QuatriviumCreditForgeTest is Test {
     function test_lp_cannot_redeem() public {
         uint256 value = credit.valorLp(owner, address(token));
         vm.prank(owner, owner);
-        vm.expectRevert();
+        vm.expectRevert(bytes(""));
         credit.retirarLiquidez(address(token), value);
         assertEq(credit.valorLp(owner, address(token)), 475 ether);
         assertEq(credit.fondoSeguro(address(token)), 25 ether);
@@ -89,7 +89,7 @@ contract QuatriviumCreditForgeTest is Test {
 
     function test_contract_cannot_register() public {
         RegistrarProxy proxy = new RegistrarProxy(credit);
-        vm.expectRevert();
+        vm.expectRevert(QuatriviumCredit.NoEsEOA.selector);
         proxy.registrar();
     }
 
@@ -103,7 +103,7 @@ contract QuatriviumCreditForgeTest is Test {
         vm.prank(stranger, stranger);
         token.approve(address(credit), type(uint256).max);
         vm.prank(stranger, stranger);
-        vm.expectRevert();
+        vm.expectRevert(bytes(""));
         credit.pagarPrestamo(address(token), 1 ether);
 
         (, uint256 montoActivo,,,,) = credit.usuarios(user);

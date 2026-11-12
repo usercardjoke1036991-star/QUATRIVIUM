@@ -1177,7 +1177,7 @@ describe('demo credit gates', function () {
     await seedPool(ctx.token, ctx.contract, ctx.owner, '50');
     await expect(
       ctx.contract.connect(ctx.owner).retirarLiquidez(ctx.tokenAddr, ethers.parseUnits('1', 18))
-    ).to.be.reverted;
+    ).to.be.revertedWithoutReason();
     function poolAllowed(product, runtime) {
       return product === 'live' && runtime === 'live';
     }

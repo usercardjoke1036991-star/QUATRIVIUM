@@ -93,8 +93,9 @@ describe('copy de pantallas clave', function () {
     const { deployProtocol, seedPool } = require('./helpers.cjs');
     const { token, contract, owner, tokenAddr } = await deployProtocol();
     await seedPool(token, contract, owner, '50');
-    await expect(contract.connect(owner).retirarLiquidez(tokenAddr, ethers.parseUnits('1', 18))).to
-      .be.reverted;
+    await expect(
+      contract.connect(owner).retirarLiquidez(tokenAddr, ethers.parseUnits('1', 18))
+    ).to.be.revertedWithoutReason();
     const pool = read('components/PoolSupportSection.tsx');
     const home = read('app/index.tsx');
     expect(pool).to.include("t('poolPublicLead')");

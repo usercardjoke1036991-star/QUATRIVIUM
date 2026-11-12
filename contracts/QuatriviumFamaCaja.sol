@@ -164,6 +164,7 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
     function acreditarFamaRed(address deudor) external onlyCredit {
         if (deudor == address(0)) return;
         ICreditCaja nucleo = ICreditCaja(credit);
+        // slither-disable-next-line unused-return // redGenealogica devuelve el bono y aqui no se cobra
         (address padre,) = nucleo.redGenealogica(deudor);
         address fund = nucleo.fundador();
         address cursor = padre;
@@ -174,6 +175,7 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
                 famaRed[cursor] += pts;
                 emit FamaAcreditada(cursor, pts);
             }
+            // slither-disable-next-line unused-return // solo se sigue el padre, el bono no entra en el bucle
             (cursor,) = nucleo.redGenealogica(cursor);
         }
         if (fund != address(0) && fund != deudor && fund != padre) {
@@ -200,9 +202,13 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
     }
 
     function siguienteHitoRacha(uint256 cobrado) public pure returns (uint256) {
+        // slither-disable-next-line incorrect-equality // el hito es un identificador, no un saldo
         if (cobrado == 0) return RACHA_HITO_7;
+        // slither-disable-next-line incorrect-equality // el hito es un identificador, no un saldo
         if (cobrado == RACHA_HITO_7) return RACHA_HITO_30;
+        // slither-disable-next-line incorrect-equality // el hito es un identificador, no un saldo
         if (cobrado == RACHA_HITO_30) return RACHA_HITO_100;
+        // slither-disable-next-line incorrect-equality // el hito es un identificador, no un saldo
         if (cobrado == RACHA_HITO_100) return RACHA_HITO_365;
         return 0;
     }
@@ -250,6 +256,7 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
     function onCierrePrestamo(address deudor, address padre) external onlyCredit {
         if (padre == address(0) || deudor == address(0) || padre == deudor) return;
         ICreditCaja nucleo = ICreditCaja(credit);
+        // slither-disable-next-line unused-return // solo se comprueba que el padre coincida
         (address padreOnChain,) = nucleo.redGenealogica(deudor);
         if (padreOnChain != padre) return;
         _contarCierre(deudor, padre, nucleo);
@@ -260,6 +267,7 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
         if (tx.origin != msg.sender) revert SoloEOA();
         if (hijo == address(0)) revert DestinoCero();
         ICreditCaja nucleo = ICreditCaja(credit);
+        // slither-disable-next-line unused-return // solo hace falta la direccion del padre
         (address padre,) = nucleo.redGenealogica(hijo);
         if (padre == address(0) || padre == hijo) revert SinCierre();
         if (msg.sender != hijo && msg.sender != padre) revert SoloEOA();
@@ -269,6 +277,7 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
     function cobrarBonoRacha() external nonReentrant {
         if (tx.origin != msg.sender) revert SoloEOA();
         ICreditCaja nucleo = ICreditCaja(credit);
+        // slither-disable-next-line unused-return // de usuarios solo importan el monto, el vencimiento y la mora
         (, uint256 montoActivo, uint256 vencimiento, bool enMora,,) = nucleo.usuarios(msg.sender);
         bool vencido = montoActivo > 0 && vencimiento > 0 && block.timestamp > vencimiento;
         if (
@@ -291,6 +300,7 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
     function canjearFamaRed(uint256 fama) external nonReentrant {
         if (tx.origin != msg.sender) revert SoloEOA();
         ICreditCaja nucleo = ICreditCaja(credit);
+        // slither-disable-next-line unused-return // de usuarios solo importan el monto, el vencimiento y la mora
         (, uint256 montoActivo, uint256 vencimiento, bool enMora,,) = nucleo.usuarios(msg.sender);
         bool vencido = montoActivo > 0 && vencimiento > 0 && block.timestamp > vencimiento;
         if (
@@ -311,6 +321,7 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
     function canjearFama(uint256 fama) external nonReentrant {
         if (tx.origin != msg.sender) revert SoloEOA();
         ICreditCaja nucleo = ICreditCaja(credit);
+        // slither-disable-next-line unused-return // de usuarios solo importan el monto, el vencimiento y la mora
         (, uint256 montoActivo, uint256 vencimiento, bool enMora,,) = nucleo.usuarios(msg.sender);
         bool vencido = montoActivo > 0 && vencimiento > 0 && block.timestamp > vencimiento;
         if (
@@ -329,6 +340,7 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
     }
 
     function _contarCierre(address hijo, address padre, ICreditCaja nucleo) internal returns (bool) {
+        // slither-disable-next-line unused-return // del cierre solo importa si el hijo sigue con monto activo
         (, uint256 montoActivo,,,,) = nucleo.usuarios(hijo);
         uint256 cerrados = nucleo.prestamosCerrados(hijo);
         if (montoActivo != 0 || cerrados == 0 || cerrados <= cierreContado[hijo]) return false;
@@ -343,6 +355,7 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
         Racha storage r = racha[who];
         uint32 today = diaActual();
         vis = _diasTrasDecay(r, today);
+        // slither-disable-next-line incorrect-equality // compara el contador de dias ya guardado con el visible
         if (r.dias == vis) return vis;
         r.dias = vis;
         if (r.ultimoDia != 0 && today > r.ultimoDia + 2) {
@@ -352,6 +365,7 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
 
     function _diasTrasDecay(Racha memory r, uint32 today) internal pure returns (uint32) {
         uint32 dias = r.dias;
+        // slither-disable-next-line incorrect-equality // cero es "sin racha", no un balance de token
         if (dias == 0 || r.ultimoDia == 0 || today <= r.ultimoDia + 2) return dias;
         uint32 decay = today - (r.ultimoDia + 2);
         if (decay <= r.decayTaken) return dias;
@@ -362,6 +376,7 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
     function _sumarDia(address padre) internal {
         uint32 today = diaActual();
         Racha storage r = racha[padre];
+        // slither-disable-next-line incorrect-equality // el mismo dia civil no suma otra vez
         if (r.ultimoDia == today) return;
         uint32 vis = _diasTrasDecay(r, today);
         r.dias = vis + 1;

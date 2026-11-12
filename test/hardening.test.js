@@ -19,7 +19,9 @@ describe('QuatriviumCredit - hardening', function () {
     const { token, contract, owner, tokenAddr } = await deployProtocol();
     await seedPool(token, contract, owner, '500');
     const value = await contract.valorLp(owner.address, tokenAddr);
-    await expect(contract.connect(owner).retirarLiquidez(tokenAddr, value)).to.be.reverted;
+    await expect(
+      contract.connect(owner).retirarLiquidez(tokenAddr, value)
+    ).to.be.revertedWithoutReason();
     expect(await contract.valorLp(owner.address, tokenAddr)).to.equal(ethers.parseUnits('475', 18));
   });
 
@@ -48,9 +50,9 @@ describe('QuatriviumCredit - hardening', function () {
     });
     const data = contract.interface.encodeFunctionData('removeAdmin', [admin3.address]);
     await contract.connect(owner).proposeAdminAction(data);
-    await expect(contract.connect(admin2).cancelAdminAction(1)).to.be.reverted;
+    await expect(contract.connect(admin2).cancelAdminAction(1)).to.be.revertedWithoutReason();
     await contract.connect(owner).cancelAdminAction(1);
-    await expect(contract.connect(owner).executeAdminAction(1)).to.be.reverted;
+    await expect(contract.connect(owner).executeAdminAction(1)).to.be.revertedWithoutReason();
   });
 
   it('does not count a lower-tier loan toward the next level', async () => {

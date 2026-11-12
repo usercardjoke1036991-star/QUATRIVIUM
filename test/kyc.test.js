@@ -18,6 +18,8 @@ describe('QuatriviumCredit - Sovereign KYC-free borrowing', function () {
   it('requires registration before borrowing', async () => {
     const { token, contract, owner, user, tokenAddr } = await deployProtocol();
     await seedPool(token, contract, owner, '500');
-    await expect(contract.connect(user).solicitarPrestamo(tokenAddr, 0)).to.be.reverted;
+    await expect(
+      contract.connect(user).solicitarPrestamo(tokenAddr, 0)
+    ).to.be.revertedWithoutReason();
   });
 });

@@ -20,10 +20,10 @@ async function proponerPausa(contract, proposer, confirmer, { wait = true, confi
 describe('Pausa de préstamos con quórum', function () {
   it('un admin solo no puede pausar ni saltarse las 72 h', async () => {
     const { contract, owner, user } = await deployProtocol();
-    await expect(contract.connect(owner).pausarPrestamosNuevos()).to.be.reverted;
+    await expect(contract.connect(owner).pausarPrestamosNuevos()).to.be.revertedWithoutReason();
     const id = await proponerPausa(contract, owner, user, { wait: false });
-    await expect(contract.connect(owner).executeAdminAction(id)).to.be.reverted;
-    await expect(contract.connect(owner).confirmAdminAction(id)).to.be.reverted;
+    await expect(contract.connect(owner).executeAdminAction(id)).to.be.revertedWithoutReason();
+    await expect(contract.connect(owner).confirmAdminAction(id)).to.be.revertedWithoutReason();
   });
 
   it('dos admins pausan tras 72 h, la pausa se levanta sola y el descanso bloquea otra', async () => {
@@ -45,7 +45,9 @@ describe('Pausa de préstamos con quórum', function () {
     await expect(reserva.connect(owner).aportarBote(ethers.parseUnits('1', 18))).to.not.be.reverted;
 
     await warp(48 * 60 * 60);
-    await expect(contract.connect(user).solicitarPrestamo(tokenAddr, 0)).to.be.reverted;
+    await expect(
+      contract.connect(user).solicitarPrestamo(tokenAddr, 0)
+    ).to.be.revertedWithoutReason();
 
     await warp(7 * 24 * 60 * 60);
     await expect(contract.connect(user).solicitarPrestamo(tokenAddr, 0)).to.not.be.reverted;

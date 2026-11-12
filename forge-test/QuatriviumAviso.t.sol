@@ -9,7 +9,7 @@ contract QuatriviumAvisoTest is Test {
 
     function test_aviso_revierte_si_el_gas_no_alcanza_el_63_64() public {
         QuatriviumAvisoHarness pago = new QuatriviumAvisoHarness();
-        vm.expectRevert();
+        vm.expectRevert(bytes(""));
         pago.aviso{gas: AVISO_MINIMO}(address(1), address(2), 1, address(3), 1, 1);
     }
 

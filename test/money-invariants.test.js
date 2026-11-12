@@ -45,6 +45,8 @@ describe('Reglas de dinero', function () {
     await seedPool(token, contract, owner, '100');
     await registerAndFund(token, contract, user, '80');
     await contract.forceNivel(user.address, 10);
-    await expect(contract.connect(user).solicitarPrestamo(tokenAddr, 10)).to.be.reverted;
+    await expect(
+      contract.connect(user).solicitarPrestamo(tokenAddr, 10)
+    ).to.be.revertedWithoutReason();
   });
 });
