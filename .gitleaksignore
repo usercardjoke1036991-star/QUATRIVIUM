@@ -1,3 +1,5 @@
 # Direccion publica de LUSD en Arbitrum One. No es un secreto.
 e5ce36996abbbbf56cdb11acd689aea012319890:test/deploy-sovereign.test.js:generic-api-key:16
 e5ce36996abbbbf56cdb11acd689aea012319890:test/deploy-sovereign.test.js:generic-api-key:26
+# Nombre de casilla SecureStore del autenticador; no es una clave.
+b8f99849699d1bc473981447a5b5a7687e1082df:services/authenticator.ts:generic-api-key:21
