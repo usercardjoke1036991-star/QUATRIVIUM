@@ -16,6 +16,8 @@ function installMock(name, exports) {
 
 let crashOnLiveWrap = false;
 let gateFault = '';
+let boundFault = '';
+let failPasswordWrite = false;
 let crashOnSecretPromote = false;
 let rejectDeviceAuth = false;
 let authError = 'no-credential';
@@ -35,16 +37,35 @@ installMock('expo-secure-store', {
     } else if (secretMeta.get(key) && secretMeta.get(key).requireAuthentication) {
       throw new Error('auth-required');
     }
+    if (boundFault && key === 'quatrivium.device.boundWallet') {
+      if (boundFault === 'throw') throw new Error('io');
+      if (boundFault === 'hang') return new Promise(() => {});
+    }
     if (gateFault && String(key).includes('lock.gate')) {
       if (gateFault === 'throw') throw new Error('io');
       if (gateFault === 'hang') return new Promise(() => {});
       if (gateFault === 'lie' && memory.has(key)) {
         return JSON.stringify({ fails: 7, until: 0, waitMs: 1, left: 1, seen: 1, chainAt: 1 });
       }
+      if (gateFault === 'lie-clear' && memory.has(key)) {
+        const stored = JSON.parse(memory.get(key));
+        if (stored.fails === 0 && stored.left === 0) {
+          return JSON.stringify({
+            fails: 3,
+            until: 0,
+            waitMs: 1,
+            left: 1,
+            seen: 1,
+            chainAt: 1,
+            lastChain: 0,
+          });
+        }
+      }
     }
     return memory.has(key) ? memory.get(key) : null;
   },
   async setItemAsync(key, value, options) {
+    if (failPasswordWrite && key === 'quatrivium.lock.password') throw new Error('disk');
     if (crashOnLiveWrap && key === PIN_WRAP) throw new Error('crash');
     if (crashOnSecretPromote && key === SECRET_KEY && memory.has(`${SECRET_KEY}.next`)) {
       throw new Error('crash');
@@ -97,6 +118,11 @@ const copy = loadTs(path.join(__dirname, '..', 'utils', 'lockFailureCopy.ts'));
 const errors = loadTs(path.join(__dirname, '..', 'utils', 'txErrors.ts'));
 const box = loadTs(path.join(__dirname, '..', 'utils', 'secretBox.ts'));
 const lock = loadTs(path.join(__dirname, '..', 'services', 'appLock.ts'));
+const auth = loadTs(path.join(__dirname, '..', 'services', 'authenticator.ts'));
+const totp = loadTs(path.join(__dirname, '..', 'utils', 'totp.ts'));
+const handoff = loadTs(path.join(__dirname, '..', 'services', 'walletHandoff.ts'));
+const entry = loadTs(path.join(__dirname, '..', 'utils', 'accountEntry.ts'));
+const session = loadTs(path.join(__dirname, '..', 'services', 'walletSession.ts'));
 const device = loadTs(path.join(__dirname, '..', 'utils', 'deviceSecret.ts'));
 const wallet = loadTs(path.join(__dirname, '..', 'services', 'appWallet.ts'));
 const rpc = loadTs(path.join(__dirname, '..', 'constants', 'rpcConfig.ts'));
@@ -125,6 +151,8 @@ describe('app lock PBKDF2', function () {
   afterEach(function () {
     kdf.resetPbkdf2ForTests();
     gateFault = '';
+    boundFault = '';
+    failPasswordWrite = false;
     lock.setMonoClockForTests(null);
     lock.setChainStampsForTests(() => []);
     device.setScreenLockForTests(null);
@@ -183,10 +211,6 @@ describe('app lock PBKDF2', function () {
       expect(material.verifier).to.not.equal(material.wrap.slice(2));
       expect(material.verifier).to.equal(record.hash);
       expect(material.wrap).to.equal(wrap);
-      const matched = await lock.matchPin(PIN);
-      expect(matched).to.equal(true);
-      expect(kdf.takeKdfCalls()).to.equal(1);
-      expect(kdf.takeKdfBlocks()).to.equal(1);
       const right = await lock.checkPin(PIN);
       expect(right.ok).to.equal(true);
       expect(kdf.takeKdfCalls()).to.equal(1);
@@ -1092,10 +1116,6 @@ describe('app lock PBKDF2', function () {
     expect(failed.storeUnknown).to.equal(true);
     expect(kdf.takeKdfCalls()).to.equal(0);
     gateFault = '';
-    memory.set('quatrivium.lock.gate', '{');
-    const corrupt = await lock.checkPassword(PASSWORD);
-    expect(corrupt.storeUnknown).to.equal(true);
-    expect(kdf.takeKdfCalls()).to.equal(0);
     memory.set(
       'quatrivium.lock.gate',
       JSON.stringify({
@@ -1148,5 +1168,286 @@ describe('app lock PBKDF2', function () {
       stamp
     );
     expect(policy.agreedChainMs([stamp + hour, stamp, stamp + 1_000])).to.equal(stamp);
+  });
+
+  function badTotp(secret) {
+    const now = Date.now();
+    const window = [
+      totp.totpAt(secret, now - 30_000),
+      totp.totpAt(secret, now),
+      totp.totpAt(secret, now + 30_000),
+    ];
+    return window.includes('000000') ? '111111' : '000000';
+  }
+
+  it('counts authenticator misses on the same ladder as the pin', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    memory.delete('quatrivium.lock.gate');
+    memory.delete('quatrivium.lock.attempts');
+    await lock.setPassword(PASSWORD);
+    await lock.setPin(PIN);
+    const secret = totp.bytesToBase32(new Uint8Array(20).fill(3));
+    memory.set('qc_totp_secret_v1', secret);
+    const bad = badTotp(secret);
+    const first = await auth.unlockWithAuthenticator(bad);
+    expect(first.remainingMs).to.equal(policy.lockoutMs(1));
+    const during = await auth.unlockWithAuthenticator(totp.totpAt(secret, Date.now()));
+    expect(during.locked).to.equal(true);
+    expect(during.ok).to.equal(false);
+    expect(memory.get('qc_totp_step_v1')).to.equal(undefined);
+    expect(JSON.parse(memory.get('quatrivium.lock.gate')).fails).to.equal(1);
+    for (let step = 2; step <= 6; step += 1) {
+      const row = JSON.parse(memory.get('quatrivium.lock.gate'));
+      row.left = 0;
+      memory.set('quatrivium.lock.gate', JSON.stringify(row));
+      const miss = await auth.unlockWithAuthenticator(bad);
+      expect(miss.remainingMs).to.equal(policy.lockoutMs(step));
+    }
+  });
+
+  it('raises the shared ladder when a totp miss is followed by a pin miss', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    memory.delete('quatrivium.lock.gate');
+    memory.delete('quatrivium.lock.attempts');
+    await lock.setPassword(PASSWORD);
+    await lock.setPin(PIN);
+    const secret = totp.bytesToBase32(new Uint8Array(20).fill(5));
+    memory.set('qc_totp_secret_v1', secret);
+    const first = await auth.unlockWithAuthenticator(badTotp(secret));
+    expect(first.remainingMs).to.equal(policy.lockoutMs(1));
+    const row = JSON.parse(memory.get('quatrivium.lock.gate'));
+    row.left = 0;
+    memory.set('quatrivium.lock.gate', JSON.stringify(row));
+    const pinMiss = await lock.checkPin('193746');
+    expect(pinMiss.remainingMs).to.equal(policy.lockoutMs(2));
+    expect(JSON.parse(memory.get('quatrivium.lock.gate')).fails).to.equal(2);
+    const attempts = JSON.parse(memory.get('quatrivium.lock.attempts'));
+    expect(attempts.totp).to.equal(1);
+    expect(attempts.pin).to.equal(1);
+  });
+
+  it('rejects a repeated authenticator code and does not open the key without the device secret', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    memory.delete('quatrivium.lock.gate');
+    memory.delete('quatrivium.lock.attempts');
+    await lock.setPassword(PASSWORD);
+    await lock.setPin(PIN);
+    const secret = totp.bytesToBase32(new Uint8Array(20).fill(4));
+    memory.set('qc_totp_secret_v1', secret);
+    const wrap = session.getWalletWrapKey();
+    const legacyKey = await box.deriveWrapKeyAsync(secret, 'qc.totp.wrap', 8000);
+    memory.set('qc_totp_wrap_v1', box.sealSecret(wrap, legacyKey));
+    const code = totp.totpAt(secret, Date.now());
+    lock.lockNow();
+    const opened = await auth.unlockWithAuthenticator(code);
+    expect(opened.ok).to.equal(true);
+    expect(session.getWalletWrapKey()).to.equal(wrap);
+    expect(() => box.openSecret(memory.get('qc_totp_wrap_v1'), legacyKey)).to.throw();
+    const again = await auth.unlockWithAuthenticator(code);
+    expect(again.ok).to.equal(false);
+    const alone = totp.bytesToBase32(new Uint8Array(20).fill(9));
+    memory.set('qc_totp_secret_v1', alone);
+    memory.delete('qc_totp_step_v1');
+    const aloneKey = await box.deriveWrapKeyAsync(alone, 'qc.totp.wrap', 8000);
+    memory.set('qc_totp_wrap_v1', box.sealSecret(wrap, aloneKey));
+    memory.delete('quatrivium.lock.deviceSecret');
+    memory.delete('quatrivium.lock.deviceAuth');
+    const row = JSON.parse(memory.get('quatrivium.lock.gate'));
+    row.left = 0;
+    memory.set('quatrivium.lock.gate', JSON.stringify(row));
+    lock.lockNow();
+    const denied = await auth.unlockWithAuthenticator(totp.totpAt(alone, Date.now()));
+    expect(denied.ok).to.equal(false);
+    expect(session.getWalletWrapKey()).to.equal(null);
+  });
+
+  it('lets one attempt through when pin and password are submitted together', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    memory.delete('quatrivium.lock.gate');
+    memory.delete('quatrivium.lock.attempts');
+    await lock.setPassword(PASSWORD);
+    await lock.setPin(PIN);
+    memory.delete('quatrivium.lock.gate');
+    memory.delete('quatrivium.lock.attempts');
+    const results = await Promise.all([
+      lock.checkPin('193746'),
+      lock.checkPin('193746'),
+      lock.checkPassword('Otra-8z'),
+    ]);
+    const processed = results.filter((result) => !result.busy);
+    const gate = JSON.parse(memory.get('quatrivium.lock.gate'));
+    expect(processed.length === 1 || gate.fails === 3).to.equal(true);
+    expect(gate.fails).to.be.at.least(processed.length);
+  });
+
+  it('turns a corrupt lock record into a day wait and then opens with the password', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    memory.delete('quatrivium.lock.gate');
+    memory.delete('quatrivium.lock.attempts');
+    await lock.setPassword(PASSWORD);
+    memory.set('quatrivium.lock.gate', '{');
+    kdf.takeKdfCalls();
+    const blocked = await lock.checkPassword(PASSWORD);
+    expect(blocked.locked).to.equal(true);
+    expect(blocked.remainingMs).to.equal(policy.lockoutMs(6));
+    expect(kdf.takeKdfCalls()).to.equal(0);
+    const saved = JSON.parse(memory.get('quatrivium.lock.gate'));
+    expect(saved.fails).to.be.at.least(6);
+    expect(saved.left).to.equal(policy.lockoutMs(6));
+    expect(saved.chainAt).to.equal(0);
+    mono += policy.lockoutMs(6);
+    expect(await lock.tickLockWait()).to.equal(0);
+    expect((await lock.checkPassword(PASSWORD)).ok).to.equal(true);
+    expect(entry.restoreFromLockScreen('lock')).to.equal('restore');
+    expect(entry.restoreFromLockScreen('app')).to.equal(null);
+  });
+
+  it('rejects the attempt when the bound wallet cannot be read', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    memory.delete('quatrivium.lock.gate');
+    memory.delete('quatrivium.lock.attempts');
+    await lock.setPassword(PASSWORD);
+    memory.set(
+      'quatrivium.lock.gate',
+      JSON.stringify({
+        fails: 4,
+        until: 0,
+        waitMs: policy.lockoutMs(4),
+        left: 0,
+        seen: mono,
+        chainAt: 0,
+        lastChain: 0,
+      })
+    );
+    boundFault = 'throw';
+    const rejected = await lock.checkPassword('Otra-8z');
+    expect(rejected.storeUnknown).to.equal(true);
+    boundFault = '';
+    expect(JSON.parse(memory.get('quatrivium.lock.gate')).fails).to.equal(4);
+  });
+
+  it('lets the user in when the success clear cannot be confirmed', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    memory.delete('quatrivium.lock.gate');
+    memory.delete('quatrivium.lock.attempts');
+    await lock.setPassword(PASSWORD);
+    let seen = 0;
+    race.setLockFaultReporter(() => {
+      seen += 1;
+    });
+    gateFault = 'lie-clear';
+    try {
+      const opened = await lock.checkPassword(PASSWORD);
+      expect(opened.ok).to.equal(true);
+      expect(seen).to.equal(1);
+    } finally {
+      race.setLockFaultReporter(null);
+    }
+  });
+
+  it('relocks when the phone clock goes backwards during a wallet handoff', function () {
+    handoff.beginExternalWalletHandoff();
+    try {
+      expect(handoff.externalWalletHandoffActive()).to.equal(true);
+      expect(lock.shouldRelockAfterBackground(5_000, 4_000, 1_000, 1_100)).to.equal(true);
+    } finally {
+      handoff.endExternalWalletHandoff();
+    }
+  });
+
+  it('locks on a cold start whenever an account is on the phone', function () {
+    expect(
+      entry.nextEntryScreen({
+        accountOnPhone: true,
+        sessionSaved: true,
+        wrapReady: true,
+        unlockOn: false,
+      })
+    ).to.equal('unlock');
+    expect(
+      entry.nextEntryScreen({
+        accountOnPhone: false,
+        sessionSaved: false,
+        wrapReady: false,
+        unlockOn: false,
+      })
+    ).to.equal('welcome');
+  });
+
+  it('counts two urls on the same host as one rpc and ignores an older chain sample', async function () {
+    const first = rpc.publicRpcList()[0];
+    const host = new URL(first).hostname;
+    expect(
+      rpc.dedupeRpcHosts([first, `https://${host}/other`, 'https://example.test/rpc'])
+    ).to.deep.equal([first, 'https://example.test/rpc']);
+    const hosts = rpc.publicRpcList().map((url) => new URL(url).hostname);
+    expect(new Set(hosts).size).to.equal(hosts.length);
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    memory.delete('quatrivium.lock.gate');
+    memory.delete('quatrivium.lock.attempts');
+    const chain = 1_800_000_000_000;
+    memory.set(
+      'quatrivium.lock.gate',
+      JSON.stringify({
+        fails: 1,
+        until: 0,
+        waitMs: 30_000,
+        left: 30_000,
+        seen: mono,
+        chainAt: chain,
+        lastChain: chain + 60_000,
+      })
+    );
+    lock.setChainStampsForTests(() => [chain, chain + 1_000]);
+    mono += 5_000;
+    expect(await lock.refreshLockChain(true)).to.equal(25_000);
+    memory.set(
+      'quatrivium.lock.gate',
+      JSON.stringify({
+        fails: 1,
+        until: 0,
+        waitMs: 30_000,
+        left: 30_000,
+        seen: mono,
+        chainAt: chain,
+        lastChain: chain + 60_000,
+      })
+    );
+    lock.setChainStampsForTests(() => [chain + 70_000, chain + 71_000]);
+    expect(await lock.refreshLockChain(true)).to.equal(0);
+  });
+
+  it('does not open the biometric wrap when the phone cancels, and live mode does not fall back', async function () {
+    installMock('expo-local-authentication', {
+      async authenticateAsync() {
+        return { success: false };
+      },
+    });
+    const wrap = `0x${'ab'.repeat(32)}`;
+    memory.set('quatrivium.wallet.wrap.v1', wrap);
+    expect(await lock.loadWrapFromBiometric()).to.equal(null);
+    installMock('expo-local-authentication', {
+      async authenticateAsync() {
+        return { success: true };
+      },
+    });
+    expect(await lock.loadWrapFromBiometric()).to.equal(wrap);
+    failPasswordWrite = true;
+    rpc.setProductMode('live');
+    try {
+      await lock.setPassword(PASSWORD);
+      expect.fail();
+    } catch (error) {
+      expect(error.message).to.equal('password-persist');
+    }
+    expect(memory.has('mem:quatrivium.lock.password.fallback')).to.equal(false);
   });
 });

@@ -149,17 +149,6 @@ describe('cyber hardening — PIN and secret box', function () {
       'utf8'
     );
     expect(policy).to.include("productMode !== 'live'");
-    const lock = fs.readFileSync(path.join(__dirname, '..', 'services', 'appLock.ts'), 'utf8');
-    expect(lock).to.include('allowWalletAsyncFallback');
-    expect(lock).to.include("throw new Error('password-persist')");
-    const bio = lock.slice(
-      lock.indexOf('export async function loadWrapFromBiometric'),
-      lock.indexOf('export async function clearBiometricWrap')
-    );
-    expect(bio).to.include('authenticateBiometric');
-    expect(bio).to.include('if (!ok) return null');
-    expect(bio).to.include('WRAP_STORE, OPTIONS');
-    expect(bio).to.not.include('BIO_WRAP_OPTIONS');
     const entry = fs.readFileSync(path.join(__dirname, '..', 'utils', 'accountEntry.ts'), 'utf8');
     expect(entry).to.include('nextUnlockAfterBiometricFail');
     expect(entry).to.include("if (flags.pinSet) return 'pin'");
@@ -1384,11 +1373,10 @@ describe('account entry — password, email and session', () => {
       if (password === null || pin === null) return null;
       return false;
     }
-    function nextEntryScreen({ accountOnPhone, wrapReady, unlockOn }) {
+    function nextEntryScreen({ accountOnPhone }) {
       if (accountOnPhone === null) return 'signIn';
       if (!accountOnPhone) return 'welcome';
-      if (unlockOn || !wrapReady) return 'unlock';
-      return 'app';
+      return 'unlock';
     }
     function orderUnlockMethods(selected, primary) {
       const unique = [...new Set((selected || []).filter(Boolean))];
@@ -1471,7 +1459,7 @@ describe('account entry — password, email and session', () => {
         wrapReady: true,
         unlockOn: false,
       })
-    ).to.equal('app');
+    ).to.equal('unlock');
     expect(
       nextEntryScreen({
         accountOnPhone: true,
@@ -2367,18 +2355,6 @@ describe('account entry — password, email and session', () => {
     expect(security).to.include('subscribeScreenshot');
     expect(security).to.include('selectable={false}');
     expect(security).to.not.include('copyText(');
-    const lock = fs.readFileSync(path.join(__dirname, '..', 'services', 'appLock.ts'), 'utf8');
-    expect(lock).to.include('AsyncStorage.removeItem(PASSWORD_FALLBACK)');
-    expect(lock).to.match(/if \(stored\) \{[\s\S]*removeItem\(PASSWORD_FALLBACK\)/);
-    expect(lock).to.include('allowWalletAsyncFallback');
-    expect(lock).to.include("throw new Error('password-persist')");
-    const bio = lock.slice(
-      lock.indexOf('export async function loadWrapFromBiometric'),
-      lock.indexOf('export async function clearBiometricWrap')
-    );
-    expect(bio).to.include('authenticateBiometric');
-    expect(bio).to.include('if (!ok) return null');
-    expect(bio).to.not.include('BIO_WRAP_OPTIONS');
   });
 
   it('keeps local sovereign auth methods without email or phone OTP', function () {

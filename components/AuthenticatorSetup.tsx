@@ -99,7 +99,7 @@ export const AuthenticatorSetup: React.FC<{
     }
     setBusy(true);
     try {
-      if (!(await verifyAuthenticator(code))) {
+      if (!(await verifyAuthenticator(code)).ok) {
         Alert.alert(t('error'), t('authenticatorWrong'));
         setCode('');
         return;

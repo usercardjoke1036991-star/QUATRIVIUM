@@ -167,10 +167,29 @@ export function getActiveContractNetwork(): 'mainnet' | 'testnet' {
   return runtimeMode === 'live' ? 'mainnet' : 'testnet';
 }
 
+/** Dos URL del mismo host son un solo RPC. Una clave en la URL no entra. */
+export function dedupeRpcHosts(urls: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const url of urls) {
+    if (!url.startsWith('https://') || /[?&](?:apikey|key)=/i.test(url)) continue;
+    let host = '';
+    try {
+      host = new URL(url).hostname.toLowerCase();
+    } catch {
+      continue;
+    }
+    if (!host || seen.has(host)) continue;
+    seen.add(host);
+    out.push(url);
+  }
+  return out;
+}
+
 /** Los RPC públicos de la red activa. Sin clave de proveedor. */
 export function publicRpcList(): string[] {
   const list = runtimeMode === 'live' ? ARBITRUM_MAINNET.rpc : ARBITRUM_SEPOLIA.rpc;
-  return list.filter((url) => url.startsWith('https://') && !/[?&](?:apikey|key)=/i.test(url));
+  return dedupeRpcHosts(list);
 }
 
 function uniqueHttpsRpcs(): string[] {

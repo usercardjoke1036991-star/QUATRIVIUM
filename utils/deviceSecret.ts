@@ -104,6 +104,17 @@ async function createDeviceSecret(): Promise<DeviceSecret> {
   }
 }
 
+/** Lee el secreto si ya existe. No crea uno nuevo. */
+export async function peekDeviceSecret(): Promise<string | null> {
+  try {
+    const flag = await SecureStore.getItemAsync(AUTH_KEY);
+    if (flag === '1') return (await readAuthed()) || null;
+    return (await readPlain()) || null;
+  } catch {
+    return null;
+  }
+}
+
 /** El mismo secreto en cada apertura. No sustituye uno que ya abre el PIN. */
 export async function loadDeviceSecret(): Promise<DeviceSecret> {
   const flag = await SecureStore.getItemAsync(AUTH_KEY);

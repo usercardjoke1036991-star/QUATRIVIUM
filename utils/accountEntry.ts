@@ -57,7 +57,10 @@ export function wrapReadyForApp(wrapPresent: boolean, walletOpened: boolean): bo
   return Boolean(wrapPresent && walletOpened);
 }
 
-/** Hay cuenta en este teléfono: desbloqueo. Iniciar sesión solo si el almacén no responde. */
+/**
+ * Hay cuenta en este teléfono: un arranque en frío siempre pide el candado.
+ * Iniciar sesión solo si el almacén no responde. La llave en memoria no salta el candado.
+ */
 export function nextEntryScreen(input: {
   accountOnPhone: boolean | null;
   sessionSaved: boolean;
@@ -66,8 +69,13 @@ export function nextEntryScreen(input: {
 }): EntryScreen {
   if (input.accountOnPhone === null) return 'signIn';
   if (!input.accountOnPhone) return 'welcome';
-  if (input.unlockOn || !input.wrapReady) return 'unlock';
-  return 'app';
+  return 'unlock';
+}
+
+/** Desde la pantalla de bloqueo se puede recuperar la cuenta con la frase. */
+export function restoreFromLockScreen(screen: 'lock' | 'welcome' | 'app'): 'restore' | null {
+  if (screen === 'lock' || screen === 'welcome') return 'restore';
+  return null;
 }
 
 export type WelcomeAction = 'createPhrase' | 'restoreAccount' | 'signIn';

@@ -89,6 +89,7 @@ import {
   signInUsernameAllowed,
   unlockPromptMethods,
   nextUnlockAfterBiometricFail,
+  restoreFromLockScreen,
   restoreMatchesDevice,
   welcomeActions,
   welcomeShowsCreate,
@@ -214,6 +215,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
   const backgroundAt = useRef<number | null>(null);
   const backgroundMono = useRef<number | null>(null);
   const passwordCommittedRef = useRef(false);
+  const attemptGuard = useRef(false);
 
   useEffect(() => {
     setLockFaultReporter(() => setError(t('lockUnexpected')));
@@ -446,15 +448,9 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
         bioEnabled: bioReadyNow,
       });
       setAskingSignIn(false);
-      if (asked || !wrapReady) {
-        if (!asked) {
-          setUnlockMode('password');
-        }
-        lockNow();
-        setLocked(true);
-      } else {
-        setLocked(false);
-      }
+      if (!asked) setUnlockMode('password');
+      lockNow();
+      setLocked(true);
     } else {
       methodQueueRef.current = [];
       setMethodQueue([]);
@@ -700,7 +696,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
   };
 
   const pressKey = async (key: string) => {
-    if (!key || busy || lockMs > 0) return;
+    if (!key || busy || lockMs > 0 || attemptGuard.current) return;
     if (key === '⌫') {
       setPinDigits((value) => value.slice(0, -1));
       setError('');
@@ -711,6 +707,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
     setPinDigits(next);
     if (next.length < PIN_LENGTH) return;
 
+    attemptGuard.current = true;
     setBusy(true);
     try {
       const result = await checkPin(next);
@@ -729,25 +726,38 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
     } catch {
       reportLockFault();
     } finally {
+      attemptGuard.current = false;
       setBusy(false);
     }
   };
 
   const submitUnlockAuthenticator = async () => {
-    if (busy || lockMs > 0 || authCode.length !== 6) return;
+    if (busy || lockMs > 0 || attemptGuard.current || authCode.length !== 6) return;
+    attemptGuard.current = true;
     setBusy(true);
-    const ok = await unlockWithAuthenticator(authCode);
-    setBusy(false);
-    if (ok) {
-      await passQueuedMethod(askingSignIn);
-      return;
+    try {
+      const result = await unlockWithAuthenticator(authCode);
+      if (!result.ok && result.busy) return;
+      if (result.ok) {
+        await passQueuedMethod(askingSignIn);
+        return;
+      }
+      if (result.locked || result.storeUnknown) {
+        setLockMs(result.remainingMs);
+        setError(describeLockFailure('password', result, t));
+      } else {
+        setError(t('authenticatorWrong'));
+      }
+      setAuthCode('');
+    } finally {
+      attemptGuard.current = false;
+      setBusy(false);
     }
-    setError(t('authenticatorWrong'));
-    setAuthCode('');
   };
 
   const submitUnlockPassword = async () => {
-    if (busy || lockMs > 0 || !passwordInput) return;
+    if (busy || lockMs > 0 || attemptGuard.current || !passwordInput) return;
+    attemptGuard.current = true;
     setBusy(true);
     setError('');
     try {
@@ -761,6 +771,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
       setError(describeLockFailure('password', result, t));
       setPasswordInput('');
     } finally {
+      attemptGuard.current = false;
       setBusy(false);
     }
   };
@@ -1879,6 +1890,27 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
             >
               <AppText style={[styles.switchText, { color: colors.primary }]}>
                 {t('lockPasswordUseAuth')}
+              </AppText>
+            </TouchableOpacity>
+          ) : null}
+
+          {locked && !needsSetup && restoreFromLockScreen('lock') === 'restore' ? (
+            <TouchableOpacity
+              onPress={() => {
+                setNeedsSetup(true);
+                setSetupStage('restore');
+                setLocked(false);
+                setError('');
+                setRestorePhrase('');
+                setPasswordInput('');
+                setAccountUsername('');
+              }}
+              style={styles.switchMode}
+              accessibilityRole="button"
+              accessibilityLabel={t('restoreAccount')}
+            >
+              <AppText style={[styles.switchText, { color: colors.primary }]}>
+                {t('restoreAccount')}
               </AppText>
             </TouchableOpacity>
           ) : null}

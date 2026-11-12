@@ -45,6 +45,7 @@ export const FundsConfirmHost: React.FC<{ children: React.ReactNode }> = ({ chil
   const [error, setError] = useState('');
   const resolver = useRef<((ok: boolean) => void) | null>(null);
   const inflight = useRef<Promise<boolean> | null>(null);
+  const secretGuard = useRef(false);
 
   const finish = useCallback((ok: boolean) => {
     resolver.current?.(ok);
@@ -123,69 +124,79 @@ export const FundsConfirmHost: React.FC<{ children: React.ReactNode }> = ({ chil
   );
 
   const submitSecret = async () => {
-    if (busy) return;
-    if (
-      purpose !== 'security' &&
-      purpose !== 'admin' &&
-      !fundsConfirmPlan({
-        movesFunds: true,
-        protectionOn: !ackOnly,
-        details: tx,
-      }).canApprove
-    ) {
-      return;
-    }
-    if (ackOnly) {
-      finish(true);
-      return;
-    }
-    if (method === 'biometric') {
-      setBusy(true);
-      const wrap = await loadWrapFromBiometric();
-      setBusy(false);
-      if (!wrap) {
-        setError(t('fundsConfirmBiometricFail'));
+    if (busy || secretGuard.current) return;
+    secretGuard.current = true;
+    try {
+      if (
+        purpose !== 'security' &&
+        purpose !== 'admin' &&
+        !fundsConfirmPlan({
+          movesFunds: true,
+          protectionOn: !ackOnly,
+          details: tx,
+        }).canApprove
+      ) {
         return;
       }
-      finish(true);
-      return;
-    }
-    if (method === 'pin') {
-      if (pin.length < 6 || pin.length > 12) return;
+      if (ackOnly) {
+        finish(true);
+        return;
+      }
+      if (method === 'biometric') {
+        setBusy(true);
+        const wrap = await loadWrapFromBiometric();
+        setBusy(false);
+        if (!wrap) {
+          setError(t('fundsConfirmBiometricFail'));
+          return;
+        }
+        finish(true);
+        return;
+      }
+      if (method === 'pin') {
+        if (pin.length < 6 || pin.length > 12) return;
+        setBusy(true);
+        const checked = await checkPin(pin);
+        if (!checked.ok) {
+          setError(describeLockFailure('pin', checked, t));
+          setPin('');
+          setBusy(false);
+          return;
+        }
+        finish(true);
+        return;
+      }
+      if (method === 'authenticator') {
+        if (code.length !== 6) return;
+        setBusy(true);
+        const checked = await verifyAuthenticator(code);
+        if (!checked.ok && checked.busy) return;
+        if (!checked.ok) {
+          setError(
+            checked.locked || checked.storeUnknown
+              ? describeLockFailure('password', checked, t)
+              : t('authenticatorWrong')
+          );
+          setCode('');
+          setBusy(false);
+          return;
+        }
+        finish(true);
+        return;
+      }
+      if (!password) return;
       setBusy(true);
-      const checked = await checkPin(pin);
+      const checked = await checkPassword(password);
       if (!checked.ok) {
-        setError(describeLockFailure('pin', checked, t));
-        setPin('');
+        setError(describeLockFailure('password', checked, t));
+        setPassword('');
         setBusy(false);
         return;
       }
       finish(true);
-      return;
+    } finally {
+      secretGuard.current = false;
     }
-    if (method === 'authenticator') {
-      if (code.length !== 6) return;
-      setBusy(true);
-      const ok = await verifyAuthenticator(code);
-      if (!ok) {
-        setError(t('authenticatorWrong'));
-        setCode('');
-        setBusy(false);
-        return;
-      }
-      finish(true);
-      return;
-    }
-    if (!password) return;
-    setBusy(true);
-    const checked = await checkPassword(password);
-    if (!checked.ok) {
-      setError(describeLockFailure('password', checked, t));
-      setPassword('');
-      setBusy(false);
-      return;
-    }
-    finish(true);
   };
 
   const value = useMemo(() => ({ confirmFunds }), [confirmFunds]);
