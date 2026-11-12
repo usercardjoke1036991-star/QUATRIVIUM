@@ -26,6 +26,8 @@ import {
   checkPassword,
   checkPin,
   getPinLockRemaining,
+  pauseLockWait,
+  resumeLockWait,
   isBiometricEnabled,
   abortPasswordSetup,
   isPasswordSet,
@@ -588,7 +590,11 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
     const onChange = (next: AppStateStatus) => {
       if (next === 'background' || next === 'inactive') {
         backgroundAt.current = Date.now();
+        void pauseLockWait();
         return;
+      }
+      if (next === 'active') {
+        void resumeLockWait().then(() => getPinLockRemaining().then(setLockMs));
       }
       if (next === 'active' && shouldRelockAfterBackground(backgroundAt.current)) {
         Promise.all([
@@ -633,7 +639,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
   useEffect(() => {
     if (lockMs <= 0) return undefined;
     const timer = setInterval(() => {
-      setLockMs((value) => Math.max(0, value - 1000));
+      void getPinLockRemaining().then(setLockMs);
     }, 1000);
     return () => clearInterval(timer);
   }, [lockMs]);

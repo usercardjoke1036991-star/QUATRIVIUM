@@ -63,29 +63,75 @@ export function remainingLockMs(until: number, now = Date.now()): number {
   return Math.max(0, until - now);
 }
 
+/** Dos sellos de bloque cuentan como la misma hora si caben en este margen. */
+export const CHAIN_AGREE_MS = 3 * 60 * 1000;
+
 export interface WaitClock {
   fails: number;
   waitMs: number;
   left: number;
+  /** Último performance.now() contado con la app abierta. No es la hora del teléfono. */
   seen: number;
+  /** Hora de cadena, en ms, guardada en el fallo. 0 si ese fallo no tuvo quorum. */
+  chainAt: number;
 }
 
-/** Empieza la espera completa en el fallo. seen es la última hora que vimos. */
-export function startWait(fails: number, now: number): WaitClock {
+export interface WaitSample {
+  /** performance.now() mientras la app sigue abierta. */
+  mono: number;
+  /** Hora de cadena acordada por dos RPC, o null sin red. */
+  chain: number | null;
+}
+
+/** Empieza la espera completa en el fallo. seen es el reloj monótono; chainAt, la hora de cadena. */
+export function startWait(fails: number, mono: number, chainAt = 0): WaitClock {
   const waitMs = lockoutMs(fails);
-  return { fails, waitMs, left: waitMs, seen: now };
+  return {
+    fails,
+    waitMs,
+    left: waitMs,
+    seen: mono,
+    chainAt: chainAt > 0 ? chainAt : 0,
+  };
 }
 
 /**
- * El reloj del teléfono no acorta la espera.
- * Un paso hacia adelante, dentro de la espera, la descuenta.
- * Si el reloj va hacia atrás, o salta más que la espera entera, se cuenta de nuevo desde el fallo.
+ * Dos de N sellos coinciden si su diferencia cabe en unos minutos.
+ * Vale cualquier par, no solo los dos primeros. Se queda el menor del par más cerrado,
+ * para que un nodo adelantado no acorte la espera.
  */
-export function advanceWait(gate: WaitClock, now: number): WaitClock {
-  if (gate.left <= 0 || gate.waitMs <= 0) return { ...gate, left: 0, seen: now };
-  const delta = now - gate.seen;
-  if (delta < 0 || delta > gate.waitMs) {
-    return { ...gate, left: gate.waitMs, seen: now };
+export function agreedChainMs(stamps: (number | null | undefined)[]): number | null {
+  const values = stamps.filter(
+    (stamp): stamp is number => typeof stamp === 'number' && Number.isFinite(stamp) && stamp > 0
+  );
+  let best: { gap: number; at: number } | null = null;
+  for (let i = 0; i < values.length; i += 1) {
+    for (let j = i + 1; j < values.length; j += 1) {
+      const gap = Math.abs(values[i] - values[j]);
+      if (gap > CHAIN_AGREE_MS) continue;
+      const at = Math.min(values[i], values[j]);
+      if (!best || gap < best.gap || (gap === best.gap && at < best.at)) best = { gap, at };
+    }
   }
-  return { ...gate, left: Math.max(0, gate.left - delta), seen: now };
+  return best ? best.at : null;
+}
+
+/**
+ * La hora del teléfono no cumple la espera.
+ * Con hora de cadena, el tiempo es el del bloque guardado en el fallo: volver después abre.
+ * Sin red, solo cuenta performance.now() desde la última muestra con la app abierta.
+ * Un reloj monótono que vuelve atrás (la app se reinició) no descuenta.
+ */
+export function advanceWait(gate: WaitClock, sample: WaitSample): WaitClock {
+  const mono = Number.isFinite(sample.mono) && sample.mono >= 0 ? sample.mono : gate.seen;
+  if (gate.left <= 0 || gate.waitMs <= 0) return { ...gate, left: 0, seen: mono };
+  if (sample.chain != null && sample.chain > 0 && gate.chainAt > 0) {
+    const elapsed = sample.chain - gate.chainAt;
+    if (elapsed < 0) return { ...gate, seen: mono };
+    return { ...gate, left: Math.max(0, gate.waitMs - elapsed), seen: mono };
+  }
+  if (!(gate.seen > 0)) return { ...gate, seen: mono };
+  const delta = mono - gate.seen;
+  if (delta < 0) return { ...gate, seen: mono };
+  return { ...gate, left: Math.max(0, gate.left - delta), seen: mono };
 }

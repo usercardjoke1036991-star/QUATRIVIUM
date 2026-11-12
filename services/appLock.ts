@@ -3,8 +3,10 @@ import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
 import {
   advanceWait,
+  agreedChainMs,
   isPinLengthOk,
   isWeakPin,
+  lockoutMs,
   startWait,
   type WaitClock,
 } from '../utils/pinPolicy';
@@ -56,7 +58,7 @@ import {
   timingSafeEqualHex,
 } from '../utils/secretBox';
 import { APP_DISPLAY_NAME } from '../constants/brand';
-import { getProductMode } from '../constants/rpcConfig';
+import { getProductMode, publicRpcList } from '../constants/rpcConfig';
 import { allowWalletAsyncFallback } from '../utils/walletVaultPolicy';
 import { getBoundWallet } from './deviceBinding';
 import { clearWalletSession, getWalletWrapKey, setWalletWrapKey } from './walletSession';
@@ -121,17 +123,37 @@ interface GateRecord {
   waitMs: number;
   left: number;
   seen: number;
+  chainAt: number;
 }
 
 let lockClockForTests: (() => number) | null = null;
+let monoClockForTests: (() => number) | null = null;
+let chainStampsForTests: (() => (number | null)[]) | null = null;
 
-/** Solo pruebas: el reloj del teléfono. */
+/** Solo pruebas: el reloj del teléfono. No cumple una espera. */
 export function setLockClockForTests(clock: (() => number) | null): void {
   lockClockForTests = clock;
 }
 
-function clockNow(): number {
+/** Solo pruebas: performance.now() mientras la app está abierta. */
+export function setMonoClockForTests(clock: (() => number) | null): void {
+  monoClockForTests = clock;
+}
+
+/**
+ * Solo pruebas: sellos de bloque ya en milisegundos.
+ * null vuelve a leer los RPC públicos.
+ */
+export function setChainStampsForTests(reader: (() => (number | null)[]) | null): void {
+  chainStampsForTests = reader;
+}
+
+function wallNow(): number {
   return lockClockForTests ? lockClockForTests() : Date.now();
+}
+
+function monoNow(): number {
+  return monoClockForTests ? monoClockForTests() : performance.now();
 }
 
 async function hashSecret(secret: string, salt: string, rounds: number): Promise<string> {
@@ -198,48 +220,98 @@ async function writeScoped(legacy: string, value: string): Promise<void> {
 }
 
 function emptyGate(): GateRecord {
-  return { fails: 0, until: 0, waitMs: 0, left: 0, seen: 0 };
+  return { fails: 0, until: 0, waitMs: 0, left: 0, seen: 0, chainAt: 0 };
 }
 
-function gateFromStored(parsed: Partial<GateRecord>, now: number): GateRecord {
+function gateFromStored(parsed: Partial<GateRecord>): GateRecord {
   const fails = Math.max(0, Number(parsed.fails) || 0);
-  const until = Math.max(0, Number(parsed.until) || 0);
-  if (until === 0) return { ...emptyGate(), fails };
   const waitMs = Math.max(0, Number(parsed.waitMs) || 0);
   const seen = Math.max(0, Number(parsed.seen) || 0);
-  if (!waitMs || !seen) {
-    const left = Math.max(0, until - now);
-    return { fails, until, waitMs: left, left, seen: now };
+  const chainAt = Math.max(0, Number(parsed.chainAt) || 0);
+  const leftField = Number(parsed.left);
+  if (Number.isFinite(leftField)) {
+    return { fails, until: 0, waitMs, left: Math.max(0, leftField), seen, chainAt };
   }
-  return {
-    fails,
-    until,
-    waitMs,
-    left: Math.max(0, Number(parsed.left) || 0),
-    seen,
-  };
+  const until = Math.max(0, Number(parsed.until) || 0);
+  if (until > 0 && fails > 0) {
+    const full = lockoutMs(fails);
+    return { fails, until: 0, waitMs: full, left: full, seen: 0, chainAt: 0 };
+  }
+  return { ...emptyGate(), fails };
+}
+
+async function readBlockStamp(url: string): Promise<number | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 4000);
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'eth_getBlockByNumber',
+        params: ['latest', false],
+      }),
+      signal: controller.signal,
+    });
+    const body = (await response.json()) as { result?: { timestamp?: string } };
+    const hex = body.result?.timestamp;
+    if (typeof hex !== 'string') return null;
+    const seconds = Number.parseInt(hex, 16);
+    if (!Number.isFinite(seconds) || seconds <= 0) return null;
+    return seconds * 1000;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Hora del último bloque si dos RPC públicos coinciden. Si no, null: no hay red de confianza. */
+async function trustedChainMs(): Promise<number | null> {
+  if (chainStampsForTests) return agreedChainMs(chainStampsForTests());
+  const stamps = await Promise.all(publicRpcList().map((url) => readBlockStamp(url)));
+  return agreedChainMs(stamps);
 }
 
 async function readGate(): Promise<GateRecord> {
   try {
     const raw = await withTimeout(readScoped(GATE_KEY), 1500, null);
     if (!raw) return emptyGate();
-    return gateFromStored(JSON.parse(raw) as Partial<GateRecord>, clockNow());
+    return gateFromStored(JSON.parse(raw) as Partial<GateRecord>);
   } catch {
     return emptyGate();
   }
 }
 
 async function observedGate(): Promise<GateRecord> {
+  void wallNow();
   const gate = await readGate();
   if (gate.left <= 0) return gate;
-  const now = clockNow();
-  const next: WaitClock = advanceWait(gate, now);
-  const until = next.left > 0 ? now + next.left : 0;
+  const chain = await trustedChainMs();
+  const next: WaitClock = advanceWait(gate, { mono: monoNow(), chain });
   const moved = next.left !== gate.left || next.seen !== gate.seen;
-  const stored = { ...gate, ...next, until };
+  const stored = { ...gate, ...next, until: 0 };
   if (moved) await writeGate(stored);
   return stored;
+}
+
+/** La app pasa a segundo plano: guarda lo ya contado y no sigue con el hueco. */
+export async function pauseLockWait(): Promise<void> {
+  const gate = await readGate();
+  if (gate.left <= 0) return;
+  const next = advanceWait(gate, { mono: monoNow(), chain: null });
+  await writeGate({ ...gate, ...next, until: 0 });
+}
+
+/** La app vuelve: el tiempo en segundo plano no cuenta si no hay hora de cadena. */
+export async function resumeLockWait(): Promise<void> {
+  const gate = await readGate();
+  if (gate.left <= 0) return;
+  const seen = monoNow();
+  if (seen === gate.seen) return;
+  await writeGate({ ...gate, seen, until: 0 });
 }
 
 async function writeGate(next: GateRecord): Promise<void> {
@@ -248,14 +320,15 @@ async function writeGate(next: GateRecord): Promise<void> {
 
 async function noteMiss(): Promise<number> {
   const gate = await readGate();
-  const now = clockNow();
-  const next = startWait(gate.fails + 1, now);
+  const chainAt = (await trustedChainMs()) || 0;
+  const next = startWait(gate.fails + 1, monoNow(), chainAt);
   await writeGate({
     fails: next.fails,
-    until: now + next.left,
+    until: 0,
     waitMs: next.waitMs,
     left: next.left,
     seen: next.seen,
+    chainAt: next.chainAt,
   });
   return next.left;
 }

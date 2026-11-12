@@ -100,13 +100,24 @@ const PIN_NEXT = 'quatrivium.lock.pinWrap.next';
 
 const PIN = '847291';
 const PASSWORD = 'Clave-9f';
+const policy = loadTs(path.join(__dirname, '..', 'utils', 'pinPolicy.ts'));
+
+let mono = 1_000_000;
 
 describe('app lock PBKDF2', function () {
   this.timeout(120000);
 
+  beforeEach(function () {
+    mono = 1_000_000;
+    lock.setMonoClockForTests(() => mono);
+    lock.setChainStampsForTests(() => []);
+  });
+
   afterEach(function () {
     kdf.resetPbkdf2ForTests();
     lock.setLockClockForTests(null);
+    lock.setMonoClockForTests(null);
+    lock.setChainStampsForTests(() => []);
     device.setScreenLockForTests(null);
     crashOnSecretPromote = false;
     randomByte = 0;
@@ -284,7 +295,7 @@ describe('app lock PBKDF2', function () {
       const gateKey = 'quatrivium.lock.gate';
       if (memory.has(gateKey)) {
         const row = JSON.parse(memory.get(gateKey));
-        row.until = 0;
+        row.left = 0;
         memory.set(gateKey, JSON.stringify(row));
       }
       const miss = await lock.checkPassword('Otra-8z');
@@ -310,7 +321,7 @@ describe('app lock PBKDF2', function () {
       const gateKey = `quatrivium.lock.gate.${walletA}`;
       if (memory.has(gateKey)) {
         const row = JSON.parse(memory.get(gateKey));
-        row.until = 0;
+        row.left = 0;
         memory.set(gateKey, JSON.stringify(row));
       }
       await lock.checkPassword('Otra-8z');
@@ -323,7 +334,7 @@ describe('app lock PBKDF2', function () {
     expect(JSON.parse(memory.get(`quatrivium.lock.attempts.${walletA}`)).password).to.equal(6);
     const gateB = `quatrivium.lock.gate.${walletB}`;
     const waitingB = JSON.parse(memory.get(gateB));
-    waitingB.until = 0;
+    waitingB.left = 0;
     memory.set(gateB, JSON.stringify(waitingB));
     const opened = await lock.checkPassword(PASSWORD);
     expect(opened.ok).to.equal(true);
@@ -332,7 +343,7 @@ describe('app lock PBKDF2', function () {
     memory.set('quatrivium.device.boundWallet', walletA);
     const gateA = `quatrivium.lock.gate.${walletA}`;
     const waiting = JSON.parse(memory.get(gateA));
-    waiting.until = 0;
+    waiting.left = 0;
     memory.set(gateA, JSON.stringify(waiting));
     const pinOk = await lock.checkPin(PIN);
     expect(pinOk.ok).to.equal(true);
@@ -516,9 +527,91 @@ describe('app lock PBKDF2', function () {
     const backward = await lock.checkPassword('Otra-8z');
     expect(backward.locked).to.equal(true);
     expect(backward.remainingMs).to.equal(30_000);
-    now += 10_000;
-    const stepped = await lock.getPinLockRemaining();
-    expect(stepped).to.equal(20_000);
+    now += 30_000;
+    const exact = await lock.getPinLockRemaining();
+    expect(exact).to.equal(30_000);
+    expect(JSON.parse(memory.get('quatrivium.lock.gate')).left).to.equal(30_000);
+  });
+
+  it('counts only open monotonic steps and opens on an agreed chain time', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    memory.delete('quatrivium.lock.gate');
+    memory.delete('quatrivium.lock.attempts');
+    const early = 1_700_000_000_000;
+    const other = early + 10 * 60_000;
+    const agreed = early + 60 * 60_000;
+    expect(policy.agreedChainMs([early, other, agreed, agreed + 20_000])).to.equal(agreed);
+    expect(policy.agreedChainMs([early, other])).to.equal(null);
+    lock.setChainStampsForTests(() => [early, other, agreed, agreed + 20_000]);
+    await lock.setPassword(PASSWORD);
+    const first = await lock.checkPassword('Otra-8z');
+    expect(first.remainingMs).to.equal(30_000);
+    expect(JSON.parse(memory.get('quatrivium.lock.gate')).chainAt).to.equal(agreed);
+    let wall = early;
+    lock.setLockClockForTests(() => wall);
+    wall += 30_000;
+    expect(await lock.getPinLockRemaining()).to.equal(30_000);
+    mono += 5_000;
+    expect(await lock.getPinLockRemaining()).to.equal(30_000);
+    lock.setChainStampsForTests(() => []);
+    memory.delete('quatrivium.lock.gate');
+    memory.delete('quatrivium.lock.attempts');
+    await lock.checkPassword('Otra-8z');
+    expect(JSON.parse(memory.get('quatrivium.lock.gate')).chainAt).to.equal(0);
+    expect(JSON.parse(memory.get('quatrivium.lock.gate')).left).to.equal(30_000);
+    wall += 30_000;
+    expect(await lock.getPinLockRemaining()).to.equal(30_000);
+    await lock.pauseLockWait();
+    mono += 60_000;
+    await lock.resumeLockWait();
+    expect(await lock.getPinLockRemaining()).to.equal(30_000);
+    expect(JSON.parse(memory.get('quatrivium.lock.gate')).left).to.equal(30_000);
+    for (let step = 0; step < 3; step += 1) {
+      mono += 5_000;
+      expect(await lock.getPinLockRemaining()).to.equal(30_000 - (step + 1) * 5_000);
+    }
+    mono += 15_000;
+    expect(await lock.getPinLockRemaining()).to.equal(0);
+    lock.setChainStampsForTests(() => [agreed, agreed + 1_000]);
+    memory.delete('quatrivium.lock.gate');
+    await lock.checkPassword('Otra-8z');
+    mono = 40;
+    lock.setChainStampsForTests(() => [agreed + 40_000, agreed + 41_000]);
+    expect(await lock.getPinLockRemaining()).to.equal(0);
+    const opened = await lock.checkPassword(PASSWORD);
+    expect(opened.ok).to.equal(true);
+  });
+
+  it('reads the block time from any two agreeing public RPCs', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    memory.delete('quatrivium.lock.gate');
+    memory.delete('quatrivium.lock.attempts');
+    rpc.setRuntimeMode('live');
+    const urls = rpc.publicRpcList();
+    expect(urls.length).to.be.at.least(4);
+    const seconds = [1_800_000_000, 1_800_000_600, 1_800_003_600, 1_800_003_630];
+    lock.setChainStampsForTests(null);
+    const previous = global.fetch;
+    global.fetch = async (url) => {
+      const index = urls.indexOf(String(url));
+      const stamp = seconds[index];
+      return {
+        json: async () => ({
+          result: stamp ? { timestamp: `0x${stamp.toString(16)}` } : null,
+        }),
+      };
+    };
+    try {
+      await lock.setPassword(PASSWORD);
+      const miss = await lock.checkPassword('Otra-8z');
+      expect(miss.remainingMs).to.equal(30_000);
+      expect(JSON.parse(memory.get('quatrivium.lock.gate')).chainAt).to.equal(seconds[2] * 1000);
+    } finally {
+      global.fetch = previous;
+      lock.setChainStampsForTests(() => []);
+    }
   });
 
   it('keeps the global counter until a wallet is bound', async function () {
