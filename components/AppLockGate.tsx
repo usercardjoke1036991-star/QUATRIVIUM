@@ -25,9 +25,10 @@ import {
   getBiometricStatus,
   checkPassword,
   checkPin,
-  getPinLockRemaining,
   pauseLockWait,
+  refreshLockChain,
   resumeLockWait,
+  tickLockWait,
   isBiometricEnabled,
   abortPasswordSetup,
   isPasswordSet,
@@ -40,6 +41,7 @@ import {
   shouldRelockAfterBackground,
 } from '../services/appLock';
 import { describeLockFailure, lockWaitCopy } from '../utils/lockFailureCopy';
+import { raceMs, setLockFaultReporter } from '../utils/lockRace';
 import { isValidMasterPassword } from '../utils/passwordPolicy';
 import {
   addressFromPhrase,
@@ -130,22 +132,6 @@ function modeFromMethod(
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'] as const;
 
-function raceMs<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
-  return new Promise((resolve) => {
-    const timer = setTimeout(() => resolve(fallback), ms);
-    promise.then(
-      (value) => {
-        clearTimeout(timer);
-        resolve(value);
-      },
-      () => {
-        clearTimeout(timer);
-        resolve(fallback);
-      }
-    );
-  });
-}
-
 async function resolveSessionWrap(): Promise<{ wrapReady: boolean; address: string }> {
   await restoreSavedSessionWrap();
   if (!getWalletWrapKey()) return { wrapReady: false, address: '' };
@@ -192,6 +178,15 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
   const [hasAuth, setHasAuth] = useState(false);
   const [authCode, setAuthCode] = useState('');
   const [lockMs, setLockMs] = useState(0);
+  const lockTicket = useRef(0);
+  const issueLockTicket = () => {
+    lockTicket.current += 1;
+    return lockTicket.current;
+  };
+  const paintLockMs = (ms: number, ticket: number) => {
+    if (ticket === lockTicket.current) setLockMs(ms);
+  };
+  setLockFaultReporter(() => setError(t('lockUnexpected')));
   const [recovering, setRecovering] = useState(false);
   const [recoverEmail, setRecoverEmail] = useState('');
   const [recoverCode, setRecoverCode] = useState('');
@@ -416,7 +411,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
     }
     if (wrapReady && (await resumePhraseRevealIfNeeded())) {
       setReady(true);
-      setLockMs(await getPinLockRemaining());
+      setLockMs(await refreshLockChain(true));
       return;
     }
     const sessionSaved = await isSessionSaved();
@@ -462,7 +457,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
       setLocked(false);
     }
     setReady(true);
-    setLockMs(await getPinLockRemaining());
+    setLockMs(await refreshLockChain(true));
     // startMethodQueue se crea en cada render; incluirlo reabriría el desbloqueo.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -594,7 +589,10 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
         return;
       }
       if (next === 'active') {
-        void resumeLockWait().then(() => getPinLockRemaining().then(setLockMs));
+        const ticket = issueLockTicket();
+        void resumeLockWait().then(() =>
+          refreshLockChain(true).then((ms) => paintLockMs(ms, ticket))
+        );
       }
       if (next === 'active' && shouldRelockAfterBackground(backgroundAt.current)) {
         Promise.all([
@@ -636,13 +634,22 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const lockWaiting = lockMs > 0;
   useEffect(() => {
-    if (lockMs <= 0) return undefined;
-    const timer = setInterval(() => {
-      void getPinLockRemaining().then(setLockMs);
+    if (!lockWaiting) return undefined;
+    const fast = setInterval(() => {
+      const ticket = issueLockTicket();
+      void tickLockWait().then((ms) => paintLockMs(ms, ticket));
     }, 1000);
-    return () => clearInterval(timer);
-  }, [lockMs]);
+    const slow = setInterval(() => {
+      const ticket = issueLockTicket();
+      void refreshLockChain(false).then((ms) => paintLockMs(ms, ticket));
+    }, 60_000);
+    return () => {
+      clearInterval(fast);
+      clearInterval(slow);
+    };
+  }, [lockWaiting]);
 
   const tryBiometric = async () => {
     if (!bioOn || !bioReady || lockMs > 0) return;
@@ -705,7 +712,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
       setError(describeLockFailure('pin', result, t));
       setPinDigits('');
     } catch {
-      // El PIN ya pudo abrir. Cancelar la huella no deshace el desbloqueo ni deja el spinner.
+      setError(t('lockUnexpected'));
     } finally {
       setBusy(false);
     }

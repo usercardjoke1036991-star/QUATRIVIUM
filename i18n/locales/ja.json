@@ -343,6 +343,7 @@
   "lockUnlockLeadPassword": "続行するには、この端末のパスワードを入力してください。",
   "lockPinMismatch": "PIN が一致しません。もう一度お試しください。",
   "lockPinWrong": "PIN が違います。",
+  "lockUnexpected": "予期しないエラーです。やり直してください。",
   "lockPinWeak": "その PIN は簡単すぎます。繰り返し、連続、分かりやすい日付は使わないでください。",
   "lockKdfMissing": "この端末は錠の鍵を作れません。弱い方式には落ちません。",
   "lockKdfWait": "数秒かかることがあります。",

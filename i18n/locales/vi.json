@@ -343,6 +343,7 @@
   "lockUnlockLeadPassword": "Nhập mật khẩu của thiết bị này để tiếp tục.",
   "lockPinMismatch": "PIN không khớp. Thử lại.",
   "lockPinWrong": "Sai PIN.",
+  "lockUnexpected": "Lỗi bất ngờ. Thử lại.",
   "lockPinWeak": "PIN đó quá dễ. Đừng dùng lặp, dãy số hoặc ngày rõ ràng.",
   "lockKdfMissing": "Dien thoai nay khong tao duoc khoa khoa. Khong dung cach yeu.",
   "lockKdfWait": "Viec nay co the mat vai giay.",

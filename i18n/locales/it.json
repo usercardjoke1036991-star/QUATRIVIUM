@@ -343,6 +343,7 @@
   "lockUnlockLeadPassword": "Inserisca la password di questo dispositivo per continuare.",
   "lockPinMismatch": "I PIN non coincidono. Riprova.",
   "lockPinWrong": "PIN errato.",
+  "lockUnexpected": "Errore imprevisto. Riprova.",
   "lockPinWeak": "Quel PIN è troppo facile. Non usare ripetizioni, sequenze o date ovvie.",
   "lockKdfMissing": "Questo telefono non costruisce la chiave del lucchetto. Nessuna via debole.",
   "lockKdfWait": "Può richiedere alcuni secondi.",

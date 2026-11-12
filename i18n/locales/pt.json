@@ -343,6 +343,7 @@
   "lockUnlockLeadPassword": "Introduza a palavra-passe deste dispositivo para continuar.",
   "lockPinMismatch": "Os PINs não coincidem. Tente de novo.",
   "lockPinWrong": "PIN incorreto.",
+  "lockUnexpected": "Erro inesperado. Tente de novo.",
   "lockPinWeak": "Esse PIN é fácil demais. Não use repetições, sequências nem datas óbvias.",
   "lockKdfMissing": "Este telefone nao monta a chave do cadeado. Sem atalho fraco.",
   "lockKdfWait": "Pode levar alguns segundos.",

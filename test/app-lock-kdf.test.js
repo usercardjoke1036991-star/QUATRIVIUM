@@ -101,6 +101,7 @@ const PIN_NEXT = 'quatrivium.lock.pinWrap.next';
 const PIN = '847291';
 const PASSWORD = 'Clave-9f';
 const policy = loadTs(path.join(__dirname, '..', 'utils', 'pinPolicy.ts'));
+const race = loadTs(path.join(__dirname, '..', 'utils', 'lockRace.ts'));
 
 let mono = 1_000_000;
 
@@ -578,7 +579,7 @@ describe('app lock PBKDF2', function () {
     await lock.checkPassword('Otra-8z');
     mono = 40;
     lock.setChainStampsForTests(() => [agreed + 40_000, agreed + 41_000]);
-    expect(await lock.getPinLockRemaining()).to.equal(0);
+    expect(await lock.refreshLockChain(true)).to.equal(0);
     const opened = await lock.checkPassword(PASSWORD);
     expect(opened.ok).to.equal(true);
   });
@@ -733,6 +734,97 @@ describe('app lock PBKDF2', function () {
       expect(/^[0-9a-f]{64}$/.test(memory.get('quatrivium.lock.deviceSecret'))).to.equal(true);
     } finally {
       rejectDeviceAuth = false;
+    }
+  });
+
+  it('anchors an offline failure to the chain and opens only after that clock covers the wait', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    memory.delete('quatrivium.lock.gate');
+    memory.delete('quatrivium.lock.attempts');
+    lock.setChainStampsForTests(() => []);
+    await lock.setPassword(PASSWORD);
+    const miss = await lock.checkPassword('Otra-8z');
+    expect(miss.remainingMs).to.equal(30_000);
+    expect(JSON.parse(memory.get('quatrivium.lock.gate')).chainAt).to.equal(0);
+    await lock.pauseLockWait();
+    mono += 120_000;
+    await lock.resumeLockWait();
+    expect(await lock.tickLockWait()).to.equal(30_000);
+    const chain = 1_800_000_000_000;
+    lock.setChainStampsForTests(() => [chain, chain + 1_000, chain + 10 * 60_000]);
+    expect(await lock.refreshLockChain(true)).to.equal(30_000);
+    const anchored = JSON.parse(memory.get('quatrivium.lock.gate'));
+    expect(anchored.chainAt).to.equal(chain - (anchored.waitMs - anchored.left));
+    expect(anchored.left).to.equal(30_000);
+    mono += 120_000;
+    expect(await lock.tickLockWait()).to.equal(30_000);
+    lock.setChainStampsForTests(() => [chain + 30_000, chain + 31_000]);
+    expect(await lock.refreshLockChain(true)).to.equal(0);
+    const opened = await lock.checkPassword(PASSWORD);
+    expect(opened.ok).to.equal(true);
+  });
+
+  it('reads the chain on open and then at most once a minute across five simulated minutes', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    memory.delete('quatrivium.lock.gate');
+    memory.delete('quatrivium.lock.attempts');
+    let reads = 0;
+    const chain = 1_700_000_000_000;
+    lock.setChainStampsForTests(() => {
+      reads += 1;
+      return [chain, chain + 1_000];
+    });
+    await lock.setPassword(PASSWORD);
+    reads = 0;
+    await lock.checkPassword('Otra-8z');
+    expect(reads).to.be.at.least(1);
+    reads = 0;
+    await lock.refreshLockChain(true);
+    for (let sec = 1; sec <= 300; sec += 1) {
+      mono += 1_000;
+      await lock.tickLockWait();
+      await lock.refreshLockChain(false);
+    }
+    expect(reads).to.equal(6);
+  });
+
+  it('does not start a second chain read while one is still in flight', async function () {
+    memory.delete('quatrivium.lock.gate');
+    memory.delete('quatrivium.lock.attempts');
+    let reads = 0;
+    let release = () => {};
+    const chain = 1_700_000_000_000;
+    lock.setChainStampsForTests(
+      () =>
+        new Promise((resolve) => {
+          reads += 1;
+          release = () => resolve([chain, chain + 1_000]);
+        })
+    );
+    const first = lock.refreshLockChain(true);
+    const second = lock.refreshLockChain(true);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(reads).to.equal(1);
+    release();
+    await first;
+    await second;
+    expect(reads).to.equal(1);
+  });
+
+  it('reports an unexpected lock failure instead of swallowing it', async function () {
+    let seen = 0;
+    race.setLockFaultReporter(() => {
+      seen += 1;
+    });
+    try {
+      const value = await race.raceMs(Promise.reject(new Error('boom')), 1000, 'fallback');
+      expect(value).to.equal('fallback');
+      expect(seen).to.equal(1);
+    } finally {
+      race.setLockFaultReporter(null);
     }
   });
 });

@@ -343,6 +343,7 @@
   "lockUnlockLeadPassword": "계속하려면 이 기기의 비밀번호를 입력하세요.",
   "lockPinMismatch": "PIN이 일치하지 않습니다. 다시 시도하세요.",
   "lockPinWrong": "PIN이 틀렸습니다.",
+  "lockUnexpected": "예기치 않은 오류입니다. 다시 시도하세요.",
   "lockPinWeak": "그 PIN은 너무 쉽습니다. 반복, 연속, 뻔한 날짜는 쓰지 마세요.",
   "lockKdfMissing": "이 전화는 잠금 키를 만들지 못합니다. 약한 방식은 쓰지 않습니다.",
   "lockKdfWait": "몇 초 걸릴 수 있습니다.",

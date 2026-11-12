@@ -63,7 +63,7 @@ Fecha de la revisión: 10 de noviembre de 2026 (America/Caracas). Rama `cursor/s
 
 La clave del historial (commits `10553d4` y `dc40f15`, archivo `.env.worker.example`) ya fue revocada. No está en el árbol. El valor no se copia y la historia no se reescribe.
 
-Sigue abierto: los dos hallazgos bajos del alta (S-01 y S-02), los tests que solo leen texto y cubren dinero (lista en la segunda auditoría), `npm audit` con `handlebars` (B-03) y el cifrado NIP-17/44, que no se ha implementado.
+Sigue abierto: los dos hallazgos bajos del alta (S-01 y S-02), los tests que solo leen texto y cubren dinero (lista en la segunda auditoría), `image-size` (hace falta un SDK de Expo nuevo) y el cifrado NIP-17/44, que no se ha implementado. Ya no hay críticos: `handlebars` está en 4.7.10.
 
 Antes de dinero real hace falta una auditoría externa y una billetera de fundador de varias firmas o física (`CONFIRM_FOUNDER_WALLET=yes`). Cuando Jose lo ordene, y nada de esto se ha hecho: compilar el APK y su SHA-256, desplegar en Arbitrum One y llenar `constants/deployedAddresses.ts`, publicar huella y hash en `QuatriviumApk`, IPFS y ENS.
 
@@ -79,7 +79,7 @@ El quinto punto grave del resumen (feed viejo) era **B-01, Medio**, no Alto. Tra
 | A-04 | Alto | Cerrado por el dueño. La clave estaba en el historial, commits `10553d4` y `dc40f15`, archivo `.env.worker.example`. Ya fue revocada. No está en la app. El valor no se copia. El historial no se reescribe. |
 | B-01 | Medio | El tope de 24 h se quitó. Ese feed no late cada día: con `answer == 0` se liquida aunque la ronda tenga meses. La caída se lee de la ronda anterior. |
 | B-02 | Medio | Arreglado en la superficie: `prepareNostrPayload` devuelve null en todos los caminos. No hay pantalla de mensaje privado. Cifrar NIP-17/44 sigue sin hacerse. La mora no se publica. |
-| B-03 | Medio | Abierto en parte. `npm audit --omit=dev` el 10 de noviembre de 2026: 0 críticas, 1 alta, 11 medias, 9 bajas. El árbol completo: 1 crítica, 2 altas, 21 medias, 15 bajas. Sin subir Expo 54 se fijaron `decode-uri-component` 0.5.1, `node-forge` 1.4.3, `undici` 6.29.1, `source-map-js` 1.2.2, `axios` 1.21.1 y `fast-uri` 3.1.9. `handlebars` 4.7.9 queda solo en desarrollo (`solidity-coverage` → `sc-istanbul`) y no se tocó. La alta de producción que queda es `image-size` 1.2.1, que Metro de este SDK usa; el parche es 2.1.0. |
+| B-03 | Medio | Abierto en parte. Ya no hay críticos. `npm audit` del CI: 39 avisos (15 bajos, 22 moderados, 2 altos, 0 críticos). `handlebars` quedó en 4.7.10. La alta de producción que queda es `image-size`: hace falta un SDK de Expo nuevo. `tmp` sigue alto porque lo arrastra `solc`. |
 | C-01 | Bajo | Arreglado. El comentario de `pagarVerificacion` ya no dice 0.50 LUSD. El comportamiento no cambió. |
 | C-02 | Bajo | Pendiente. Reescribir cada test que lee fuente sería un refactor. Los arreglos de esta ronda sí ejecutan el contrato. |
 | C-03 | Bajo | Arreglado. `web/invite/index.html` ya no muestra un hash inventado. |
@@ -139,7 +139,7 @@ Nada de lo leído permite que un extraño vacíe el pool, el bote de Reserva o e
 - Foundry: 51 pruebas, todas en verde, con `--fuzz-runs 32`. Los invariantes corrieron 256 veces, sin reverts.
 - `node scripts/check-external-services.mjs`: sin nombres prohibidos en el árbol actual.
 - `node scripts/check-i18n.mjs`: 17 idiomas, 1256 claves cada uno, sin copias largas del inglés.
-- `npm audit --omit=dev` (10 nov 2026): 0 críticas, 1 alta, 11 medias, 9 bajas. Árbol completo: 1 crítica, 2 altas, 21 medias, 15 bajas. La crítica sigue siendo `handlebars` 4.7.9, solo en desarrollo, y no se tocó. La alta de producción es `image-size` 1.2.1.
+- `npm audit` del CI: 39 avisos (15 bajos, 22 moderados, 2 altos, 0 críticos). Ya no hay críticos. `handlebars` está en 4.7.10. La alta de producción es `image-size`, que pide un SDK de Expo nuevo.
 - Slither de esta rama está en «Medición de esta rama»: 0 altos y 0 medios. La frase vieja de que Slither no estaba instalado ya no vale.
 
 Tamaños de bytecode desplegado (artifact de Hardhat, límite EIP-170 = 24576):
@@ -220,13 +220,13 @@ Si el feed del sequencer responde «arriba» pero el dato es viejo, la liquidaci
 
 Nostr no cifra y no se conecta. La mora sí está bloqueada.
 
-- `utils/sovereignSurface.ts`, líneas 88-101. `nostrMayPublish` rechaza `mora`, `moroso` y `delinquency`. `prepareNostrPayload` devuelve el texto tal cual, con la etiqueta NIP-17 o NIP-44. No hay cifrado ni websocket.
+- `utils/sovereignSurface.ts`. `prepareNostrPayload` devuelve null y Nostr está apagado. No hay cifrado ni websocket. La mora no se publica.
 - Hoy nadie envía ese objeto a un relé. El riesgo aparece si más adelante se publica `body` creyendo que ya va cifrado.
 - Arreglo: no enviar `body` a la red hasta que exista cifrado de verdad, o quitar las etiquetas NIP hasta entonces.
 
 ### B-03 · Medio · dependencia
 
-`npm audit --omit=dev` el 10 de noviembre de 2026 marca 0 críticas, 1 alta, 11 medias y 9 bajas. El árbol completo marca 1 crítica, 2 altas, 21 medias y 15 bajas. La crítica sigue siendo `handlebars` 4.7.9 (inyección en plantillas), solo por `solidity-coverage` → `sc-istanbul`, y no se tocó. La alta de producción que queda es `image-size` 1.2.1 (`expo` → `@expo/metro` → `metro`); el arreglo publicado es 2.1.0 y este SDK no lo usa. Se fijaron dentro de Expo 54: `decode-uri-component` 0.5.1, `node-forge` 1.4.3, `undici` 6.29.1, `source-map-js` 1.2.2, `axios` 1.21.1 y `fast-uri` 3.1.9. Con eso salieron de la lista `axios`, `node-forge`, `undici`, `expo-router` y `@react-navigation/core`.
+Ya no hay críticos. `npm audit` del CI: 39 avisos (15 bajos, 22 moderados, 2 altos, 0 críticos). `handlebars` de desarrollo está en 4.7.10, fuera del rango vulnerable. La alta de producción que queda es `image-size` (`expo` → `@expo/metro` → `metro`): hace falta un SDK de Expo nuevo y no se subió. `tmp` sigue alto porque lo arrastra `solc`. Se fijaron dentro de Expo 54: `decode-uri-component` 0.5.1, `node-forge` 1.4.3, `undici` 6.29.1, `source-map-js` 1.2.2, `axios` 1.21.1 y `fast-uri` 3.1.9.
 
 ### C-01 · Bajo · texto
 

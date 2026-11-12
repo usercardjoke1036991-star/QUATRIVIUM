@@ -118,18 +118,27 @@ export function agreedChainMs(stamps: (number | null | undefined)[]): number | n
 
 /**
  * La hora del teléfono no cumple la espera.
- * Con hora de cadena, el tiempo es el del bloque guardado en el fallo: volver después abre.
- * Sin red, solo cuenta performance.now() desde la última muestra con la app abierta.
+ * Con hora de cadena, el tiempo es el del bloque: volver después abre.
+ * Si el fallo se guardó sin red y luego hay una lectura válida, se ancla
+ * chainAt = cadena − (espera − restante) y desde ahí cuenta la cadena.
+ * Sin red, solo cuenta performance.now() con la app abierta.
  * Un reloj monótono que vuelve atrás (la app se reinició) no descuenta.
  */
 export function advanceWait(gate: WaitClock, sample: WaitSample): WaitClock {
   const mono = Number.isFinite(sample.mono) && sample.mono >= 0 ? sample.mono : gate.seen;
   if (gate.left <= 0 || gate.waitMs <= 0) return { ...gate, left: 0, seen: mono };
-  if (sample.chain != null && sample.chain > 0 && gate.chainAt > 0) {
-    const elapsed = sample.chain - gate.chainAt;
-    if (elapsed < 0) return { ...gate, seen: mono };
-    return { ...gate, left: Math.max(0, gate.waitMs - elapsed), seen: mono };
+  let chainAt = gate.chainAt;
+  if (sample.chain != null && sample.chain > 0 && !(chainAt > 0)) {
+    const served = Math.max(0, Math.min(gate.waitMs, gate.waitMs - gate.left));
+    chainAt = sample.chain - served;
+    if (!(chainAt > 0)) chainAt = sample.chain;
   }
+  if (sample.chain != null && sample.chain > 0 && chainAt > 0) {
+    const elapsed = sample.chain - chainAt;
+    if (elapsed < 0) return { ...gate, chainAt, seen: mono };
+    return { ...gate, chainAt, left: Math.max(0, gate.waitMs - elapsed), seen: mono };
+  }
+  if (chainAt > 0) return { ...gate, chainAt, seen: mono };
   if (!(gate.seen > 0)) return { ...gate, seen: mono };
   const delta = mono - gate.seen;
   if (delta < 0) return { ...gate, seen: mono };

@@ -129,7 +129,7 @@ interface GateRecord {
 
 let lockClockForTests: (() => number) | null = null;
 let monoClockForTests: (() => number) | null = null;
-let chainStampsForTests: (() => (number | null)[]) | null = null;
+let chainStampsForTests: (() => Promise<(number | null)[]> | (number | null)[]) | null = null;
 
 /** Solo pruebas: el reloj del teléfono. No cumple una espera. */
 export function setLockClockForTests(clock: (() => number) | null): void {
@@ -139,13 +139,17 @@ export function setLockClockForTests(clock: (() => number) | null): void {
 /** Solo pruebas: performance.now() mientras la app está abierta. */
 export function setMonoClockForTests(clock: (() => number) | null): void {
   monoClockForTests = clock;
+  lastChainMono = -CHAIN_POLL_MS;
+  chainFlight = null;
 }
 
 /**
  * Solo pruebas: sellos de bloque ya en milisegundos.
  * null vuelve a leer los RPC públicos.
  */
-export function setChainStampsForTests(reader: (() => (number | null)[]) | null): void {
+export function setChainStampsForTests(
+  reader: (() => Promise<(number | null)[]> | (number | null)[]) | null
+): void {
   chainStampsForTests = reader;
 }
 
@@ -269,11 +273,37 @@ async function readBlockStamp(url: string): Promise<number | null> {
   }
 }
 
+/** Como máximo una lectura de cadena por minuto, además del fallo, la apertura y el primer plano. */
+export const CHAIN_POLL_MS = 60_000;
+
+let lastChainMono = -CHAIN_POLL_MS;
+let chainFlight: Promise<number> | null = null;
+let gateQueue: Promise<void> = Promise.resolve();
+
+function withGate<T>(job: () => Promise<T>): Promise<T> {
+  const run = gateQueue.then(job, job);
+  gateQueue = run.then(
+    () => undefined,
+    () => undefined
+  );
+  return run;
+}
+
 /** Hora del último bloque si dos RPC públicos coinciden. Si no, null: no hay red de confianza. */
 async function trustedChainMs(): Promise<number | null> {
-  if (chainStampsForTests) return agreedChainMs(chainStampsForTests());
+  if (chainStampsForTests) return agreedChainMs(await Promise.resolve(chainStampsForTests()));
   const stamps = await Promise.all(publicRpcList().map((url) => readBlockStamp(url)));
   return agreedChainMs(stamps);
+}
+
+async function applySample(chain: number | null): Promise<number> {
+  void wallNow();
+  const gate = await readGate();
+  if (gate.left <= 0) return 0;
+  const next: WaitClock = advanceWait(gate, { mono: monoNow(), chain });
+  const moved = next.left !== gate.left || next.seen !== gate.seen || next.chainAt !== gate.chainAt;
+  if (moved) await writeGate({ ...gate, ...next, until: 0 });
+  return next.left;
 }
 
 async function readGate(): Promise<GateRecord> {
@@ -286,33 +316,52 @@ async function readGate(): Promise<GateRecord> {
   }
 }
 
-async function observedGate(): Promise<GateRecord> {
-  void wallNow();
-  const gate = await readGate();
-  if (gate.left <= 0) return gate;
-  const chain = await trustedChainMs();
-  const next: WaitClock = advanceWait(gate, { mono: monoNow(), chain });
-  const moved = next.left !== gate.left || next.seen !== gate.seen;
-  const stored = { ...gate, ...next, until: 0 };
-  if (moved) await writeGate(stored);
-  return stored;
+/** El tic de la pantalla: solo performance.now(). No llama a la red. */
+export function tickLockWait(): Promise<number> {
+  return withGate(() => applySample(null));
+}
+
+/**
+ * Lee la cadena si toca. force: al abrir o al volver a primer plano.
+ * Si ya hay una lectura en curso, no lanza otra.
+ */
+export function refreshLockChain(force = false): Promise<number> {
+  if (chainFlight) return chainFlight;
+  const due = force || monoNow() - lastChainMono >= CHAIN_POLL_MS;
+  if (!due) return tickLockWait();
+  let flight: Promise<number> = Promise.resolve(0);
+  flight = withGate(async () => {
+    const chain = await trustedChainMs();
+    lastChainMono = monoNow();
+    return applySample(chain);
+  }).finally(() => {
+    if (chainFlight === flight) chainFlight = null;
+  });
+  chainFlight = flight;
+  return flight;
 }
 
 /** La app pasa a segundo plano: guarda lo ya contado y no sigue con el hueco. */
-export async function pauseLockWait(): Promise<void> {
-  const gate = await readGate();
-  if (gate.left <= 0) return;
-  const next = advanceWait(gate, { mono: monoNow(), chain: null });
-  await writeGate({ ...gate, ...next, until: 0 });
+export function pauseLockWait(): Promise<void> {
+  return withGate(async () => {
+    const gate = await readGate();
+    if (gate.left <= 0) return;
+    const next = advanceWait(gate, { mono: monoNow(), chain: null });
+    if (next.left !== gate.left || next.seen !== gate.seen || next.chainAt !== gate.chainAt) {
+      await writeGate({ ...gate, ...next, until: 0 });
+    }
+  });
 }
 
-/** La app vuelve: el tiempo en segundo plano no cuenta si no hay hora de cadena. */
-export async function resumeLockWait(): Promise<void> {
-  const gate = await readGate();
-  if (gate.left <= 0) return;
-  const seen = monoNow();
-  if (seen === gate.seen) return;
-  await writeGate({ ...gate, seen, until: 0 });
+/** La app vuelve: el hueco en segundo plano no cuenta. La cadena se pide aparte. */
+export function resumeLockWait(): Promise<void> {
+  return withGate(async () => {
+    const gate = await readGate();
+    if (gate.left <= 0) return;
+    const seen = monoNow();
+    if (seen === gate.seen) return;
+    await writeGate({ ...gate, seen, until: 0 });
+  });
 }
 
 async function writeGate(next: GateRecord): Promise<void> {
@@ -320,18 +369,21 @@ async function writeGate(next: GateRecord): Promise<void> {
 }
 
 async function noteMiss(): Promise<number> {
-  const gate = await readGate();
-  const chainAt = (await trustedChainMs()) || 0;
-  const next = startWait(gate.fails + 1, monoNow(), chainAt);
-  await writeGate({
-    fails: next.fails,
-    until: 0,
-    waitMs: next.waitMs,
-    left: next.left,
-    seen: next.seen,
-    chainAt: next.chainAt,
+  return withGate(async () => {
+    const gate = await readGate();
+    const chainAt = (await trustedChainMs()) || 0;
+    lastChainMono = monoNow();
+    const next = startWait(gate.fails + 1, monoNow(), chainAt);
+    await writeGate({
+      fails: next.fails,
+      until: 0,
+      waitMs: next.waitMs,
+      left: next.left,
+      seen: next.seen,
+      chainAt: next.chainAt,
+    });
+    return next.left;
   });
-  return next.left;
 }
 
 async function readAttempts(): Promise<AttemptRecord> {
@@ -687,7 +739,7 @@ export async function isPinSet(): Promise<boolean> {
 }
 
 export async function getPinLockRemaining(): Promise<number> {
-  return (await observedGate()).left;
+  return refreshLockChain(false);
 }
 
 export async function setPin(pin: string): Promise<string> {
