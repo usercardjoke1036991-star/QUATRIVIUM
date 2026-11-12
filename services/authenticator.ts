@@ -24,27 +24,27 @@ const MIG_KEY = ['qc', 'totp', 'wrap', 'mig', 'v1'].join('_');
 const STEP_MONO_KEY = 'qc_totp_step_mono_v1';
 const STEP_RUN_KEY = ['qc', 'totp', 'step', 'run', 'v1'].join('_');
 const RUN_ID = Crypto.randomUUID();
-let runIdForTests: string | null = null;
-let totpMonoForTests: (() => number) | null = null;
-let totpMonoOffsetForTests = 0;
+let runIdOverride: string | null = null;
+let totpMonoClock: (() => number) | null = null;
+let totpMonoOffset = 0;
 
 function currentRunId(): string {
-  return runIdForTests || RUN_ID;
+  return runIdOverride || RUN_ID;
 }
 
 function totpMonoNow(): number {
-  const base = totpMonoForTests ? totpMonoForTests() : performance.now();
-  return base + totpMonoOffsetForTests;
+  const base = totpMonoClock ? totpMonoClock() : performance.now();
+  return base + totpMonoOffset;
 }
 
 /** Solo pruebas: simula que performance.now() volvió a cero tras reiniciar. */
-export function rewindTotpMonoForTests(ms: number): void {
-  totpMonoOffsetForTests -= ms;
+export function rewindTotpMono(ms: number): void {
+  totpMonoOffset -= ms;
 }
 
 /** Solo pruebas: simula otra ejecución de la app. */
-export function setTotpRunIdForTests(id: string | null): void {
-  runIdForTests = id;
+export function setTotpRunId(id: string | null): void {
+  runIdOverride = id;
 }
 const WRAP_SALT = 'qc.totp.wrap';
 const WRAP_ROUNDS = 8000;

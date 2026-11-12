@@ -6,16 +6,11 @@ import { getProductMode, NETWORK_CONFIG } from '../constants/rpcConfig';
 import { createWriteProvider } from './writeRpc';
 import { isAllowedWei, isHexAddress } from '../utils/sanitize';
 import { migrateSealedValue, type LockStore } from '../utils/lockMigration';
+import { reportLockFault } from '../utils/lockRace';
 import { isSealedBlob, openSecret, sealSecret, sealedBlobVersion } from '../utils/secretBox';
 import { allowWalletAsyncFallback } from '../utils/walletVaultPolicy';
 import { assertRestoreFitsThisDevice, lookupBoundWalletOnThisDevice } from './deviceClaim';
-import {
-  BOUND_UNKNOWN,
-  bindAppWallet,
-  claimDeviceWallet,
-  clearBoundWallet,
-  getBoundWallet,
-} from './deviceBinding';
+import { BOUND_UNKNOWN, bindAppWallet, clearBoundWallet, getBoundWallet } from './deviceBinding';
 import { getWalletWrapKey } from './walletSession';
 import { storeSlot } from '../utils/storeSlot';
 
@@ -113,7 +108,7 @@ async function readStored(): Promise<StoredWallet | null> {
   return parsed;
 }
 
-async function persistRecord(record: StoredWallet): Promise<void> {
+async function persistRecord(record: StoredWallet): Promise<string> {
   const wrap = getWalletWrapKey();
   if (!wrap) {
     throw new Error('locked');
@@ -126,7 +121,7 @@ async function persistRecord(record: StoredWallet): Promise<void> {
   );
   if (secureOk) {
     await AsyncStorage.removeItem(WALLET_FALLBACK).catch(() => {});
-    return;
+    return sealed;
   }
   if (!allowWalletAsyncFallback(getProductMode())) {
     throw new Error('wallet-persist');
@@ -136,24 +131,43 @@ async function persistRecord(record: StoredWallet): Promise<void> {
   } catch {
     throw new Error('wallet-persist');
   }
+  return sealed;
+}
+
+/** Solo lo que esta llamada escribió, y solo si el teléfono no tenía vínculo. */
+async function dropFreshWallet(): Promise<void> {
+  try {
+    await SecureStore.deleteItemAsync(WALLET_KEY);
+  } catch {
+    // ignore
+  }
+  try {
+    await AsyncStorage.removeItem(WALLET_FALLBACK);
+  } catch {
+    // ignore
+  }
+  await clearBoundWallet();
 }
 
 async function writeStored(record: StoredWallet): Promise<void> {
-  const claim = await claimDeviceWallet(record.address);
-  if (!claim.ok) {
-    throw new Error(claim.bound === BOUND_UNKNOWN ? 'store-unknown' : 'device-bound');
-  }
-  await persistRecord(record);
+  const bound = await getBoundWallet();
+  if (bound === BOUND_UNKNOWN) throw new Error('store-unknown');
+  const next = record.address.toLowerCase();
+  if (bound && bound !== next) throw new Error('device-bound');
+  const wasEmpty = !bound;
+  const previous = wasEmpty ? null : await readRawWallet();
   try {
-    await bindAppWallet(record.address);
+    const sealed = await persistRecord(record);
+    const back = await readRawWallet();
+    if (back !== sealed) throw new Error('wallet-persist');
+    await bindAppWallet(next);
   } catch (error) {
-    await wipeAppWallet().catch(() => {});
-    throw error instanceof Error ? error : new Error('bind-unconfirmed');
-  }
-  const back = await getBoundWallet();
-  if (back !== record.address.toLowerCase()) {
-    await wipeAppWallet().catch(() => {});
-    throw new Error('bind-unconfirmed');
+    if (wasEmpty) {
+      await dropFreshWallet();
+    } else if (previous && (await readRawWallet()) !== previous) {
+      await SecureStore.setItemAsync(WALLET_KEY, previous, OPTIONS).catch(() => {});
+    }
+    throw error instanceof Error ? error : new Error('wallet-persist');
   }
 }
 
@@ -254,7 +268,11 @@ export async function createAppWallet(): Promise<HDNodeWallet> {
 export async function ensureAppWallet(): Promise<HDNodeWallet | Wallet> {
   const existing = await loadAppWallet();
   if (existing) {
-    await bindAppWallet(existing.address);
+    try {
+      await bindAppWallet(existing.address);
+    } catch {
+      reportLockFault();
+    }
     return existing;
   }
   if (!getWalletWrapKey()) {
@@ -319,7 +337,6 @@ export async function importFromPhrase(
   const imported = HDNodeWallet.fromPhrase(normalized);
   const next = imported.address.toLowerCase();
   await assertRestoreFitsThisDevice(next);
-  await wipeAppWallet();
   await writeStored({
     address: next,
     privateKey: imported.privateKey,

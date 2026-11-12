@@ -44,7 +44,7 @@ export const WalletFailedEscape: React.FC<WalletFailedEscapeProps> = ({
           style={styles.row}
         >
           <AppText style={[styles.action, { color: colors.primary }]}>
-            {t('restoreAccount')}
+            {t('lockRestoreWithPhrase')}
           </AppText>
         </TouchableOpacity>
       ) : null}

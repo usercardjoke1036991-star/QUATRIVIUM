@@ -72,6 +72,18 @@ export function nextEntryScreen(input: {
   return 'unlock';
 }
 
+/**
+ * La contraseña abrió la sesión y el cofre no cargó: en esa pantalla se ofrece la frase.
+ * Si la billetera cargó, o la sesión no está abierta, no.
+ */
+export function phraseRestoreAfterPasswordUnlock(input: {
+  sessionOpen: boolean;
+  walletLoaded: boolean;
+}): 'phrase' | null {
+  if (input.sessionOpen && !input.walletLoaded) return 'phrase';
+  return null;
+}
+
 /** Desde la pantalla de bloqueo se puede recuperar la cuenta con la frase. */
 export function restoreFromLockScreen(screen: 'lock' | 'welcome' | 'app'): 'restore' | null {
   if (screen === 'lock' || screen === 'welcome') return 'restore';

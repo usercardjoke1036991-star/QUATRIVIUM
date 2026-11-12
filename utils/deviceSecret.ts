@@ -30,11 +30,11 @@ export type DeviceSecret = { hex: string; authenticated: boolean; repair?: boole
 
 export type DeviceGuard = 'bound' | 'open' | 'repair' | 'reset' | 'lost' | 'confirm';
 
-let screenLockForTests: (() => Promise<boolean>) | null = null;
+let screenLockProbe: (() => Promise<boolean>) | null = null;
 
 /** Solo pruebas. En el teléfono se usa el nivel de bloqueo de Expo. */
-export function setScreenLockForTests(probe: (() => Promise<boolean>) | null): void {
-  screenLockForTests = probe;
+export function setScreenLockProbe(probe: (() => Promise<boolean>) | null): void {
+  screenLockProbe = probe;
 }
 
 function toHex(bytes: Uint8Array): string {
@@ -164,7 +164,7 @@ export async function ensureDeviceSecret(): Promise<DeviceSecret> {
 }
 
 export async function phoneHasScreenLock(): Promise<boolean> {
-  if (screenLockForTests) return screenLockForTests();
+  if (screenLockProbe) return screenLockProbe();
   try {
     const local = (await import('expo-local-authentication')) as {
       getEnrolledLevelAsync?: () => Promise<number>;

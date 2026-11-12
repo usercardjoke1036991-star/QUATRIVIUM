@@ -346,6 +346,7 @@
   "lockUnexpected": "Erreur imprévue. Réessayez.",
   "lockStoreUnknown": "État de sécurité illisible. Réessayez.",
   "lockVerifyTimeout": "La vérification a trop duré. Réessayez.",
+  "lockRestoreWithPhrase": "Restaurer avec la phrase",
   "lockPinWeak": "Ce PIN est trop simple. N’utilisez pas de répétitions, de suites ni de dates évidentes.",
   "lockKdfMissing": "Ce telephone ne construit pas la cle du cadenas. Aucune voie faible.",
   "lockKdfWait": "Cela peut prendre quelques secondes.",

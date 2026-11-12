@@ -43,8 +43,8 @@ export async function restoreAccountOnDevice(input: {
     clearRestorePasswordBackup();
     return { ok: true, wallet };
   } catch (error) {
-    const { abortPasswordSetup, takeRestoreTokenForAbort } = await import('./appLock');
-    const token = takeRestoreTokenForAbort();
+    const { abortPasswordSetup, currentUndoToken } = await import('./appLock');
+    const token = currentUndoToken();
     await abortPasswordSetup(token).catch(() => {});
     const code = error instanceof Error ? error.message : 'import';
     if (code === 'device-bound') return { ok: false, reason: 'wallet-other-app' };

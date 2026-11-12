@@ -31,8 +31,11 @@ import {
   tickLockWait,
   isBiometricEnabled,
   abortPasswordSetup,
+  clearRestorePasswordBackup,
+  discardCreatedPin,
   isPasswordSet,
   isPinSet,
+  currentUndoToken,
   probePasswordSet,
   probePinSet,
   loadWrapFromBiometric,
@@ -91,6 +94,7 @@ import {
   signInUsernameAllowed,
   unlockPromptMethods,
   nextUnlockAfterBiometricFail,
+  phraseRestoreAfterPasswordUnlock,
   restoreFromLockScreen,
   welcomeActions,
   welcomeShowsCreate,
@@ -200,6 +204,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
   const [keepOnPhone, setKeepOnPhone] = useState(true);
   const [restorePhrase, setRestorePhrase] = useState('');
   const [deviceClaimed, setDeviceClaimed] = useState(false);
+  const [walletMiss, setWalletMiss] = useState(false);
   const [pendingPhrase, setPendingPhrase] = useState('');
   const [phraseAcked, setPhraseAcked] = useState(false);
   const [accountUsername, setAccountUsername] = useState('');
@@ -326,10 +331,12 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
           wallet = null;
         }
         if (!wallet?.address) {
+          setWalletMiss(true);
           setError(t('appWalletFailed'));
           setLocked(true);
           return;
         }
+        setWalletMiss(false);
         await raceMs(markSessionSaved(), 2500, undefined);
         setLocked(false);
         setNeedsSetup(!(await isPasswordSet()));
@@ -813,6 +820,10 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
     setInviteError('');
     setBusy(true);
     setError('');
+    const hadPassword = await isPasswordSet().catch(() => true);
+    const hadPin = await isPinSet().catch(() => true);
+    const hadBound = await getBoundWallet().catch(() => BOUND_UNKNOWN);
+    const hadRaw = await readRawWallet().catch(() => 'unreadable' as const);
     try {
       const created = generateSecretPhrase();
       const wrap = await setPassword(passwordInput, pendingPin || undefined);
@@ -829,13 +840,15 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
       setPendingPhrase(created.phrase);
       setPhraseAcked(false);
       setSetupStage('phraseReveal');
+      clearRestorePasswordBackup();
     } catch (err) {
-      await abortPasswordSetup().catch(() => {});
-      const bound = await getBoundWallet().catch(() => BOUND_UNKNOWN);
-      const raw = await readRawWallet().catch(() => 'unreadable');
-      const passwordLeft = await isPasswordSet().catch(() => true);
-      const pinLeft = await isPinSet().catch(() => true);
-      if (!(bound || raw || passwordLeft || pinLeft)) {
+      if (!hadPassword) {
+        await abortPasswordSetup(currentUndoToken()).catch(() => {});
+      }
+      if (!hadPin) {
+        await discardCreatedPin().catch(() => {});
+      }
+      if (!hadPassword && !hadPin && hadBound === '' && hadRaw == null) {
         await wipeAppWallet().catch(() => {});
       }
       passwordCommittedRef.current = false;
@@ -1901,6 +1914,32 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
             >
               <AppText style={[styles.switchText, { color: colors.primary }]}>
                 {t('lockPasswordUseAuth')}
+              </AppText>
+            </TouchableOpacity>
+          ) : null}
+
+          {walletMiss &&
+          phraseRestoreAfterPasswordUnlock({
+            sessionOpen: Boolean(getWalletWrapKey()),
+            walletLoaded: false,
+          }) === 'phrase' ? (
+            <TouchableOpacity
+              onPress={() => {
+                setWalletMiss(false);
+                setNeedsSetup(true);
+                setSetupStage('restore');
+                setLocked(false);
+                setError('');
+                setRestorePhrase('');
+                setPasswordInput('');
+                setAccountUsername('');
+              }}
+              style={styles.switchMode}
+              accessibilityRole="button"
+              accessibilityLabel={t('lockRestoreWithPhrase')}
+            >
+              <AppText style={[styles.switchText, { color: colors.primary }]}>
+                {t('lockRestoreWithPhrase')}
               </AppText>
             </TouchableOpacity>
           ) : null}

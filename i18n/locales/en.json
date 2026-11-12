@@ -346,6 +346,7 @@
   "lockUnexpected": "Unexpected error. Try again.",
   "lockStoreUnknown": "Storage unavailable. Try again.",
   "lockVerifyTimeout": "The check took too long. Try again.",
+  "lockRestoreWithPhrase": "Restore with the phrase",
   "lockPinWeak": "PIN too easy. Avoid repeats and sequences.",
   "lockKdfMissing": "This phone cannot build the lock key. Derivation stays unavailable.",
   "lockKdfWait": "This can take a few seconds.",

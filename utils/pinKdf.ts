@@ -44,11 +44,11 @@ let kdfCalls = 0;
 let kdfBlocks = 0;
 
 /** Solo pruebas: null simula un teléfono sin PBKDF2. */
-export function setPbkdf2ForTests(next: DeriveFn | null): void {
+export function setPbkdf2(next: DeriveFn | null): void {
   derive = next;
 }
 
-export function resetPbkdf2ForTests(): void {
+export function resetPbkdf2(): void {
   derive = nobleDerive;
 }
 

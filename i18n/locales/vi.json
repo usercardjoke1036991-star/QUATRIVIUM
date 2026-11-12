@@ -346,6 +346,7 @@
   "lockUnexpected": "Lỗi bất ngờ. Thử lại.",
   "lockStoreUnknown": "Không đọc được trạng thái bảo mật. Thử lại.",
   "lockVerifyTimeout": "Kiểm tra quá lâu. Thử lại.",
+  "lockRestoreWithPhrase": "Khôi phục bằng cụm từ",
   "lockPinWeak": "PIN đó quá dễ. Đừng dùng lặp, dãy số hoặc ngày rõ ràng.",
   "lockKdfMissing": "Dien thoai nay khong tao duoc khoa khoa. Khong dung cach yeu.",
   "lockKdfWait": "Viec nay co the mat vai giay.",

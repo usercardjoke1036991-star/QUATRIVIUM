@@ -34,7 +34,7 @@ export type WriteRpcInject = {
 };
 
 let unseenRecheckMs = 1_500;
-let receiptNodesForTests: ReceiptNode[] | null = null;
+let receiptNodes: ReceiptNode[] | null = null;
 
 export type ReceiptLike = {
   hash?: string;
@@ -48,12 +48,12 @@ export type ReceiptNode = {
 };
 
 /** Solo pruebas de WalletConnect: los recibos salen de estos nodos, no de la billetera. */
-export function setReceiptNodesForTests(nodes: ReceiptNode[] | null): void {
-  receiptNodesForTests = nodes;
+export function setReceiptNodes(nodes: ReceiptNode[] | null): void {
+  receiptNodes = nodes;
 }
 
 export function ownReceiptNodes(): ReceiptNode[] {
-  if (receiptNodesForTests) return receiptNodesForTests;
+  if (receiptNodes) return receiptNodes;
   const network = { chainId: NETWORK_CONFIG.chainId, name: NETWORK_CONFIG.chainName };
   return publicRpcList().map((url) => {
     const node = new JsonRpcProvider(url, network, { staticNetwork: true, batchMaxCount: 1 });
@@ -120,7 +120,7 @@ export async function firstConfirmedReceipt(
 }
 
 /** Solo pruebas: la segunda consulta del hash no tiene que esperar un segundo. */
-export function setUnseenRecheckForTests(ms: number): void {
+export function setUnseenRecheck(ms: number): void {
   unseenRecheckMs = ms;
 }
 
@@ -140,15 +140,15 @@ const holdStore: HoldStore = {
   },
 };
 
-let holdStoreForTests: HoldStore | null = null;
+let holdStoreOverride: HoldStore | null = null;
 
 /** Solo pruebas: el módulo ya cargado no puede cambiar de AsyncStorage a mitad de la suite. */
-export function setHoldStoreForTests(store: HoldStore | null): void {
-  holdStoreForTests = store;
+export function setHoldStore(store: HoldStore | null): void {
+  holdStoreOverride = store;
 }
 
 function holds(): HoldStore {
-  return holdStoreForTests ?? holdStore;
+  return holdStoreOverride ?? holdStore;
 }
 
 export async function nonceForSender(

@@ -18,6 +18,8 @@ let crashOnLiveWrap = false;
 let gateFault = '';
 let boundFault = '';
 let failPasswordWrite = false;
+let walletWriteFault = '';
+let hideBoundConfirm = false;
 let crashOnSecretPromote = false;
 let rejectDeviceAuth = false;
 let authError = 'no-credential';
@@ -26,6 +28,7 @@ const secureWrites = [];
 const secretReads = [];
 const secretMeta = new Map();
 const SECRET_KEY = 'quatrivium.lock.deviceSecret';
+const WALLET_SLOT = ['quatrivium', 'appWallet', 'v1'].join('.');
 
 installMock('expo-secure-store', {
   WHEN_UNLOCKED_THIS_DEVICE_ONLY: 'when-unlocked',
@@ -36,6 +39,9 @@ installMock('expo-secure-store', {
       if (rejectDeviceAuth) throw new Error(authError);
     } else if (secretMeta.get(key) && secretMeta.get(key).requireAuthentication) {
       throw new Error('auth-required');
+    }
+    if (hideBoundConfirm && key === 'quatrivium.device.boundWallet' && memory.has(key)) {
+      return null;
     }
     if (boundFault && key === 'quatrivium.device.boundWallet') {
       if (boundFault === 'throw') throw new Error('io');
@@ -66,6 +72,9 @@ installMock('expo-secure-store', {
   },
   async setItemAsync(key, value, options) {
     if (failPasswordWrite && key === 'quatrivium.lock.password') throw new Error('disk');
+    if (walletWriteFault === 'persist' && key === WALLET_SLOT) {
+      throw new Error('disk');
+    }
     if (crashOnLiveWrap && key === PIN_WRAP) throw new Error('crash');
     if (crashOnSecretPromote && key === SECRET_KEY && memory.has(`${SECRET_KEY}.next`)) {
       throw new Error('crash');
@@ -92,6 +101,7 @@ installMock('expo-crypto', {
 
 installMock('@react-native-async-storage/async-storage', {
   async getItem(key) {
+    if (hideBoundConfirm && key === 'quatrivium.device.boundWallet.fallback') return null;
     return memory.has(`mem:${key}`) ? memory.get(`mem:${key}`) : null;
   },
   async setItem(key, value) {
@@ -142,6 +152,26 @@ const PASSWORD = 'Clave-9f';
 const policy = loadTs(path.join(__dirname, '..', 'utils', 'pinPolicy.ts'));
 const race = loadTs(path.join(__dirname, '..', 'utils', 'lockRace.ts'));
 
+for (const [from, to] of [
+  ['setVerifyBudgetForTests', 'setVerifyBudget'],
+  ['setLockPhaseForTests', 'setLockPhase'],
+  ['setMonoClockForTests', 'setMonoClock'],
+  ['setChainStampsForTests', 'setChainStamps'],
+  ['advanceReplaceClockForTests', 'advanceReplaceClock'],
+  ['setReplaceClockForTests', 'setReplaceClock'],
+  ['setReplaceTokenObserverForTests', 'setReplaceTokenObserver'],
+  ['replaceClockNowForTests', 'replaceClockNow'],
+  ['retryDeviceProtectionForTests', 'probeDeviceProtection'],
+  ['takeRestoreTokenForAbort', 'currentUndoToken'],
+]) {
+  lock[from] = lock[to];
+}
+auth.rewindTotpMonoForTests = auth.rewindTotpMono;
+auth.setTotpRunIdForTests = auth.setTotpRunId;
+device.setScreenLockForTests = device.setScreenLockProbe;
+kdf.setPbkdf2ForTests = kdf.setPbkdf2;
+kdf.resetPbkdf2ForTests = kdf.resetPbkdf2;
+
 let mono = 1_000_000;
 
 describe('app lock PBKDF2', function () {
@@ -158,6 +188,8 @@ describe('app lock PBKDF2', function () {
     gateFault = '';
     boundFault = '';
     failPasswordWrite = false;
+    walletWriteFault = '';
+    hideBoundConfirm = false;
     lock.setVerifyBudgetForTests(null);
     lock.setLockPhaseForTests(null);
     lock.setMonoClockForTests(null);
@@ -2082,5 +2114,170 @@ describe('app lock PBKDF2', function () {
     store.getItemAsync = previous;
     expect(denied.ok).to.equal(false);
     expect(session.getWalletWrapKey()).to.equal(null);
+  });
+
+  async function failedFirstCreate(phrase) {
+    await lock.setPassword(PASSWORD);
+    let code = '';
+    try {
+      await wallet.importFromPhrase(phrase, { markBackedUp: false });
+    } catch (error) {
+      code = error instanceof Error ? error.message : 'throw';
+    }
+    await lock.abortPasswordSetup(lock.takeRestoreTokenForAbort());
+    return code;
+  }
+
+  it('clears a first creation when the wallet write fails', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    rpc.setProductMode('live');
+    const created = wallet.generateSecretPhrase();
+    walletWriteFault = 'persist';
+    const code = await failedFirstCreate(created.phrase);
+    walletWriteFault = '';
+    expect(code).to.equal('wallet-persist');
+    expect(await binding.getBoundWallet()).to.equal('');
+    expect(await wallet.readRawWallet()).to.equal(null);
+    expect(await lock.isPasswordSet()).to.equal(false);
+    await lock.setPassword(PASSWORD);
+    const again = await wallet.importFromPhrase(created.phrase, { markBackedUp: false });
+    expect(again.address.toLowerCase()).to.equal(created.address);
+    lock.lockNow();
+    for (const key of [...memory.keys()]) {
+      if (String(key).startsWith('quatrivium.lock.gate')) memory.delete(key);
+    }
+    expect((await lock.checkPassword(PASSWORD)).ok).to.equal(true);
+    const opened = await wallet.loadAppWallet();
+    expect(opened.address.toLowerCase()).to.equal(created.address);
+  });
+
+  it('clears a first creation when binding the wallet fails', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    rpc.setProductMode('live');
+    const created = wallet.generateSecretPhrase();
+    hideBoundConfirm = true;
+    const code = await failedFirstCreate(created.phrase);
+    hideBoundConfirm = false;
+    expect(code).to.equal('bind-unconfirmed');
+    expect(await binding.getBoundWallet()).to.equal('');
+    expect(await wallet.readRawWallet()).to.equal(null);
+    expect(await lock.isPasswordSet()).to.equal(false);
+    await lock.setPassword(PASSWORD);
+    const again = await wallet.importFromPhrase(created.phrase, { markBackedUp: false });
+    expect(again.address.toLowerCase()).to.equal(created.address);
+    lock.lockNow();
+    for (const key of [...memory.keys()]) {
+      if (String(key).startsWith('quatrivium.lock.gate')) memory.delete(key);
+    }
+    expect((await lock.checkPassword(PASSWORD)).ok).to.equal(true);
+    const opened = await wallet.loadAppWallet();
+    expect(opened.address.toLowerCase()).to.equal(created.address);
+  });
+
+  it('keeps an existing owner when a later wallet write fails', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    rpc.setProductMode('live');
+    await lock.setPassword(PASSWORD);
+    const owner = wallet.generateSecretPhrase();
+    await wallet.importFromPhrase(owner.phrase, { markBackedUp: false });
+    const blob = memory.get('quatrivium.appWallet.v1');
+    const password = memory.get('quatrivium.lock.password');
+    const bound = memory.get('quatrivium.device.boundWallet');
+    const fallback = memory.get('mem:quatrivium.device.boundWallet.fallback');
+    walletWriteFault = 'persist';
+    let code = '';
+    try {
+      await wallet.importFromPhrase(owner.phrase, { markBackedUp: false });
+    } catch (error) {
+      code = error instanceof Error ? error.message : 'throw';
+    }
+    walletWriteFault = '';
+    expect(code).to.equal('wallet-persist');
+    expect(memory.get('quatrivium.appWallet.v1')).to.equal(blob);
+    expect(memory.get('quatrivium.lock.password')).to.equal(password);
+    expect(memory.get('quatrivium.device.boundWallet')).to.equal(bound);
+    expect(memory.get('mem:quatrivium.device.boundWallet.fallback')).to.equal(fallback);
+    lock.lockNow();
+    for (const key of [...memory.keys()]) {
+      if (String(key).startsWith('quatrivium.lock.gate')) memory.delete(key);
+    }
+    expect((await lock.checkPassword(PASSWORD)).ok).to.equal(true);
+  });
+
+  it('loads the wallet when the bound link times out', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    rpc.setProductMode('live');
+    await lock.setPassword(PASSWORD);
+    const created = wallet.generateSecretPhrase();
+    await wallet.importFromPhrase(created.phrase, { markBackedUp: false });
+    let reported = 0;
+    race.setLockFaultReporter(() => {
+      reported += 1;
+    });
+    boundFault = 'hang';
+    let opened = null;
+    let error = '';
+    try {
+      opened = await wallet.ensureAppWallet();
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'throw';
+    }
+    boundFault = '';
+    race.setLockFaultReporter(null);
+    expect(error).to.equal('');
+    expect(opened.address.toLowerCase()).to.equal(created.address);
+    expect(reported).to.be.at.least(1);
+    lock.lockNow();
+    for (const key of [...memory.keys()]) {
+      if (String(key).startsWith('quatrivium.lock.gate')) memory.delete(key);
+    }
+    expect((await lock.checkPassword(PASSWORD)).ok).to.equal(true);
+    expect((await wallet.loadAppWallet()).address.toLowerCase()).to.equal(created.address);
+  });
+
+  it('keeps the owner blob when the restore write fails', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    rpc.setProductMode('live');
+    await lock.setPassword(PASSWORD);
+    const owner = wallet.generateSecretPhrase();
+    await wallet.importFromPhrase(owner.phrase, { markBackedUp: false });
+    const blob = memory.get('quatrivium.appWallet.v1');
+    const password = memory.get('quatrivium.lock.password');
+    lock.lockNow();
+    walletWriteFault = 'persist';
+    const result = await restore.restoreAccountOnDevice({
+      phrase: owner.phrase,
+      password: 'Nueva-9z',
+    });
+    walletWriteFault = '';
+    expect(result.ok).to.equal(false);
+    expect(result.reason).to.equal('wallet-persist');
+    expect(memory.get('quatrivium.appWallet.v1')).to.equal(blob);
+    expect(memory.get('quatrivium.lock.password')).to.equal(password);
+    for (const key of [...memory.keys()]) {
+      if (String(key).startsWith('quatrivium.lock.gate')) memory.delete(key);
+    }
+    expect((await lock.checkPassword(PASSWORD)).ok).to.equal(true);
+  });
+
+  it('offers the phrase restore when the password opened but the wallet did not', function () {
+    expect(
+      entry.phraseRestoreAfterPasswordUnlock({ sessionOpen: true, walletLoaded: false })
+    ).to.equal('phrase');
+    expect(
+      entry.phraseRestoreAfterPasswordUnlock({ sessionOpen: true, walletLoaded: true })
+    ).to.equal(null);
+    expect(
+      entry.phraseRestoreAfterPasswordUnlock({ sessionOpen: false, walletLoaded: false })
+    ).to.equal(null);
+    const es = require('../i18n/locales/es.json');
+    const en = require('../i18n/locales/en.json');
+    expect(es.lockRestoreWithPhrase).to.be.a('string');
+    expect(en.lockRestoreWithPhrase).to.be.a('string');
   });
 });

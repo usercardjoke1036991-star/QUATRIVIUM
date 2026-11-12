@@ -346,6 +346,7 @@
   "lockUnexpected": "意外错误，请重试。",
   "lockStoreUnknown": "无法读取安全状态。请重试。",
   "lockVerifyTimeout": "验证超时。请重试。",
+  "lockRestoreWithPhrase": "用助记词恢复",
   "lockPinWeak": "该 PIN 过于简单。请勿使用重复数字、连续序列或明显日期。",
   "lockKdfMissing": "此手机无法生成锁定密钥。不会改用弱推导。",
   "lockKdfWait": "这可能需要几秒钟。",

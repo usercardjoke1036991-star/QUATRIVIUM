@@ -141,12 +141,12 @@ interface GateRecord {
   lastChain: number;
 }
 
-let monoClockForTests: (() => number) | null = null;
-let replaceClockForTests: (() => number) | null = null;
-let replaceOffsetForTests = 0;
-let chainStampsForTests: (() => Promise<(number | null)[]> | (number | null)[]) | null = null;
-let beforeVerifyForTests: (() => Promise<void> | void) | null = null;
-let afterMatchForTests: (() => Promise<void> | void) | null = null;
+let monoClock: (() => number) | null = null;
+let replaceClock: (() => number) | null = null;
+let replaceOffset = 0;
+let chainStamps: (() => Promise<(number | null)[]> | (number | null)[]) | null = null;
+let beforeVerify: (() => Promise<void> | void) | null = null;
+let afterMatch: (() => Promise<void> | void) | null = null;
 let anchorTail: Promise<void> = Promise.resolve();
 let anchorTimer: ReturnType<typeof setTimeout> | null = null;
 let lastLockLeft = 0;
@@ -214,7 +214,7 @@ function throwIfAborted(signal: AbortSignal): void {
 }
 
 /** Solo pruebas: acorta el presupuesto interno de withLockVerify. */
-export function setVerifyBudgetForTests(ms: number | null): void {
+export function setVerifyBudget(ms: number | null): void {
   verifyBudgetMs = ms == null ? VERIFY_INTERNAL_MS : Math.max(50, ms);
 }
 
@@ -242,14 +242,14 @@ function timeoutCheckResult(): PinCheck {
 }
 
 /** Solo pruebas: cortar entre el intento guardado y PBKDF2, o entre el acierto y la limpieza. */
-export function setLockPhaseForTests(
+export function setLockPhase(
   phase: {
     beforeVerify?: (() => Promise<void> | void) | null;
     afterMatch?: (() => Promise<void> | void) | null;
   } | null
 ): void {
-  beforeVerifyForTests = phase?.beforeVerify ?? null;
-  afterMatchForTests = phase?.afterMatch ?? null;
+  beforeVerify = phase?.beforeVerify ?? null;
+  afterMatch = phase?.afterMatch ?? null;
 }
 
 /** La lectura de cadena posterior al fallo. La respuesta en pantalla no la espera. */
@@ -258,8 +258,8 @@ export function whenLockAnchorSettled(): Promise<void> {
 }
 
 /** Solo pruebas: performance.now() mientras la app está abierta. */
-export function setMonoClockForTests(clock: (() => number) | null): void {
-  monoClockForTests = clock;
+export function setMonoClock(clock: (() => number) | null): void {
+  monoClock = clock;
   lastChainMono = -CHAIN_POLL_MS;
   chainFlight = null;
   gateQueue = Promise.resolve();
@@ -273,52 +273,52 @@ export function setMonoClockForTests(clock: (() => number) | null): void {
   verifyBudgetMs = VERIFY_INTERNAL_MS;
   passwordReplaceToken = null;
   passwordBackup = null;
-  replaceClockForTests = null;
-  replaceOffsetForTests = 0;
-  replaceTokenObserverForTests = null;
-  beforeVerifyForTests = null;
-  afterMatchForTests = null;
+  replaceClock = null;
+  replaceOffset = 0;
+  replaceTokenObserver = null;
+  beforeVerify = null;
+  afterMatch = null;
 }
 
 /**
  * Solo pruebas: sellos de bloque ya en milisegundos.
  * null vuelve a leer los RPC públicos.
  */
-export function setChainStampsForTests(
+export function setChainStamps(
   reader: (() => Promise<(number | null)[]> | (number | null)[]) | null
 ): void {
-  chainStampsForTests = reader;
+  chainStamps = reader;
 }
 
 function monoNow(): number {
-  return monoClockForTests ? monoClockForTests() : performance.now();
+  return monoClock ? monoClock() : performance.now();
 }
 
 function replaceNow(): number {
-  const base = replaceClockForTests ? replaceClockForTests() : performance.now();
-  return base + replaceOffsetForTests;
+  const base = replaceClock ? replaceClock() : performance.now();
+  return base + replaceOffset;
 }
 
 /** Solo pruebas: adelanta el reloj del token de restaurar. */
-export function advanceReplaceClockForTests(ms: number): void {
-  replaceOffsetForTests += ms;
+export function advanceReplaceClock(ms: number): void {
+  replaceOffset += ms;
 }
 
 /** Solo pruebas: sustituye el reloj del token. null vuelve a performance.now(). */
-export function setReplaceClockForTests(clock: (() => number) | null): void {
-  replaceClockForTests = clock;
-  if (!clock) replaceOffsetForTests = 0;
+export function setReplaceClock(clock: (() => number) | null): void {
+  replaceClock = clock;
+  if (!clock) replaceOffset = 0;
 }
 
-let replaceTokenObserverForTests: ((token: string) => void) | null = null;
+let replaceTokenObserver: ((token: string) => void) | null = null;
 
 /** Solo pruebas: ve el token interno justo después de emitirlo. */
-export function setReplaceTokenObserverForTests(observer: ((token: string) => void) | null): void {
-  replaceTokenObserverForTests = observer;
+export function setReplaceTokenObserver(observer: ((token: string) => void) | null): void {
+  replaceTokenObserver = observer;
 }
 
 /** Solo pruebas: deja visible el reloj del token. */
-export function replaceClockNowForTests(): number {
+export function replaceClockNow(): number {
   return replaceNow();
 }
 
@@ -484,7 +484,7 @@ function withGate<T>(job: () => Promise<T>): Promise<T> {
 
 /** Hora del último bloque si dos RPC públicos coinciden. Si no, null: no hay red de confianza. */
 async function trustedChainMs(): Promise<number | null> {
-  if (chainStampsForTests) return agreedChainMs(await Promise.resolve(chainStampsForTests()));
+  if (chainStamps) return agreedChainMs(await Promise.resolve(chainStamps()));
   const stamps = await Promise.all(publicRpcList().map((url) => readBlockStamp(url)));
   return agreedChainMs(stamps);
 }
@@ -1243,7 +1243,7 @@ async function checkPinBody(
     }
     return { ok: false, remainingMs: 0, locked: true };
   }
-  if (beforeVerifyForTests) await beforeVerifyForTests();
+  if (beforeVerify) await beforeVerify();
   throwIfAborted(signal);
   try {
     material = current
@@ -1281,7 +1281,7 @@ async function checkPinBody(
   } catch (error) {
     return deviceCheck(error);
   }
-  if (afterMatchForTests) await afterMatchForTests();
+  if (afterMatch) await afterMatch();
   const ready = pinReady(record);
   if (await isPasswordSet()) {
     const opened = material
@@ -1426,9 +1426,7 @@ async function retryDeviceProtection(pin: string): Promise<'bound' | 'open' | 'n
 }
 
 /** Solo pruebas: el producto llama al reintento desde el acierto del PIN. */
-export async function retryDeviceProtectionForTests(
-  pin: string
-): Promise<'bound' | 'open' | 'no-lock' | 'lost'> {
+export function probeDeviceProtection(pin: string): Promise<'bound' | 'open' | 'no-lock' | 'lost'> {
   return retryDeviceProtection(pin);
 }
 
@@ -1481,6 +1479,20 @@ export async function changePin(current: string, next: string): Promise<boolean>
     }
     setWalletWrapKey(oldWrap);
     return false;
+  }
+}
+
+/** Borra el PIN que acaba de crear un alta que no terminó. */
+export async function discardCreatedPin(): Promise<void> {
+  try {
+    await SecureStore.deleteItemAsync(PIN_KEY);
+  } catch {
+    // ignore
+  }
+  try {
+    await SecureStore.deleteItemAsync(PIN_WRAP_KEY);
+  } catch {
+    // ignore
   }
 }
 
@@ -1552,7 +1564,7 @@ export async function restorePasswordForPhrase(input: {
   await capturePasswordBackup(token);
   passwordReplaceToken = { token, address, expiresMono };
   lockNow();
-  replaceTokenObserverForTests?.(token);
+  replaceTokenObserver?.(token);
   if (replaceNow() > expiresMono) {
     clearPasswordBackup();
     throw new Error('password-locked');
@@ -1569,7 +1581,7 @@ export function clearRestorePasswordBackup(): void {
 }
 
 /** Token de un solo uso para abortar el mismo intento de restaurar. */
-export function takeRestoreTokenForAbort(): string {
+export function currentUndoToken(): string {
   const token = passwordReplaceToken?.token || passwordBackup?.token || '';
   return token;
 }
@@ -1586,6 +1598,7 @@ export async function setPassword(
     throw new Error('wrong-pin');
   }
   const existing = await readPasswordRecord();
+  const fresh = !existing;
   if (existing) {
     const sessionOpen = Boolean(getWalletWrapKey());
     const issued = passwordReplaceToken;
@@ -1601,6 +1614,14 @@ export async function setPassword(
     );
     if (!sessionOpen && !tokenOk) throw new Error('password-locked');
     if (tokenOk && issued) passwordReplaceToken = null;
+  } else {
+    const freshToken = Crypto.randomUUID();
+    await capturePasswordBackup(freshToken);
+    passwordReplaceToken = {
+      token: freshToken,
+      address: '',
+      expiresMono: replaceNow() + REPLACE_TOKEN_MS,
+    };
   }
   if (!passwordBackup) await capturePasswordBackup('');
   const salt = Crypto.randomUUID();
@@ -1651,7 +1672,7 @@ export async function setPassword(
   }
   await persistCompanionWraps(nextWrap);
   if (!options?.keepLockCounters) await writeGate(emptyGate());
-  if (!options?.keepLockCounters) clearPasswordBackup();
+  if (!options?.keepLockCounters && !fresh) clearPasswordBackup();
   return nextWrap;
 }
 
@@ -1705,7 +1726,7 @@ async function checkPasswordBody(
     if (reserved.status === 'pin-blocked') return pinBlockedResult();
     return { ok: false, remainingMs: 0, locked: true };
   }
-  if (beforeVerifyForTests) await beforeVerifyForTests();
+  if (beforeVerify) await beforeVerify();
   throwIfAborted(signal);
   const modern = record.kdf === PIN_KDF;
   const current = modern && record.split === PIN_SPLIT;
@@ -1727,7 +1748,7 @@ async function checkPasswordBody(
     return { ok: false, remainingMs: reserved.left, locked: reserved.left > 0 };
   }
   throwIfAborted(signal);
-  if (afterMatchForTests) await afterMatchForTests();
+  if (afterMatch) await afterMatch();
   throwIfAborted(signal);
   if (material && ready) {
     throwIfAborted(signal);

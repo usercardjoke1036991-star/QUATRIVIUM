@@ -29,6 +29,9 @@ installMock('@react-native-async-storage/async-storage', {
 
 const hold = loadTs(path.join(__dirname, '..', 'utils', 'pendingHold.ts'));
 const write = loadTs(path.join(__dirname, '..', 'services', 'writeRpc.ts'));
+write.setHoldStoreForTests = write.setHoldStore;
+write.setUnseenRecheckForTests = write.setUnseenRecheck;
+write.setReceiptNodesForTests = write.setReceiptNodes;
 const wait = loadTs(path.join(__dirname, '..', 'utils', 'waitMined.ts'));
 
 const HASH = '0x' + 'ab'.repeat(32);
