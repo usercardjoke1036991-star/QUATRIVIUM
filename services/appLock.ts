@@ -61,7 +61,7 @@ import {
 import { APP_DISPLAY_NAME } from '../constants/brand';
 import { getProductMode, publicRpcList } from '../constants/rpcConfig';
 import { allowWalletAsyncFallback } from '../utils/walletVaultPolicy';
-import { getBoundWallet } from './deviceBinding';
+import { BOUND_UNKNOWN, getBoundWallet } from './deviceBinding';
 import { clearWalletSession, getWalletWrapKey, setWalletWrapKey } from './walletSession';
 import { externalWalletHandoffActive } from './walletHandoff';
 import { isPickerHeld } from '../utils/pickerHold';
@@ -90,6 +90,11 @@ const BIO_WRAP_OPTIONS = {
 export const PIN_LENGTH = 6;
 /** Diez PIN seguidos mal: el PIN se bloquea y solo abre la contraseña. No se borra nada. */
 export const PIN_FAIL_LIMIT = 10;
+/** Diez TOTP seguidos mal: el autenticador no desbloquea; abren la contraseña o la frase. */
+export const TOTP_FAIL_LIMIT = 10;
+/** Presupuesto interno de una verificación (sin contar avisos del sistema). */
+const VERIFY_INTERNAL_MS = 20_000;
+let verifyBudgetMs = VERIFY_INTERNAL_MS;
 export { PASSWORD_LENGTH, isValidMasterPassword };
 export const PIN_ROUNDS = 20_000;
 const BACKGROUND_LOCK_MS = 20_000;
@@ -139,10 +144,33 @@ let anchorTail: Promise<void> = Promise.resolve();
 let anchorTimer: ReturnType<typeof setTimeout> | null = null;
 let lastLockLeft = 0;
 let verifying = false;
+let passwordBackup: { secure: string | null; fallback: string | null } | null = null;
+let passwordReplaceToken: string | null = null;
 const STORE_UNKNOWN = Symbol('store-unknown');
 
 function busyResult(): PinCheck {
   return { ok: false, remainingMs: 0, locked: false, busy: true };
+}
+
+function withVerifyBudget<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('lock-verify-timeout')), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+}
+
+/** Solo pruebas: acorta el presupuesto interno de withLockVerify. */
+export function setVerifyBudgetForTests(ms: number | null): void {
+  verifyBudgetMs = ms == null ? VERIFY_INTERNAL_MS : Math.max(50, ms);
 }
 
 /** Mientras un PIN, una contraseña o un TOTP se comprueban, el resto no toca el candado. */
@@ -150,10 +178,18 @@ export async function withLockVerify<T>(job: () => Promise<T>, busy: T): Promise
   if (verifying) return busy;
   verifying = true;
   try {
-    return await job();
+    return await withVerifyBudget(Promise.resolve().then(job), verifyBudgetMs);
   } finally {
     verifying = false;
   }
+}
+
+function timeoutCheckResult(): PinCheck {
+  return {
+    ok: false,
+    remainingMs: lastLockLeft,
+    locked: lastLockLeft > 0,
+  };
 }
 
 /** Solo pruebas: cortar entre el intento guardado y PBKDF2, o entre el acierto y la limpieza. */
@@ -185,6 +221,9 @@ export function setMonoClockForTests(clock: (() => number) | null): void {
   }
   lastLockLeft = 0;
   verifying = false;
+  verifyBudgetMs = VERIFY_INTERNAL_MS;
+  passwordReplaceToken = null;
+  passwordBackup = null;
   beforeVerifyForTests = null;
   afterMatchForTests = null;
 }
@@ -243,7 +282,7 @@ async function readPinRecord(): Promise<PinRecord | null> {
 
 async function boundScope(): Promise<string | null | typeof STORE_UNKNOWN> {
   const bound = (await getBoundWallet()).toLowerCase();
-  if (bound === 'desconocido') return STORE_UNKNOWN;
+  if (bound === BOUND_UNKNOWN) return STORE_UNKNOWN;
   return /^0x[0-9a-f]{40}$/.test(bound) ? bound : null;
 }
 
@@ -278,22 +317,31 @@ function emptyGate(): GateRecord {
   return { fails: 0, until: 0, waitMs: 0, left: 0, seen: 0, chainAt: 0, lastChain: 0 };
 }
 
-function gateFromStored(parsed: Partial<GateRecord>): GateRecord {
+function gateFromStored(parsed: Partial<GateRecord>): GateRecord | 'corrupt' {
   const fails = Math.max(0, Number(parsed.fails) || 0);
-  const waitMs = Math.max(0, Number(parsed.waitMs) || 0);
+  const waitRaw = Number(parsed.waitMs);
   const seen = Math.max(0, Number(parsed.seen) || 0);
   const chainAt = Math.max(0, Number(parsed.chainAt) || 0);
   const lastChain = Math.max(0, Number(parsed.lastChain) || 0);
   const leftField = Number(parsed.left);
-  if (Number.isFinite(leftField)) {
-    return { fails, until: 0, waitMs, left: Math.max(0, leftField), seen, chainAt, lastChain };
+  if (Number.isFinite(leftField) && Number.isFinite(waitRaw)) {
+    return {
+      fails,
+      until: 0,
+      waitMs: Math.max(0, waitRaw),
+      left: Math.max(0, leftField),
+      seen,
+      chainAt,
+      lastChain,
+    };
   }
   const until = Math.max(0, Number(parsed.until) || 0);
   if (until > 0 && fails > 0) {
     const full = lockoutMs(fails);
     return { fails, until: 0, waitMs: full, left: full, seen: 0, chainAt: 0, lastChain: 0 };
   }
-  return { ...emptyGate(), fails };
+  if (fails > 0) return 'corrupt';
+  return emptyGate();
 }
 
 function recoveredNumber(raw: string, field: string): number | null {
@@ -593,7 +641,8 @@ export type ReserveResult =
   | { status: 'ok'; left: number; fails: number; attempts: AttemptRecord }
   | { status: 'unknown' }
   | { status: 'wait'; remainingMs: number }
-  | { status: 'pin-blocked' };
+  | { status: 'pin-blocked' }
+  | { status: 'totp-blocked' };
 
 /**
  * Una sola pasada dentro de la cola: relee, rechaza o escribe el fallo confirmado.
@@ -605,6 +654,7 @@ export async function reserveAttempt(kind: ReserveKind): Promise<ReserveResult> 
     const attempts = await readAttempts();
     if (gate === STORE_UNKNOWN || attempts === STORE_UNKNOWN) return { status: 'unknown' };
     if (kind === 'pin' && attempts.pin >= PIN_FAIL_LIMIT) return { status: 'pin-blocked' };
+    if (kind === 'totp' && attempts.totp >= TOTP_FAIL_LIMIT) return { status: 'totp-blocked' };
     let current = gate;
     if (gate.left > 0) {
       const next = advanceWait(gate, { mono: monoNow(), chain: null });
@@ -1058,6 +1108,7 @@ export type PinCheck =
       deviceSecretLost?: boolean;
       storeUnknown?: boolean;
       busy?: boolean;
+      totpBlocked?: boolean;
     };
 
 function pinReady(record: PinRecord): boolean {
@@ -1098,10 +1149,13 @@ async function checkPinBody(pin: string): Promise<PinCheck> {
     return deviceCheck(error);
   }
   const reserved = await reserveAttempt('pin');
-  if (reserved.status === 'unknown') return storeUnknownResult();
-  if (reserved.status === 'pin-blocked') return pinBlockedResult();
-  if (reserved.status === 'wait') {
-    return { ok: false, remainingMs: reserved.remainingMs, locked: true };
+  if (reserved.status !== 'ok') {
+    if (reserved.status === 'unknown') return storeUnknownResult();
+    if (reserved.status === 'pin-blocked') return pinBlockedResult();
+    if (reserved.status === 'wait') {
+      return { ok: false, remainingMs: reserved.remainingMs, locked: true };
+    }
+    return { ok: false, remainingMs: 0, locked: true };
   }
   if (beforeVerifyForTests) await beforeVerifyForTests();
   try {
@@ -1244,7 +1298,7 @@ async function retryPasswordProtection(): Promise<'bound' | 'open' | 'no-lock' |
  * El registro nuevo se guarda antes de sustituir el secreto. Si el proceso cae en medio,
  * el siguiente PIN abre con el borrador y termina el cambio.
  */
-export async function retryDeviceProtection(
+async function retryDeviceProtection(
   pin: string
 ): Promise<'bound' | 'open' | 'no-lock' | 'lost'> {
   const guard = await readDeviceGuard();
@@ -1281,11 +1335,25 @@ export async function retryDeviceProtection(
   return 'bound';
 }
 
+/** Solo pruebas: el producto llama al reintento desde el acierto del PIN. */
+export async function retryDeviceProtectionForTests(
+  pin: string
+): Promise<'bound' | 'open' | 'no-lock' | 'lost'> {
+  return retryDeviceProtection(pin);
+}
+
 export async function checkPin(pin: string): Promise<PinCheck> {
   if (!isSixDigits(pin)) {
     return { ok: false, remainingMs: 0, locked: false };
   }
-  return withLockVerify(() => checkPinBody(pin), busyResult());
+  try {
+    return await withLockVerify(() => checkPinBody(pin), busyResult());
+  } catch (error) {
+    if (error instanceof Error && error.message === 'lock-verify-timeout') {
+      return timeoutCheckResult();
+    }
+    throw error;
+  }
 }
 
 export async function verifyPin(pin: string): Promise<boolean> {
@@ -1347,13 +1415,53 @@ export async function clearPin(current: string): Promise<boolean> {
   return true;
 }
 
-export async function setPassword(password: string, conveniencePin?: string): Promise<string> {
+async function capturePasswordBackup(): Promise<void> {
+  let secure: string | null = null;
+  let fallback: string | null = null;
+  try {
+    secure = (await SecureStore.getItemAsync(PASSWORD_KEY)) || null;
+  } catch {
+    secure = null;
+  }
+  try {
+    fallback = (await AsyncStorage.getItem(PASSWORD_FALLBACK)) || null;
+  } catch {
+    fallback = null;
+  }
+  passwordBackup = { secure, fallback };
+}
+
+/**
+ * Tras comprobar que la frase es de este teléfono, emite un token para sobrescribir
+ * la contraseña sin sesión abierta. Guarda una copia exacta del registro anterior.
+ */
+export async function preparePasswordReplace(): Promise<string> {
+  await capturePasswordBackup();
+  const token = Crypto.randomUUID();
+  passwordReplaceToken = token;
+  return token;
+}
+
+export async function setPassword(
+  password: string,
+  conveniencePin?: string,
+  options?: { replaceToken?: string; keepLockCounters?: boolean }
+): Promise<string> {
   if (!isValidMasterPassword(password)) {
     throw passwordError(password);
   }
   if (conveniencePin && !(await checkPin(conveniencePin)).ok) {
     throw new Error('wrong-pin');
   }
+  const existing = await readPasswordRecord();
+  if (existing) {
+    const sessionOpen = Boolean(getWalletWrapKey());
+    const token = options?.replaceToken || '';
+    const tokenOk = Boolean(token) && token === passwordReplaceToken;
+    if (!sessionOpen && !tokenOk) throw new Error('password-locked');
+    if (tokenOk) passwordReplaceToken = null;
+  }
+  if (!passwordBackup) await capturePasswordBackup();
   const salt = Crypto.randomUUID();
   const material = await derivePinMaterial(password, salt, PIN_PBKDF2_ROUNDS);
   const record: PasswordRecord = {
@@ -1401,21 +1509,34 @@ export async function setPassword(password: string, conveniencePin?: string): Pr
     await persistWrapForBiometric(nextWrap);
   }
   await persistCompanionWraps(nextWrap);
-  await writeGate(emptyGate());
+  if (!options?.keepLockCounters) await writeGate(emptyGate());
   return nextWrap;
 }
 
-/** Si el alta falla después de guardar la clave, no dejar candado huérfano. */
+/** Si el alta falla después de guardar la clave, restaura la copia exacta anterior. */
 export async function abortPasswordSetup(): Promise<void> {
-  try {
-    await AsyncStorage.removeItem(PASSWORD_FALLBACK);
-  } catch {
-    /* ignore */
-  }
-  try {
-    await SecureStore.deleteItemAsync(PASSWORD_KEY);
-  } catch {
-    /* ignore */
+  const backup = passwordBackup;
+  passwordBackup = null;
+  passwordReplaceToken = null;
+  if (backup) {
+    try {
+      if (backup.secure) {
+        await SecureStore.setItemAsync(PASSWORD_KEY, backup.secure, OPTIONS);
+      } else {
+        await SecureStore.deleteItemAsync(PASSWORD_KEY);
+      }
+    } catch {
+      /* ignore */
+    }
+    try {
+      if (backup.fallback) {
+        await AsyncStorage.setItem(PASSWORD_FALLBACK, backup.fallback);
+      } else {
+        await AsyncStorage.removeItem(PASSWORD_FALLBACK);
+      }
+    } catch {
+      /* ignore */
+    }
   }
   clearWalletSession();
 }
@@ -1426,11 +1547,14 @@ async function checkPasswordBody(password: string): Promise<PinCheck> {
     return { ok: false, remainingMs: 0, locked: false };
   }
   const reserved = await reserveAttempt('password');
-  if (reserved.status === 'unknown') return storeUnknownResult();
-  if (reserved.status === 'wait') {
-    return { ok: false, remainingMs: reserved.remainingMs, locked: true };
+  if (reserved.status !== 'ok') {
+    if (reserved.status === 'unknown') return storeUnknownResult();
+    if (reserved.status === 'wait') {
+      return { ok: false, remainingMs: reserved.remainingMs, locked: true };
+    }
+    if (reserved.status === 'pin-blocked') return pinBlockedResult();
+    return { ok: false, remainingMs: 0, locked: true };
   }
-  if (reserved.status === 'pin-blocked') return pinBlockedResult();
   if (beforeVerifyForTests) await beforeVerifyForTests();
   const modern = record.kdf === PIN_KDF;
   const current = modern && record.split === PIN_SPLIT;
@@ -1510,7 +1634,21 @@ export async function checkPassword(password: string): Promise<PinCheck> {
   if (!password) {
     return { ok: false, remainingMs: 0, locked: false };
   }
-  return withLockVerify(() => checkPasswordBody(password), busyResult());
+  try {
+    return await withLockVerify(() => checkPasswordBody(password), busyResult());
+  } catch (error) {
+    if (error instanceof Error && error.message === 'lock-verify-timeout') {
+      return timeoutCheckResult();
+    }
+    throw error;
+  }
+}
+
+/** Solo pruebas: deja visible si el TOTP de desbloqueo está bloqueado. */
+export async function totpUnlockBlocked(): Promise<boolean> {
+  const attempts = await readAttempts();
+  if (attempts === STORE_UNKNOWN) return true;
+  return attempts.totp >= TOTP_FAIL_LIMIT;
 }
 
 export async function changePassword(
@@ -1661,7 +1799,7 @@ export function shouldRelockAfterBackground(
   monoAt: number | null = null,
   mono = performance.now()
 ): boolean {
-  if (isPickerHeld()) return false;
+  if (isPickerHeld(mono)) return false;
   if (backgroundedAt == null) return false;
   if (now < backgroundedAt) return true;
   if (externalWalletHandoffActive()) return false;

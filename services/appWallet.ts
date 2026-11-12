@@ -222,8 +222,8 @@ export async function loadAppWallet(): Promise<HDNodeWallet | Wallet | null> {
 
 export async function createAppWallet(): Promise<HDNodeWallet> {
   const claimed = await lookupBoundWalletOnThisDevice();
-  if (claimed) {
-    throw new Error('device-bound');
+  if (claimed.status === 'wallet' || claimed.status === 'unknown') {
+    throw new Error(claimed.status === 'unknown' ? 'store-unknown' : 'device-bound');
   }
   const created = createTwentyFourWordWallet();
   await writeStored({

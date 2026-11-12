@@ -142,23 +142,26 @@ describe('cyber hardening — PIN and secret box', function () {
   });
 
   it('keeps AsyncStorage wallet fallback only on Demo', function () {
-    const fs = require('fs');
     const path = require('path');
-    const policy = fs.readFileSync(
-      path.join(__dirname, '..', 'utils', 'walletVaultPolicy.ts'),
-      'utf8'
-    );
-    expect(policy).to.include("productMode !== 'live'");
-    const entry = fs.readFileSync(path.join(__dirname, '..', 'utils', 'accountEntry.ts'), 'utf8');
-    expect(entry).to.include('nextUnlockAfterBiometricFail');
-    expect(entry).to.include("if (flags.pinSet) return 'pin'");
-    expect(entry).to.include("if (flags.passwordSet) return 'password'");
-    const gate = fs.readFileSync(
-      path.join(__dirname, '..', 'components', 'AppLockGate.tsx'),
-      'utf8'
-    );
-    expect(gate).to.include('nextUnlockAfterBiometricFail');
-    expect(gate).to.include("code === 'wallet-persist' || code === 'password-persist'");
+    const { loadTs } = require('./loadTsApp.cjs');
+    const vault = loadTs(path.join(__dirname, '..', 'utils', 'walletVaultPolicy.ts'));
+    const entry = loadTs(path.join(__dirname, '..', 'utils', 'accountEntry.ts'));
+    expect(vault.allowWalletAsyncFallback('live')).to.equal(false);
+    expect(vault.allowWalletAsyncFallback('demo')).to.equal(true);
+    expect(
+      entry.nextUnlockAfterBiometricFail(['pin', 'password', 'authenticator'], {
+        pinSet: true,
+        passwordSet: true,
+        authOn: true,
+      })
+    ).to.equal('pin');
+    expect(
+      entry.nextUnlockAfterBiometricFail(['password'], {
+        pinSet: false,
+        passwordSet: true,
+        authOn: false,
+      })
+    ).to.equal('password');
   });
 
   it('accepts a user-chosen master password and rejects a private key', function () {

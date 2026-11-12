@@ -11,6 +11,8 @@ export type LockMiss = {
   deviceKeyReset?: boolean;
   deviceSecretLost?: boolean;
   storeUnknown?: boolean;
+  totpBlocked?: boolean;
+  busy?: boolean;
 };
 
 type Copy = { key: TranslationKey; vars?: Vars };
@@ -35,7 +37,7 @@ export function lockFailureCopy(
   passwordMissing = false
 ): Copy {
   if (checked.storeUnknown) return { key: 'lockStoreUnknown' };
-  if (checked.pinBlocked) return { key: 'lockPinBlocked' };
+  if (checked.pinBlocked || checked.totpBlocked) return { key: 'lockPinBlocked' };
   if (checked.deviceKeyReset) return { key: 'lockDeviceKeyReset' };
   if (checked.deviceSecretLost) return { key: 'lockDeviceSecretLost' };
   if (checked.deviceAuth) return { key: 'lockDeviceAuth' };

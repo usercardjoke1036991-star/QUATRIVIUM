@@ -44,7 +44,6 @@ import { describeLockFailure, lockWaitCopy } from '../utils/lockFailureCopy';
 import { raceMs, reportLockFault, setLockFaultReporter } from '../utils/lockRace';
 import { isValidMasterPassword } from '../utils/passwordPolicy';
 import {
-  addressFromPhrase,
   ensureAppWallet,
   generateSecretPhrase,
   getSecretPhrase,
@@ -61,6 +60,7 @@ import {
   saveClaimedUsername,
 } from '../services/accountUsername';
 import { lookupBoundWalletOnThisDevice } from '../services/deviceClaim';
+import { restoreAccountOnDevice } from '../services/restoreAccount';
 import { isAuthenticatorEnabled, unlockWithAuthenticator } from '../services/authenticator';
 import {
   ensureUnlockEnabled,
@@ -90,7 +90,6 @@ import {
   unlockPromptMethods,
   nextUnlockAfterBiometricFail,
   restoreFromLockScreen,
-  restoreMatchesDevice,
   welcomeActions,
   welcomeShowsCreate,
   wrapReadyForApp,
@@ -199,7 +198,6 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
   const [keepOnPhone, setKeepOnPhone] = useState(true);
   const [restorePhrase, setRestorePhrase] = useState('');
   const [deviceClaimed, setDeviceClaimed] = useState(false);
-  const [claimedWallet, setClaimedWallet] = useState('');
   const [pendingPhrase, setPendingPhrase] = useState('');
   const [phraseAcked, setPhraseAcked] = useState(false);
   const [accountUsername, setAccountUsername] = useState('');
@@ -888,24 +886,30 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
       setError(isValidUsername(username) ? t('lockPasswordWeak') : t('usernameInvalid'));
       return;
     }
-    try {
-      if (!restoreMatchesDevice(claimedWallet, addressFromPhrase(restorePhrase))) {
-        setError(t('errWalletOtherApp'));
-        return;
-      }
-    } catch {
-      setError(t('seedInvalid'));
-      return;
-    }
     setBusy(true);
     setError('');
     try {
-      const wrap = await setPassword(passwordInput);
-      if (!wrap && !getWalletWrapKey()) {
-        throw new Error('locked');
+      const restored = await restoreAccountOnDevice({
+        phrase: restorePhrase,
+        password: passwordInput,
+      });
+      if (!restored.ok) {
+        setError(
+          restored.reason === 'store-unknown'
+            ? t('lockStoreUnknown')
+            : restored.reason === 'wallet-other-app'
+              ? t('errWalletOtherApp')
+              : restored.reason === 'phrase'
+                ? t('seedInvalid')
+                : restored.reason === 'password-persist' || restored.reason === 'wallet-persist'
+                  ? t('errWalletPersist')
+                  : restored.reason === 'device-bound'
+                    ? t('errDeviceBound')
+                    : t('appWalletFailed')
+        );
+        return;
       }
-      const wallet = await importFromPhrase(restorePhrase);
-      if (!wallet) throw new Error('phrase');
+      const wallet = restored.wallet;
       await rememberUsername(wallet.address, username);
       setHasPassword(true);
       setSetupWallet(wallet.address);
@@ -921,7 +925,6 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
       }
       setSetupStage('publicIdentity');
     } catch (err) {
-      await abortPasswordSetup().catch(() => {});
       const code = err instanceof Error ? err.message : '';
       setError(
         code === 'phrase' || code.includes('phrase')
@@ -994,24 +997,24 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
   }, [needsSetup, locked]);
 
   useEffect(() => {
-    if (hasPassword || sessionReady) return;
+    if (sessionReady) return;
     let live = true;
     void lookupBoundWalletOnThisDevice()
-      .then((wallet) => {
+      .then((bound) => {
         if (!live) return;
-        setClaimedWallet(wallet);
-        setDeviceClaimed(Boolean(wallet));
+        if (bound.status === 'wallet') {
+          setDeviceClaimed(true);
+          return;
+        }
+        setDeviceClaimed(bound.status === 'unknown');
       })
       .catch(() => {
-        if (live) {
-          setClaimedWallet('');
-          setDeviceClaimed(false);
-        }
+        if (live) setDeviceClaimed(false);
       });
     return () => {
       live = false;
     };
-  }, [hasPassword, sessionReady]);
+  }, [sessionReady]);
 
   if (!ready) {
     return <BrandSplash />;

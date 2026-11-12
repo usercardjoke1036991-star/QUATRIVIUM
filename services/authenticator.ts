@@ -2,13 +2,14 @@ import { hkdf } from '@noble/hashes/hkdf';
 import { sha256 } from '@noble/hashes/sha2';
 import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
-import { peekDeviceSecret } from '../utils/deviceSecret';
+import { peekDeviceSecret, readDeviceGuard } from '../utils/deviceSecret';
 import { deriveWrapKeyAsync, isSealedBlob, openSecret, sealSecret } from '../utils/secretBox';
 import { bytesToBase32, matchingTotpStep, otpauthUrl, verifyTotp } from '../utils/totp';
 import {
   anchorLockAttempt,
   clearLockAfterSuccess,
   reserveAttempt,
+  totpUnlockBlocked,
   withLockVerify,
   type PinCheck,
 } from './appLock';
@@ -17,6 +18,8 @@ import { getWalletWrapKey, setWalletWrapKey } from './walletSession';
 const KEY = 'qc_totp_secret_v1';
 const WRAP_KEY = 'qc_totp_wrap_v1';
 const STEP_KEY = 'qc_totp_step_v1';
+const MIG_KEY = 'qc_totp_wrap_mig_v1';
+const STEP_MONO_KEY = 'qc_totp_step_mono_v1';
 const WRAP_SALT = 'qc.totp.wrap';
 const WRAP_ROUNDS = 8000;
 const OPTIONS = { keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY };
@@ -89,11 +92,18 @@ export function authenticatorUri(secret: string, account: string): string {
 export async function persistAuthenticatorWrap(wrap = getWalletWrapKey()): Promise<boolean> {
   const secret = await loadAuthenticatorSecret();
   const deviceHex = await peekDeviceSecret();
-  if (!wrap || !secret || !deviceHex) return false;
+  if (!wrap || !secret) return false;
+  if (!deviceHex) {
+    await SecureStore.deleteItemAsync(WRAP_KEY).catch(() => {});
+    await SecureStore.deleteItemAsync(MIG_KEY).catch(() => {});
+    return false;
+  }
   try {
     const key = totpDeviceWrapKey(secret, deviceHex);
     await SecureStore.setItemAsync(WRAP_KEY, sealSecret(wrap, key), OPTIONS);
-    return true;
+    await SecureStore.setItemAsync(MIG_KEY, '1', OPTIONS);
+    const back = await SecureStore.getItemAsync(MIG_KEY);
+    return back === '1';
   } catch {
     return false;
   }
@@ -101,26 +111,43 @@ export async function persistAuthenticatorWrap(wrap = getWalletWrapKey()): Promi
 
 export async function confirmAuthenticator(secret: string, code: string): Promise<boolean> {
   if (!verifyTotp(secret, code)) return false;
+  await SecureStore.deleteItemAsync(STEP_KEY).catch(() => {});
+  await SecureStore.deleteItemAsync(STEP_MONO_KEY).catch(() => {});
   await SecureStore.setItemAsync(KEY, secret, OPTIONS);
   await persistAuthenticatorWrap();
   return true;
 }
 
-async function readLastStep(): Promise<number | 'unknown'> {
+async function readLastStep(): Promise<{ step: number; mono: number } | 'unknown'> {
   const raw = await timedRead(SecureStore.getItemAsync(STEP_KEY));
   if (raw === 'unknown') return 'unknown';
-  if (!raw) return 0;
+  if (!raw) return { step: 0, mono: 0 };
   const step = Number(raw);
   if (!Number.isFinite(step) || step < 0) return 'unknown';
-  return step;
+  const monoRaw = await timedRead(SecureStore.getItemAsync(STEP_MONO_KEY));
+  if (monoRaw === 'unknown') return 'unknown';
+  const mono = monoRaw ? Number(monoRaw) : 0;
+  if (!Number.isFinite(mono) || mono < 0) return 'unknown';
+  return { step, mono };
 }
 
-async function confirmStep(step: number): Promise<boolean> {
+async function confirmStep(step: number, mono: number): Promise<boolean> {
   const text = String(step);
   const wrote = await timedRead(SecureStore.setItemAsync(STEP_KEY, text, OPTIONS));
   if (wrote === 'unknown') return false;
+  const monoText = String(mono);
+  const monoWrote = await timedRead(SecureStore.setItemAsync(STEP_MONO_KEY, monoText, OPTIONS));
+  if (monoWrote === 'unknown') return false;
   const back = await timedRead(SecureStore.getItemAsync(STEP_KEY));
-  return back === text;
+  const monoBack = await timedRead(SecureStore.getItemAsync(STEP_MONO_KEY));
+  return back === text && monoBack === monoText;
+}
+
+function stepTooFarAhead(step: number, last: { step: number; mono: number }, monoNow: number): boolean {
+  if (!(last.step > 0) || !(last.mono > 0)) return false;
+  const elapsed = Math.max(0, monoNow - last.mono);
+  const allowed = last.step + 1 + Math.floor(elapsed / 30_000);
+  return step > allowed;
 }
 
 async function acceptCode(
@@ -137,13 +164,22 @@ async function acceptCode(
   if (reserved.status === 'pin-blocked') {
     return { ok: false, remainingMs: 0, locked: true, pinBlocked: true };
   }
+  if (reserved.status === 'totp-blocked') {
+    return { ok: false, remainingMs: 0, locked: true, totpBlocked: true };
+  }
   const step = matchingTotpStep(secret, code);
   const last = await readLastStep();
-  if (step == null || last === 'unknown' || step <= last) {
+  const mono = performance.now();
+  if (
+    step == null ||
+    last === 'unknown' ||
+    step <= last.step ||
+    stepTooFarAhead(step, last, mono)
+  ) {
     anchorLockAttempt(reserved.fails);
     return { ok: false, remainingMs: reserved.left, locked: reserved.left > 0 };
   }
-  if (!(await confirmStep(step))) {
+  if (!(await confirmStep(step, mono))) {
     anchorLockAttempt(reserved.fails);
     return { ok: false, remainingMs: reserved.left, locked: reserved.left > 0 };
   }
@@ -153,12 +189,16 @@ async function acceptCode(
 async function openTotpWrap(secret: string, deviceHex: string): Promise<boolean> {
   const raw = await SecureStore.getItemAsync(WRAP_KEY);
   if (!raw || !isSealedBlob(raw)) return false;
+  const migrated = await SecureStore.getItemAsync(MIG_KEY).catch(() => null);
   const nextKey = totpDeviceWrapKey(secret, deviceHex);
   try {
     setWalletWrapKey(openSecret(raw, nextKey));
+    if (migrated !== '1') {
+      await SecureStore.setItemAsync(MIG_KEY, '1', OPTIONS);
+    }
     return Boolean(getWalletWrapKey());
   } catch {
-    /* la envoltura vieja se resella con el secreto del teléfono */
+    if (migrated === '1') return false;
   }
   try {
     const legacy = await deriveWrapKeyAsync(secret, WRAP_SALT, WRAP_ROUNDS);
@@ -167,6 +207,9 @@ async function openTotpWrap(secret: string, deviceHex: string): Promise<boolean>
     await SecureStore.setItemAsync(WRAP_KEY, resealed, OPTIONS);
     const back = await SecureStore.getItemAsync(WRAP_KEY);
     if (back !== resealed) return false;
+    await SecureStore.setItemAsync(MIG_KEY, '1', OPTIONS);
+    const mig = await SecureStore.getItemAsync(MIG_KEY);
+    if (mig !== '1') return false;
     setWalletWrapKey(opened);
     return Boolean(getWalletWrapKey());
   } catch {
@@ -175,31 +218,60 @@ async function openTotpWrap(secret: string, deviceHex: string): Promise<boolean>
 }
 
 export async function verifyAuthenticator(code: string): Promise<PinCheck> {
-  return withLockVerify(async () => {
-    const secret = await loadAuthenticatorSecret();
-    if (!secret) return { ok: false, remainingMs: 0, locked: false };
-    await peekDeviceSecret();
-    const accepted = await acceptCode(code, secret);
-    if (!('step' in accepted)) return accepted;
-    await clearLockAfterSuccess();
-    return { ok: true };
-  }, BUSY);
+  try {
+    return await withLockVerify(async () => {
+      const secret = await loadAuthenticatorSecret();
+      if (!secret) return { ok: false, remainingMs: 0, locked: false };
+      await peekDeviceSecret();
+      const accepted = await acceptCode(code, secret);
+      if (!('step' in accepted)) return accepted;
+      await clearLockAfterSuccess();
+      return { ok: true };
+    }, BUSY);
+  } catch (error) {
+    if (error instanceof Error && error.message === 'lock-verify-timeout') {
+      return { ok: false, remainingMs: 0, locked: false };
+    }
+    throw error;
+  }
 }
 
 export async function unlockWithAuthenticator(code: string): Promise<PinCheck> {
-  return withLockVerify(async () => {
-    const secret = await loadAuthenticatorSecret();
-    if (!secret) return { ok: false, remainingMs: 0, locked: false };
-    const deviceHex = await peekDeviceSecret();
-    const accepted = await acceptCode(code, secret);
-    if (!('step' in accepted)) return accepted;
-    if (!deviceHex || !(await openTotpWrap(secret, deviceHex))) {
-      anchorLockAttempt(accepted.fails);
+  try {
+    return await withLockVerify(async () => {
+      if (await totpUnlockBlocked()) {
+        return { ok: false, remainingMs: 0, locked: true, totpBlocked: true };
+      }
+      const secret = await loadAuthenticatorSecret();
+      if (!secret) return { ok: false, remainingMs: 0, locked: false };
+      const deviceHex = await peekDeviceSecret();
+      if (!deviceHex) {
+        await SecureStore.deleteItemAsync(WRAP_KEY).catch(() => {});
+        await SecureStore.deleteItemAsync(MIG_KEY).catch(() => {});
+      }
+      const accepted = await acceptCode(code, secret);
+      if (!('step' in accepted)) {
+        if ('totpBlocked' in accepted && accepted.totpBlocked) return accepted;
+        return accepted;
+      }
+      const guard = await readDeviceGuard();
+      if (guard !== 'bound' || !deviceHex) {
+        anchorLockAttempt(accepted.fails);
+        return { ok: false, remainingMs: 0, locked: false };
+      }
+      if (!(await openTotpWrap(secret, deviceHex))) {
+        anchorLockAttempt(accepted.fails);
+        return { ok: false, remainingMs: 0, locked: false };
+      }
+      await clearLockAfterSuccess();
+      return { ok: true };
+    }, BUSY);
+  } catch (error) {
+    if (error instanceof Error && error.message === 'lock-verify-timeout') {
       return { ok: false, remainingMs: 0, locked: false };
     }
-    await clearLockAfterSuccess();
-    return { ok: true };
-  }, BUSY);
+    throw error;
+  }
 }
 
 export async function clearAuthenticator(): Promise<void> {
@@ -215,6 +287,16 @@ export async function clearAuthenticator(): Promise<void> {
   }
   try {
     await SecureStore.deleteItemAsync(STEP_KEY);
+  } catch {
+    /* ignore */
+  }
+  try {
+    await SecureStore.deleteItemAsync(STEP_MONO_KEY);
+  } catch {
+    /* ignore */
+  }
+  try {
+    await SecureStore.deleteItemAsync(MIG_KEY);
   } catch {
     /* ignore */
   }

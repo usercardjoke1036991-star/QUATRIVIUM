@@ -344,7 +344,7 @@
   "lockPinMismatch": "Los PIN no coinciden. Inténtelo de nuevo.",
   "lockPinWrong": "PIN incorrecto.",
   "lockUnexpected": "Error inesperado. Reintente.",
-  "lockStoreUnknown": "No se pudo leer el estado de seguridad. Intenta de nuevo.",
+  "lockStoreUnknown": "Almacenamiento no disponible. Intenta de nuevo.",
   "lockPinWeak": "PIN demasiado fácil. Evite repeticiones y secuencias.",
   "lockKdfMissing": "Este telefono no puede armar la clave del candado. No hay una derivacion debil.",
   "lockKdfWait": "Puede tardar unos segundos.",

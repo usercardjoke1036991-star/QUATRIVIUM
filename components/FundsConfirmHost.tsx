@@ -170,10 +170,13 @@ export const FundsConfirmHost: React.FC<{ children: React.ReactNode }> = ({ chil
         if (code.length !== 6) return;
         setBusy(true);
         const checked = await verifyAuthenticator(code);
-        if (!checked.ok && checked.busy) return;
+        if (!checked.ok && checked.busy) {
+          setBusy(false);
+          return;
+        }
         if (!checked.ok) {
           setError(
-            checked.locked || checked.storeUnknown
+            checked.locked || checked.storeUnknown || checked.totpBlocked
               ? describeLockFailure('password', checked, t)
               : t('authenticatorWrong')
           );
