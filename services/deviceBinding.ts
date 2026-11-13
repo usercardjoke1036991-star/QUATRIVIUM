@@ -66,21 +66,31 @@ export async function getDeviceHash(): Promise<string> {
   return keccak256(toUtf8Bytes(`quatrivium:${seed}`));
 }
 
+/** Error o tiempo agotado al leer el llavero. No es lo mismo que "no hay billetera". */
+export const BOUND_UNKNOWN = 'desconocido';
+
 export async function getBoundWallet(): Promise<string> {
-  const raw =
-    (await withLimit(
-      SecureStore.getItemAsync(BOUND_WALLET_KEY).catch(() => null),
-      1500,
-      null
-    )) || (await AsyncStorage.getItem(BOUND_FALLBACK).catch(() => null));
-  return (raw || '').toLowerCase();
+  const secure = await withLimit(SecureStore.getItemAsync(BOUND_WALLET_KEY), 1500, BOUND_UNKNOWN);
+  if (secure === BOUND_UNKNOWN) return BOUND_UNKNOWN;
+  if (secure) return secure.toLowerCase();
+  try {
+    const fallback = await AsyncStorage.getItem(BOUND_FALLBACK);
+    return (fallback || '').toLowerCase();
+  } catch {
+    return BOUND_UNKNOWN;
+  }
 }
 
 export async function bindAppWallet(address: string): Promise<void> {
   const next = address.toLowerCase();
-  if (!/^0x[0-9a-f]{40}$/.test(next)) return;
+  if (!/^0x[0-9a-f]{40}$/.test(next)) throw new Error('bind-unconfirmed');
+  const current = await getBoundWallet();
+  if (current === BOUND_UNKNOWN) throw new Error('store-unknown');
+  if (current && current !== next) throw new Error('device-bound');
   await AsyncStorage.setItem(BOUND_FALLBACK, next).catch(() => {});
   await withLimit(SecureStore.setItemAsync(BOUND_WALLET_KEY, next, OPTIONS), 2500, undefined);
+  const back = await getBoundWallet();
+  if (back !== next) throw new Error('bind-unconfirmed');
 }
 
 export async function clearBoundWallet(): Promise<void> {
@@ -102,6 +112,7 @@ export async function claimDeviceWallet(address: string): Promise<DeviceClaim> {
     return { ok: false, bound: '' };
   }
   const bound = await getBoundWallet();
+  if (bound === BOUND_UNKNOWN) return { ok: false, bound: BOUND_UNKNOWN };
   if (!bound) {
     await bindAppWallet(next);
     return { ok: true, wallet: next };

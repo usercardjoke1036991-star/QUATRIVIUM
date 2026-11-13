@@ -1,4 +1,4 @@
-/** Direcciones públicas desplegadas. Mainnet (Arbitrum One) se rellena tras `npm run deploy:bsc`. */
+/** Direcciones públicas desplegadas. Mainnet (Arbitrum One) se rellena tras `npm run deploy:arbitrum`. */
 
 export const DEPLOYED_TESTNET = {
   chainId: 421614,
@@ -17,6 +17,8 @@ export const DEPLOYED_MAINNET = {
   reserva: '',
   fama: '',
   alta: '',
+  /** Registro del APK. Vacío hasta el despliegue: la app dice versión no verificada. */
+  apk: '',
   /** Billetera personal Real (donaciones). */
   founder: '0x5023bf46dB7458B9bb9152a7ffE64f195CD1a047',
   startBlock: 0,

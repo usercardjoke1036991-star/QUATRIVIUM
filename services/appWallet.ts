@@ -1,22 +1,16 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  Contract,
-  HDNodeWallet,
-  JsonRpcProvider,
-  Mnemonic,
-  Wallet,
-  randomBytes,
-  type Signer,
-} from 'ethers';
+import { Contract, HDNodeWallet, Mnemonic, Wallet, randomBytes, type Signer } from 'ethers';
 import * as SecureStore from 'expo-secure-store';
 import { ERC20_ABI } from '../constants/contractConfig';
-import { estimateNetworkGasWei, resolveFeeCollector } from '../constants/feeConfig';
-import { getProductMode, NETWORK_CONFIG, RPC_URLS } from '../constants/rpcConfig';
+import { getProductMode, NETWORK_CONFIG } from '../constants/rpcConfig';
+import { createWriteProvider } from './writeRpc';
 import { isAllowedWei, isHexAddress } from '../utils/sanitize';
+import { migrateSealedValue, type LockStore } from '../utils/lockMigration';
+import { reportLockFault } from '../utils/lockRace';
 import { isSealedBlob, openSecret, sealSecret, sealedBlobVersion } from '../utils/secretBox';
 import { allowWalletAsyncFallback } from '../utils/walletVaultPolicy';
 import { assertRestoreFitsThisDevice, lookupBoundWalletOnThisDevice } from './deviceClaim';
-import { bindAppWallet, claimDeviceWallet, clearBoundWallet } from './deviceBinding';
+import { BOUND_UNKNOWN, bindAppWallet, clearBoundWallet, getBoundWallet } from './deviceBinding';
 import { getWalletWrapKey } from './walletSession';
 import { storeSlot } from '../utils/storeSlot';
 
@@ -57,7 +51,13 @@ function parseStored(raw: string): StoredWallet | null {
   }
 }
 
-async function readRawWallet(): Promise<string | null> {
+export async function readRawWallet(): Promise<string | null> {
+  const live = !allowWalletAsyncFallback(getProductMode());
+  if (live) {
+    const secure = await SecureStore.getItemAsync(WALLET_KEY).catch(() => null);
+    await AsyncStorage.removeItem(WALLET_FALLBACK).catch(() => {});
+    return secure;
+  }
   const secure = await withLimit(
     SecureStore.getItemAsync(WALLET_KEY).catch(() => null),
     12000,
@@ -108,7 +108,7 @@ async function readStored(): Promise<StoredWallet | null> {
   return parsed;
 }
 
-async function persistRecord(record: StoredWallet): Promise<void> {
+async function persistRecord(record: StoredWallet): Promise<string> {
   const wrap = getWalletWrapKey();
   if (!wrap) {
     throw new Error('locked');
@@ -121,7 +121,7 @@ async function persistRecord(record: StoredWallet): Promise<void> {
   );
   if (secureOk) {
     await AsyncStorage.removeItem(WALLET_FALLBACK).catch(() => {});
-    return;
+    return sealed;
   }
   if (!allowWalletAsyncFallback(getProductMode())) {
     throw new Error('wallet-persist');
@@ -131,15 +131,119 @@ async function persistRecord(record: StoredWallet): Promise<void> {
   } catch {
     throw new Error('wallet-persist');
   }
+  return sealed;
+}
+
+/** Borra el blob solo si sigue siendo exactamente el que escribió esta llamada. */
+async function dropFreshWallet(written: string | null): Promise<void> {
+  let secure: string | null = null;
+  let fallback: string | null = null;
+  try {
+    secure = await SecureStore.getItemAsync(WALLET_KEY);
+  } catch {
+    secure = null;
+  }
+  try {
+    fallback = await AsyncStorage.getItem(WALLET_FALLBACK);
+  } catch {
+    fallback = null;
+  }
+  const other =
+    (secure != null && secure !== '' && secure !== written) ||
+    (fallback != null && fallback !== '' && fallback !== written);
+  if (written == null || other) {
+    if (other) reportLockFault();
+    return;
+  }
+  if (secure === written) {
+    try {
+      await SecureStore.deleteItemAsync(WALLET_KEY);
+    } catch {
+      // ignore
+    }
+  }
+  if (fallback === written) {
+    try {
+      await AsyncStorage.removeItem(WALLET_FALLBACK);
+    } catch {
+      // ignore
+    }
+  }
+  await clearBoundWallet();
 }
 
 async function writeStored(record: StoredWallet): Promise<void> {
-  const claim = await claimDeviceWallet(record.address);
-  if (!claim.ok) {
-    throw new Error('device-bound');
+  const previousSecure = await SecureStore.getItemAsync(WALLET_KEY).catch(() => null);
+  const previousFallback = await AsyncStorage.getItem(WALLET_FALLBACK).catch(() => null);
+  const bound = await getBoundWallet();
+  if (bound === BOUND_UNKNOWN) throw new Error('store-unknown');
+  const next = record.address.toLowerCase();
+  if (bound && bound !== next) throw new Error('device-bound');
+  const wasEmpty = !bound;
+  let written: string | null = null;
+  try {
+    written = await persistRecord(record);
+    const back = await readRawWallet();
+    if (back !== written) throw new Error('wallet-persist');
+    await bindAppWallet(next);
+  } catch (error) {
+    if (wasEmpty) {
+      await dropFreshWallet(written);
+    } else {
+      const now = await SecureStore.getItemAsync(WALLET_KEY).catch(() => null);
+      if (previousSecure && now !== previousSecure) {
+        await SecureStore.setItemAsync(WALLET_KEY, previousSecure, OPTIONS).catch(() => {});
+      }
+      if (previousFallback) {
+        const backFallback = await AsyncStorage.getItem(WALLET_FALLBACK).catch(() => null);
+        if (backFallback !== previousFallback) {
+          try {
+            await AsyncStorage.setItem(WALLET_FALLBACK, previousFallback);
+          } catch {
+            reportLockFault();
+          }
+        }
+      }
+    }
+    throw error instanceof Error ? error : new Error('wallet-persist');
   }
-  await persistRecord(record);
-  await bindAppWallet(record.address);
+}
+
+export async function walletOpensWith(key: string): Promise<boolean> {
+  const raw = await readRawWallet();
+  if (!raw || !isSealedBlob(raw)) return true;
+  try {
+    openSecret(raw, key);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Abre el cofre con la llave vieja y solo entonces lo guarda con la nueva. */
+export async function rewrapStoredWallet(
+  oldKeys: readonly string[],
+  newWrap: string
+): Promise<void> {
+  const raw = await readRawWallet();
+  if (!raw || !isSealedBlob(raw)) return;
+  const memory = new Map<string, string>([[WALLET_KEY, raw]]);
+  const store: LockStore = {
+    get: async (key) => memory.get(key) ?? null,
+    set: async (key, value) => {
+      await SecureStore.setItemAsync(key, value, OPTIONS);
+      memory.set(key, value);
+    },
+    del: async (key) => {
+      memory.delete(key);
+      try {
+        await SecureStore.deleteItemAsync(key);
+      } catch {
+        /* el ensayo ya se comprobó */
+      }
+    },
+  };
+  await migrateSealedValue(store, WALLET_KEY, `${WALLET_KEY}:next`, oldKeys, newWrap);
 }
 
 export async function rewrapWalletWithNewKey(rotatePin: () => Promise<string>): Promise<void> {
@@ -151,11 +255,7 @@ export async function rewrapWalletWithNewKey(rotatePin: () => Promise<string>): 
 }
 
 function writeProvider() {
-  return new JsonRpcProvider(
-    RPC_URLS.primary,
-    { chainId: NETWORK_CONFIG.chainId, name: NETWORK_CONFIG.chainName },
-    { staticNetwork: true }
-  );
+  return createWriteProvider(NETWORK_CONFIG.chainId, NETWORK_CONFIG.chainName);
 }
 
 function toConnectedWallet(privateKey: string): HDNodeWallet | Wallet {
@@ -188,10 +288,10 @@ export async function loadAppWallet(): Promise<HDNodeWallet | Wallet | null> {
   return toConnectedWallet(stored.privateKey);
 }
 
-export async function createAppWallet(): Promise<HDNodeWallet> {
+async function createAppWallet(): Promise<HDNodeWallet> {
   const claimed = await lookupBoundWalletOnThisDevice();
-  if (claimed) {
-    throw new Error('device-bound');
+  if (claimed.status === 'wallet' || claimed.status === 'unknown') {
+    throw new Error(claimed.status === 'unknown' ? 'store-unknown' : 'device-bound');
   }
   const created = createTwentyFourWordWallet();
   await writeStored({
@@ -206,7 +306,11 @@ export async function createAppWallet(): Promise<HDNodeWallet> {
 export async function ensureAppWallet(): Promise<HDNodeWallet | Wallet> {
   const existing = await loadAppWallet();
   if (existing) {
-    await bindAppWallet(existing.address);
+    try {
+      await bindAppWallet(existing.address);
+    } catch {
+      reportLockFault();
+    }
     return existing;
   }
   if (!getWalletWrapKey()) {
@@ -235,11 +339,6 @@ export async function wipeAppWallet(): Promise<void> {
     // ignore
   }
   await clearBoundWallet();
-}
-
-export async function recreateAppWallet(): Promise<HDNodeWallet> {
-  await wipeAppWallet();
-  return createAppWallet();
 }
 
 function createTwentyFourWordWallet(): HDNodeWallet {
@@ -276,7 +375,6 @@ export async function importFromPhrase(
   const imported = HDNodeWallet.fromPhrase(normalized);
   const next = imported.address.toLowerCase();
   await assertRestoreFitsThisDevice(next);
-  await wipeAppWallet();
   await writeStored({
     address: next,
     privateKey: imported.privateKey,
@@ -310,29 +408,13 @@ export async function markPhraseBackedUp(): Promise<void> {
 }
 
 async function cobrarGasPlataforma(
-  signer: Signer,
-  tokenTransfer: boolean,
-  extraWei = 0n,
-  followUp = false
+  _signer: Signer,
+  _tokenTransfer: boolean,
+  _extraWei = 0n,
+  _followUp = false
 ): Promise<bigint> {
-  const collector = await resolveFeeCollector(signer);
-  const from = (await signer.getAddress()).toLowerCase();
-  if (!collector || collector === from) return 0n;
-  const feeWei =
-    (await estimateNetworkGasWei(signer, tokenTransfer)) +
-    (await estimateNetworkGasWei(signer, false));
-  if (feeWei <= 0n) return 0n;
-  const provider = signer.provider;
-  if (!provider) throw new Error('provider');
-  const balance = await provider.getBalance(from);
-  const feeTxGas = await estimateNetworkGasWei(signer, false);
-  const followGas = followUp ? await estimateNetworkGasWei(signer, tokenTransfer) : 0n;
-  if (balance < feeWei + feeTxGas + followGas + extraWei) {
-    throw new Error('platform-fee-bnb');
-  }
-  const tx = await signer.sendTransaction({ to: collector, value: feeWei });
-  await tx.wait();
-  return feeWei;
+  // El protocolo no cobra gas en ETH. El fundador cobra LUSD dentro del contrato.
+  return 0n;
 }
 
 export async function cobrarComisionIntermediario(signer: Signer, tokenTransfer = true) {
@@ -375,4 +457,9 @@ function assertAmount(amountWei: string) {
   if (!isAllowedWei(amountWei)) {
     throw new Error('invalid-amount');
   }
+}
+
+if (__DEV__) {
+  const host = globalThis as { __qcDev?: Record<string, Record<string, unknown>> };
+  (host.__qcDev ??= {}).wallet = { createAppWallet };
 }

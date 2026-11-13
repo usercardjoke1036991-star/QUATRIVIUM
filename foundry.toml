@@ -15,6 +15,18 @@ revert_strings = "strip"
 auto_detect_solc = false
 fs_permissions = [{ access = "read", path = "./" }]
 
+[invariant]
+runs = 16
+depth = 200
+fail_on_revert = true
+
+# El alta acierta cerca del 1,5 % de las llamadas. Con 256 corridas,
+# depth 800 deja (0,985)^800 casi en cero: ninguna corrida se queda sin esa accion.
+[profile.ci.invariant]
+runs = 256
+depth = 800
+fail_on_revert = true
+
 [lint]
 lint_on_build = false
 

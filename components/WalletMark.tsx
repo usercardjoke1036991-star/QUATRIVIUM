@@ -5,7 +5,6 @@ import type { CompatibleWallet } from '../constants/compatibleWallets';
 const WALLET_ICONS = {
   metamask: require('../assets/wallets/metamask.png'),
   trust: require('../assets/wallets/trust.png'),
-  binance: require('../assets/wallets/binance.png'),
   okx: require('../assets/wallets/okx.png'),
   safepal: require('../assets/wallets/safepal.png'),
   tokenpocket: require('../assets/wallets/tokenpocket.png'),

@@ -1,15 +1,14 @@
 import { formatUnits, isAddress } from 'ethers';
 import React, { useEffect, useState } from 'react';
 import { QuatriviumCreditService } from '../services/quatriviumCreditService';
-import { leerPendienteRetiroBote, type RetiroBotePendiente } from '../services/reservaService';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useI18n } from '../i18n/LanguageContext';
 import { useTheme } from '../theme/ThemeContext';
 import { AppIcon } from './icons';
 import { formatAddress } from '../utils/formatters';
 import type { OpenAdminProposal } from '../utils/adminProposal';
-import type { ConfigurableStable } from '../constants/tokens';
 import { AppText, AppTextInput } from './AppText';
+import { useFundsConfirm } from './FundsConfirmHost';
 
 interface AdminPanelProps {
   isOwner: boolean;
@@ -23,25 +22,15 @@ interface AdminPanelProps {
   proposalCount?: number;
   openProposal?: OpenAdminProposal | null;
   founderAddress?: string;
-  ownerAddress?: string;
-  extraStables?: ConfigurableStable[];
-  onWithdrawFees: () => void;
-  onWithdrawTokenFees: () => void;
   onExecuteProposal?: (id: number) => void;
   onConfirmProposal?: (id: number) => void;
   onCancelProposal?: (id: number) => void;
   onProposeAddAdmin?: (address: string) => void;
   onProposeRemoveAdmin?: (address: string) => void;
-  onProposeFeeCollector?: (address: string) => void;
-  onProposeConfirmations?: (required: number) => void;
   onProposeFundador?: (address: string) => void;
-  onProposeOwner?: (address: string) => void;
-  onProposeSetTokenConfig?: (token: string, feed: string, enabled: boolean) => void;
   onLiquidar?: (debtorAddress: string, tokenAddress: string) => void;
   onMarcarMoroso?: (debtorAddress: string) => void;
   onAportarReserva?: (amount: string) => void;
-  onProponerRetiroReserva?: (amount: string, destino: string) => void;
-  onAplicarRetiroReserva?: () => void;
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({
@@ -55,34 +44,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   proposalCount = 0,
   openProposal = null,
   founderAddress = '',
-  extraStables = [],
-  onWithdrawFees,
-  onWithdrawTokenFees,
   onExecuteProposal,
   onConfirmProposal,
   onCancelProposal,
   onProposeAddAdmin,
   onProposeRemoveAdmin,
-  onProposeFeeCollector,
-  onProposeConfirmations,
   onProposeFundador,
-  onProposeOwner,
-  onProposeSetTokenConfig,
   onLiquidar,
   onMarcarMoroso,
   onAportarReserva,
-  onProponerRetiroReserva,
-  onAplicarRetiroReserva,
 }) => {
   const { t } = useI18n();
   const { colors } = useTheme();
+  const { confirmFunds } = useFundsConfirm();
   const [draft, setDraft] = useState('');
   const [debtorDraft, setDebtorDraft] = useState('');
   const [reservaPot, setReservaPot] = useState('100');
-  const [retiroMonto, setRetiroMonto] = useState('');
-  const [retiroDestino, setRetiroDestino] = useState('');
-  const [retiroPendiente, setRetiroPendiente] = useState<RetiroBotePendiente | null>(null);
-  const [retiroUnread, setRetiroUnread] = useState(false);
   const [salud, setSalud] = useState<{
     cash: bigint;
     outstanding: bigint;
@@ -104,48 +81,44 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         }));
       })
       .catch(() => {});
-    void leerPendienteRetiroBote()
-      .then((row) => {
-        setRetiroPendiente(row);
-        setRetiroUnread(false);
-      })
-      .catch(() => setRetiroUnread(true));
   }, [isOwner, isAdmin, tokenAddress, isLoading]);
   if (!isOwner && !isAdmin) return null;
 
-  const confirmToggle = (next: boolean, apply: (value: boolean) => void) => {
-    Alert.alert(t('admin'), t('adminTimelockConfirm'), [
-      { text: t('cancel'), style: 'cancel' },
-      { text: t('ready'), onPress: () => apply(next) },
-    ]);
-  };
-
-  const confirmWithdrawBnb = () => {
-    Alert.alert(t('withdrawBnb'), t('confirmWithdrawBnb'), [
-      { text: t('cancel'), style: 'cancel' },
-      { text: t('withdrawBnb'), style: 'destructive', onPress: onWithdrawFees },
-    ]);
-  };
-
-  const confirmWithdrawToken = () => {
-    Alert.alert(t('withdrawFees'), t('confirmWithdrawFees'), [
-      { text: t('cancel'), style: 'cancel' },
-      { text: t('withdrawFees'), style: 'destructive', onPress: onWithdrawTokenFees },
-    ]);
-  };
-
   const trimmed = draft.trim();
 
-  const proposeWithAddress = (fn?: (address: string) => void) => {
+  const askAdmin = async (action: string, target: string) =>
+    confirmFunds('admin', {
+      amount: '',
+      symbol: '',
+      destination: target,
+      fee: '',
+      action,
+      target,
+    });
+
+  const proposeWithAddress = async (action: string, fn?: (address: string) => void) => {
     if (!fn) return;
     if (!isAddress(trimmed)) {
       Alert.alert(t('admin'), t('adminInvalidAddress'));
       return;
     }
-    confirmToggle(true, () => {
-      fn(trimmed);
-      setDraft('');
-    });
+    if (!(await askAdmin(action, trimmed))) return;
+    fn(trimmed);
+    setDraft('');
+  };
+
+  const proposalWords = (proposal: OpenAdminProposal) => {
+    const action =
+      proposal.actionKey === 'adminActionUnknown' ? t('adminActionUnknown') : t(proposal.actionKey);
+    const target =
+      proposal.actionKey === 'adminActionPause' ? t('adminActionPauseTarget') : proposal.target;
+    return { action, target };
+  };
+
+  const runProposal = async () => {
+    if (!openProposal) return false;
+    const words = proposalWords(openProposal);
+    return askAdmin(words.action, words.target || String(openProposal.id));
   };
 
   return (
@@ -208,7 +181,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       {onProposeAddAdmin && adminRoster.length < 3 ? (
         <TouchableOpacity
           disabled={isLoading}
-          onPress={() => proposeWithAddress(onProposeAddAdmin)}
+          onPress={() => void proposeWithAddress(t('adminAdd'), onProposeAddAdmin)}
           style={[styles.button, { backgroundColor: colors.chip }]}
         >
           <AppText style={[styles.buttonText, { color: colors.text }]}>{t('adminAdd')}</AppText>
@@ -217,7 +190,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       {onProposeRemoveAdmin ? (
         <TouchableOpacity
           disabled={isLoading}
-          onPress={() => proposeWithAddress(onProposeRemoveAdmin)}
+          onPress={() => void proposeWithAddress(t('adminRemove'), onProposeRemoveAdmin)}
           style={[styles.button, { backgroundColor: colors.chip }]}
         >
           <AppText style={[styles.buttonText, { color: colors.text }]}>{t('adminRemove')}</AppText>
@@ -226,7 +199,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       {onProposeFundador ? (
         <TouchableOpacity
           disabled={isLoading}
-          onPress={() => proposeWithAddress(onProposeFundador)}
+          onPress={() => void proposeWithAddress(t('adminSetFundador'), onProposeFundador)}
           style={[styles.button, { backgroundColor: colors.chip }]}
         >
           <AppText style={[styles.buttonText, { color: colors.text }]}>
@@ -234,87 +207,21 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           </AppText>
         </TouchableOpacity>
       ) : null}
-      {onProposeOwner ? (
-        <TouchableOpacity
-          disabled={isLoading}
-          onPress={() => proposeWithAddress(onProposeOwner)}
-          style={[styles.button, { backgroundColor: colors.chip }]}
-        >
-          <AppText style={[styles.buttonText, { color: colors.text }]}>
-            {t('adminSetOwner')}
-          </AppText>
-        </TouchableOpacity>
-      ) : null}
-      {onProposeFeeCollector ? (
-        <TouchableOpacity
-          disabled={isLoading}
-          onPress={() => proposeWithAddress(onProposeFeeCollector)}
-          style={[styles.button, { backgroundColor: colors.chip }]}
-        >
-          <AppText style={[styles.buttonText, { color: colors.text }]}>
-            {t('adminFeeCollector')}
-          </AppText>
-        </TouchableOpacity>
-      ) : null}
-      {onProposeConfirmations && adminRoster.length < 3 ? (
-        <View style={styles.row}>
-          <TouchableOpacity
-            disabled={isLoading}
-            onPress={() => confirmToggle(true, () => onProposeConfirmations(1))}
-            style={[styles.button, styles.half, { backgroundColor: colors.chip }]}
-          >
-            <AppText style={[styles.buttonText, { color: colors.text }]}>
-              {t('adminConfirms1')}
-            </AppText>
-          </TouchableOpacity>
-          <TouchableOpacity
-            disabled={isLoading}
-            onPress={() => confirmToggle(true, () => onProposeConfirmations(2))}
-            style={[styles.button, styles.half, { backgroundColor: colors.chip }]}
-          >
-            <AppText style={[styles.buttonText, { color: colors.text }]}>
-              {t('adminConfirms2')}
-            </AppText>
-          </TouchableOpacity>
-        </View>
-      ) : null}
       {adminRoster.length >= 3 ? (
         <AppText style={[styles.note, { color: colors.textMuted }]}>{t('adminTwoOfThree')}</AppText>
-      ) : null}
-      {onProposeSetTokenConfig && extraStables.length ? (
-        <>
-          <AppText style={[styles.note, { color: colors.textMuted }]}>
-            {t('adminEnableTokenLead')}
-          </AppText>
-          {extraStables.map((stable) => (
-            <TouchableOpacity
-              key={stable.address}
-              disabled={isLoading}
-              onPress={() =>
-                confirmToggle(true, () =>
-                  onProposeSetTokenConfig(stable.address, stable.feed, true)
-                )
-              }
-              style={[styles.button, { backgroundColor: colors.chip }]}
-            >
-              <AppText style={[styles.buttonText, { color: colors.text }]}>
-                {t('adminEnableToken', { symbol: stable.symbol })}
-              </AppText>
-            </TouchableOpacity>
-          ))}
-        </>
       ) : null}
       {openProposal ? (
         <AppText style={[styles.meta, { color: colors.text }]}>
           {t('adminProposalMeta', {
             id: openProposal.id,
-            selector: openProposal.selector,
+            selector: proposalWords(openProposal).action,
             confirms: openProposal.confirms,
             when:
               openProposal.eta * 1000 <= Date.now()
                 ? t('adminProposalReady')
                 : new Date(openProposal.eta * 1000).toLocaleString(),
           })}
+          {proposalWords(openProposal).target ? ` · ${proposalWords(openProposal).target}` : ''}
         </AppText>
       ) : (
         <AppText style={[styles.meta, { color: colors.textMuted }]}>
@@ -324,7 +231,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       {isAdmin && onConfirmProposal && openProposal ? (
         <TouchableOpacity
           disabled={isLoading}
-          onPress={() => onConfirmProposal(openProposal.id)}
+          onPress={() =>
+            void runProposal().then((ok) => {
+              if (ok) onConfirmProposal(openProposal.id);
+            })
+          }
           style={[styles.button, { backgroundColor: colors.chip }]}
         >
           <AppText style={[styles.buttonText, { color: colors.text }]}>
@@ -335,7 +246,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       {isAdmin && onExecuteProposal && openProposal ? (
         <TouchableOpacity
           disabled={isLoading}
-          onPress={() => onExecuteProposal(openProposal.id)}
+          onPress={() =>
+            void runProposal().then((ok) => {
+              if (ok) onExecuteProposal(openProposal.id);
+            })
+          }
           style={[styles.button, { backgroundColor: colors.chip }]}
         >
           {isLoading ? (
@@ -350,7 +265,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       {isAdmin && onCancelProposal && openProposal ? (
         <TouchableOpacity
           disabled={isLoading}
-          onPress={() => onCancelProposal(openProposal.id)}
+          onPress={() =>
+            void runProposal().then((ok) => {
+              if (ok) onCancelProposal(openProposal.id);
+            })
+          }
           style={[styles.button, { backgroundColor: colors.chip }]}
         >
           <AppText style={[styles.buttonText, { color: colors.text }]}>
@@ -390,116 +309,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </AppText>
             )}
           </TouchableOpacity>
-          {onProponerRetiroReserva ? (
-            <>
-              <AppText style={[styles.note, { color: colors.textMuted, marginTop: 8 }]}>
-                {t('reservaRetiroTitle')}
-              </AppText>
-              <AppText style={[styles.meta, { color: colors.textMuted }]}>
-                {t('reservaRetiroHint')}
-              </AppText>
-              {retiroPendiente ? (
-                <AppText style={[styles.meta, { color: colors.text }]}>
-                  {t('reservaRetiroPending', {
-                    amount: formatUnits(retiroPendiente.amountWei, 18),
-                    address: formatAddress(retiroPendiente.to),
-                    when: new Date((retiroPendiente.desde + 72 * 60 * 60) * 1000).toLocaleString(),
-                  })}
-                </AppText>
-              ) : retiroUnread ? null : (
-                <AppText style={[styles.meta, { color: colors.textMuted }]}>
-                  {t('reservaRetiroNone')}
-                </AppText>
-              )}
-              {retiroUnread ? (
-                <AppText style={[styles.meta, { color: colors.warnText }]}>
-                  {t('reservaPreviewFailed')}
-                </AppText>
-              ) : null}
-              <AppTextInput
-                value={retiroMonto}
-                onChangeText={setRetiroMonto}
-                keyboardType="decimal-pad"
-                placeholder={t('amount')}
-                placeholderTextColor={colors.textMuted}
-                style={[
-                  styles.input,
-                  {
-                    color: colors.text,
-                    borderColor: colors.border,
-                    backgroundColor: colors.surface,
-                  },
-                ]}
-              />
-              <AppTextInput
-                value={retiroDestino}
-                onChangeText={setRetiroDestino}
-                autoCapitalize="none"
-                autoCorrect={false}
-                placeholder={t('reservaRetiroDestino')}
-                placeholderTextColor={colors.textMuted}
-                style={[
-                  styles.input,
-                  {
-                    color: colors.text,
-                    borderColor: colors.border,
-                    backgroundColor: colors.surface,
-                  },
-                ]}
-              />
-              <TouchableOpacity
-                disabled={isLoading}
-                onPress={() => {
-                  const amount = retiroMonto.trim();
-                  const destino = retiroDestino.trim();
-                  if (!amount || Number(amount) <= 0) {
-                    Alert.alert(t('amount'), t('amountGreaterZero'));
-                    return;
-                  }
-                  if (!isAddress(destino)) {
-                    Alert.alert(t('admin'), t('adminInvalidAddress'));
-                    return;
-                  }
-                  Alert.alert(
-                    t('reservaRetiroTitle'),
-                    t('reservaRetiroConfirm', { amount, address: destino }),
-                    [
-                      { text: t('cancel'), style: 'cancel' },
-                      { text: t('ready'), onPress: () => onProponerRetiroReserva(amount, destino) },
-                    ]
-                  );
-                }}
-                style={[styles.button, { backgroundColor: colors.chip }]}
-              >
-                <AppText style={[styles.buttonText, { color: colors.text }]}>
-                  {t('reservaRetiroPropose')}
-                </AppText>
-              </TouchableOpacity>
-              {onAplicarRetiroReserva && retiroPendiente ? (
-                <TouchableOpacity
-                  disabled={isLoading}
-                  onPress={() => {
-                    Alert.alert(
-                      t('reservaRetiroTitle'),
-                      t('reservaRetiroApplyConfirm', {
-                        amount: formatUnits(retiroPendiente.amountWei, 18),
-                        address: retiroPendiente.to,
-                      }),
-                      [
-                        { text: t('cancel'), style: 'cancel' },
-                        { text: t('ready'), onPress: () => onAplicarRetiroReserva() },
-                      ]
-                    );
-                  }}
-                  style={[styles.button, { backgroundColor: colors.primary }]}
-                >
-                  <AppText style={[styles.buttonText, { color: colors.onPrimary }]}>
-                    {t('reservaRetiroApply')}
-                  </AppText>
-                </TouchableOpacity>
-              ) : null}
-            </>
-          ) : null}
         </>
       ) : null}
       {onLiquidar || onMarcarMoroso ? (
@@ -582,42 +391,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               )}
             </TouchableOpacity>
           ) : null}
-        </>
-      ) : null}
-      {isOwner ? (
-        <>
-          <TouchableOpacity
-            disabled={isLoading}
-            onPress={confirmWithdrawBnb}
-            style={[styles.button, { backgroundColor: colors.primary }]}
-          >
-            {isLoading ? (
-              <ActivityIndicator color={colors.onPrimary} size="small" />
-            ) : (
-              <View style={styles.btnRow}>
-                <AppIcon name="withdraw" size={16} color={colors.onPrimary} />
-                <AppText style={[styles.buttonText, { color: colors.onPrimary }]}>
-                  {t('withdrawBnb')}
-                </AppText>
-              </View>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            disabled={isLoading}
-            onPress={confirmWithdrawToken}
-            style={[styles.button, { backgroundColor: colors.primary }]}
-          >
-            {isLoading ? (
-              <ActivityIndicator color={colors.onPrimary} size="small" />
-            ) : (
-              <View style={styles.btnRow}>
-                <AppIcon name="withdraw" size={16} color={colors.onPrimary} />
-                <AppText style={[styles.buttonText, { color: colors.onPrimary }]}>
-                  {t('withdrawFees')} ({tokenSymbol})
-                </AppText>
-              </View>
-            )}
-          </TouchableOpacity>
         </>
       ) : null}
     </View>

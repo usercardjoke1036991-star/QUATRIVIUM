@@ -40,7 +40,7 @@ export function commissionForGeneration(
   return (interestFromLoan(usdAmount, interestBps) * generationCommissionBps(gen)) / 10000;
 }
 
-export const COMMISSION_BANDS: ReadonlyArray<{ range: string; gen: number }> = [
+export const COMMISSION_BANDS: readonly { range: string; gen: number }[] = [
   { range: '1', gen: 1 },
   { range: '2', gen: 2 },
   { range: '3', gen: 3 },
@@ -58,7 +58,7 @@ export function commissionLine(): number[] {
 export function commissionBandsForLoan(
   usdAmount: number,
   interestBps: number
-): Array<{ range: string; amount: number }> {
+): { range: string; amount: number }[] {
   return COMMISSION_BANDS.map((band) => ({
     range: band.range,
     amount: commissionForGeneration(usdAmount, interestBps, band.gen),
@@ -69,8 +69,8 @@ export function commissionBandsForLoan(
 export function commissionRowsForLoan(
   usdAmount: number,
   interestBps: number
-): Array<{ range: string; amount: number }> {
-  const rows: Array<{ range: string; amount: number }> = [];
+): { range: string; amount: number }[] {
+  const rows: { range: string; amount: number }[] = [];
   for (let gen = 1; gen <= 12; gen++) {
     rows.push({
       range: String(gen),
@@ -86,9 +86,9 @@ export function commissionRowsForLoan(
 
 /** Comisión directa (gen 1) por cada nivel de préstamo L1…L1000. */
 export function directCommissionRowsForTiers(
-  tiers: ReadonlyArray<{ id: number; usdAmount: number; interestBps: number }>,
+  tiers: readonly { id: number; usdAmount: number; interestBps: number }[],
   curveRateBps = 0
-): Array<{ id: number; usdAmount: number; amount: number }> {
+): { id: number; usdAmount: number; amount: number }[] {
   return tiers.map((tier) => ({
     id: tier.id,
     usdAmount: tier.usdAmount,

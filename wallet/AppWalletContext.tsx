@@ -10,15 +10,7 @@ import React, {
 import type { HDNodeWallet, Wallet } from 'ethers';
 import { subscribeRuntimeMode } from '../constants/rpcConfig';
 import { setWalletSigner, clearWalletSigner } from '../services/quatriviumCreditService';
-import {
-  loadAppWallet,
-  ensureAppWallet,
-  importFromPhrase,
-  recreateAppWallet,
-  addressFromPhrase,
-  withCurrentRpc,
-} from '../services/appWallet';
-import { wipeLocalAccount } from '../services/accountReset';
+import { loadAppWallet, ensureAppWallet, withCurrentRpc } from '../services/appWallet';
 import { purgePersistedWrap, restoreSavedSessionWrap } from '../services/savedSession';
 import { clearWalletSession, getWalletWrapKey } from '../services/walletSession';
 
@@ -28,8 +20,6 @@ interface AppWalletValue {
   failed: boolean;
   signer: HDNodeWallet | Wallet | null;
   retry: () => Promise<void>;
-  recreate: () => Promise<string>;
-  restore: (phrase: string) => Promise<string>;
 }
 
 const AppWalletContext = createContext<AppWalletValue | null>(null);
@@ -128,30 +118,6 @@ export const AppWalletProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   }, [boot]);
 
-  const recreate = useCallback(async () => {
-    const previous = signer?.address.toLowerCase() || '';
-    await wipeLocalAccount(previous);
-    const wallet = await recreateAppWallet();
-    setSigner(wallet);
-    setWalletSigner(wallet);
-    return wallet.address.toLowerCase();
-  }, [signer]);
-
-  const restore = useCallback(
-    async (phrase: string) => {
-      const previous = signer?.address.toLowerCase() || '';
-      const next = addressFromPhrase(phrase);
-      if (previous && previous !== next) {
-        await wipeLocalAccount(previous);
-      }
-      const wallet = await importFromPhrase(phrase);
-      setSigner(wallet);
-      setWalletSigner(wallet);
-      return wallet.address.toLowerCase();
-    },
-    [signer]
-  );
-
   const value = useMemo(
     () => ({
       address: signer?.address.toLowerCase() || '',
@@ -159,10 +125,8 @@ export const AppWalletProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       failed,
       signer,
       retry,
-      recreate,
-      restore,
     }),
-    [failed, ready, recreate, restore, retry, signer]
+    [failed, ready, retry, signer]
   );
 
   return <AppWalletContext.Provider value={value}>{children}</AppWalletContext.Provider>;

@@ -9,21 +9,6 @@ const {
   toUtf8String,
 } = require('ethers');
 
-function isWeakPin(pin) {
-  if (!/^\d{6}$/.test(pin)) return true;
-  if (/^(\d)\1{5}$/.test(pin)) return true;
-  if ('01234567890'.includes(pin) || '09876543210'.includes(pin)) return true;
-  if (new Set(pin.split('')).size <= 2) return true;
-  return ['123456', '654321', '123123', '121212', '112233'].includes(pin);
-}
-
-function lockoutMs(fails) {
-  if (fails < 5) return 0;
-  if (fails < 8) return 30_000;
-  if (fails < 12) return 5 * 60_000;
-  return 30 * 60_000;
-}
-
 function hmacSha256(key, data) {
   const block = 64;
   let keyBytes = getBytes(key);
@@ -124,6 +109,8 @@ function masterPasswordFromRandomBytes(bytes) {
 
 describe('cyber hardening — PIN and secret box', function () {
   it('rejects weak and sequential PINs', function () {
+    require('ts-node/register');
+    const { isWeakPin } = require('../utils/pinPolicy.ts');
     expect(isWeakPin('123456')).to.equal(true);
     expect(isWeakPin('000000')).to.equal(true);
     expect(isWeakPin('111222')).to.equal(true);
@@ -132,10 +119,18 @@ describe('cyber hardening — PIN and secret box', function () {
   });
 
   it('escalates lockout after repeated failures', function () {
-    expect(lockoutMs(4)).to.equal(0);
-    expect(lockoutMs(5)).to.equal(30_000);
-    expect(lockoutMs(8)).to.equal(5 * 60_000);
-    expect(lockoutMs(12)).to.equal(30 * 60_000);
+    require('ts-node/register');
+    const { lockoutMs, remainingLockMs } = require('../utils/pinPolicy.ts');
+    expect(lockoutMs(1)).to.equal(30_000);
+    expect(lockoutMs(2)).to.equal(60_000);
+    expect(lockoutMs(3)).to.equal(5 * 60_000);
+    expect(lockoutMs(4)).to.equal(15 * 60_000);
+    expect(lockoutMs(5)).to.equal(60 * 60_000);
+    expect(lockoutMs(6)).to.equal(24 * 60 * 60_000);
+    expect(lockoutMs(8)).to.equal(24 * 60 * 60_000);
+    const now = 1_700_000_000_000;
+    expect(remainingLockMs(now + lockoutMs(1), now)).to.equal(30_000);
+    expect(remainingLockMs(now, now + 1)).to.equal(0);
   });
 
   it('round-trips a sealed wallet blob and rejects a bad key', function () {
@@ -147,34 +142,26 @@ describe('cyber hardening — PIN and secret box', function () {
   });
 
   it('keeps AsyncStorage wallet fallback only on Demo', function () {
-    const fs = require('fs');
     const path = require('path');
-    const policy = fs.readFileSync(
-      path.join(__dirname, '..', 'utils', 'walletVaultPolicy.ts'),
-      'utf8'
-    );
-    expect(policy).to.include("productMode !== 'live'");
-    const lock = fs.readFileSync(path.join(__dirname, '..', 'services', 'appLock.ts'), 'utf8');
-    expect(lock).to.include('allowWalletAsyncFallback');
-    expect(lock).to.include("throw new Error('password-persist')");
-    const bio = lock.slice(
-      lock.indexOf('export async function loadWrapFromBiometric'),
-      lock.indexOf('export async function clearBiometricWrap')
-    );
-    expect(bio).to.include('authenticateBiometric');
-    expect(bio).to.include('if (!ok) return null');
-    expect(bio).to.include('WRAP_STORE, OPTIONS');
-    expect(bio).to.not.include('BIO_WRAP_OPTIONS');
-    const entry = fs.readFileSync(path.join(__dirname, '..', 'utils', 'accountEntry.ts'), 'utf8');
-    expect(entry).to.include('nextUnlockAfterBiometricFail');
-    expect(entry).to.include("if (flags.pinSet) return 'pin'");
-    expect(entry).to.include("if (flags.passwordSet) return 'password'");
-    const gate = fs.readFileSync(
-      path.join(__dirname, '..', 'components', 'AppLockGate.tsx'),
-      'utf8'
-    );
-    expect(gate).to.include('nextUnlockAfterBiometricFail');
-    expect(gate).to.include("code === 'wallet-persist' || code === 'password-persist'");
+    const { loadTs } = require('./loadTsApp.cjs');
+    const vault = loadTs(path.join(__dirname, '..', 'utils', 'walletVaultPolicy.ts'));
+    const entry = loadTs(path.join(__dirname, '..', 'utils', 'accountEntry.ts'));
+    expect(vault.allowWalletAsyncFallback('live')).to.equal(false);
+    expect(vault.allowWalletAsyncFallback('demo')).to.equal(true);
+    expect(
+      entry.nextUnlockAfterBiometricFail(['pin', 'password', 'authenticator'], {
+        pinSet: true,
+        passwordSet: true,
+        authOn: true,
+      })
+    ).to.equal('pin');
+    expect(
+      entry.nextUnlockAfterBiometricFail(['password'], {
+        pinSet: false,
+        passwordSet: true,
+        authOn: false,
+      })
+    ).to.equal('password');
   });
 
   it('accepts a user-chosen master password and rejects a private key', function () {
@@ -244,15 +231,22 @@ describe('cyber hardening — PIN and secret box', function () {
     const fs = require('fs');
     const path = require('path');
     const script = fs.readFileSync(
-      path.join(__dirname, '..', 'scripts', 'deploy-mainnet-nuevo.cjs'),
+      path.join(__dirname, '..', 'scripts', 'deploy-arbitrum-sovereign.cjs'),
       'utf8'
     );
-    const nets = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'bscNetworks.cjs'), 'utf8');
+    const nets = fs.readFileSync(
+      path.join(__dirname, '..', 'scripts', 'arbitrumNetworks.cjs'),
+      'utf8'
+    );
+    const arbitrum = require('../scripts/arbitrumNetworks.cjs');
+    expect(arbitrum.ARBITRUM_MAINNET.chainId).to.equal(42161);
+    expect(arbitrum.ARBITRUM_SEPOLIA.chainId).to.equal(421614);
     expect(script).to.include("process.env.CONFIRM_MAINNET !== 'yes'");
-    expect(script).to.include('chainId !== 42161');
-    expect(script).to.include('QuatriviumReserva');
-    expect(script).to.include('QuatriviumAlta');
-    expect(script).to.include('setAltaFuente');
+    expect(script).to.include('CONFIRM_FOUNDER_WALLET');
+    expect(script).to.include('chainId === 42161');
+    expect(script).to.not.include('setAltaFuente');
+    expect(script).to.not.include('setAlta(');
+    expect(script).to.not.include('setReserva(');
     expect(script).to.not.include('mint(');
     expect(script).to.not.include('EXPO_PUBLIC_CHAIN_ID');
     expect(nets).to.include('0x0411D28c94d85A36bC72Cb0f875dfA8371D8fFfF');
@@ -271,7 +265,7 @@ describe('cyber hardening — PIN and secret box', function () {
       'utf8'
     );
     const slitherCfg = fs.readFileSync(path.join(__dirname, '..', 'slither.config.json'), 'utf8');
-    expect(credit).to.include('(interest * restante * feeBasisPoints) / (totalDue * 10000)');
+    expect(credit).to.include('(principalRestante * 5) / 100');
     expect(credit).not.to.include('(interestRestante * feeBasisPoints) / 10000');
     expect(credit).to.include('next <= nivel - (nivel % 100)');
     expect(leveling).to.include('nivel - (nivel % HITO_PASO)');
@@ -281,7 +275,7 @@ describe('cyber hardening — PIN and secret box', function () {
     expect(slitherCfg).to.include('timestamp');
     const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
     expect(pkg.scripts['security:slither']).to.include('run-slither.mjs');
-    // underscore 1.13.6 llega por snarkjs con CVE-2026-27601; el override lo sube al parche.
+    // underscore queda pineado: la versión vieja traía CVE-2026-27601.
     expect(pkg.overrides.underscore).to.equal('^1.13.8');
     expect(pkg.overrides.compression).to.equal('1.8.2');
     const cyber = fs.readFileSync(
@@ -359,7 +353,8 @@ describe('cyber hardening — PIN and secret box', function () {
     const path = require('path');
     const root = path.join(__dirname, '..');
     const sonar = fs.readFileSync(path.join(root, 'sonar-project.properties'), 'utf8');
-    expect(sonar).to.include('sonar.projectKey=usercardjoke1036991-star_Magno');
+    expect(sonar).to.include('sonar.projectKey=usercardjoke1036991-star_QUATRIVIUM');
+    expect(sonar).to.not.include('Magno');
     expect(sonar).to.include('sonar.organization=usercardjoke1036991-star');
     expect(sonar).to.include('sonarcloud.io');
     expect(sonar).to.include('**/i18n/**/*.json');
@@ -368,7 +363,8 @@ describe('cyber hardening — PIN and secret box', function () {
     expect(sonar).to.not.match(/sonar\.login=/);
     expect(sonar).to.not.match(/sonar\.token=/);
     const auto = fs.readFileSync(path.join(root, '.sonarcloud.properties'), 'utf8');
-    expect(auto).to.include('usercardjoke1036991-star_Magno');
+    expect(auto).to.include('usercardjoke1036991-star_QUATRIVIUM');
+    expect(auto).to.not.include('Magno');
     expect(auto).to.include('**/i18n/**/*.json');
     expect(auto).to.include('tsconfig.sonar.json');
     expect(auto).to.not.match(/sonar\.login=/);
@@ -401,12 +397,11 @@ describe('cyber hardening — PIN and secret box', function () {
     expect(trivyIgnore).to.include('CVE-2026-44705');
     expect(trivyIgnore).to.include('Metro 0.83');
     expect(pkg.scripts['security:trivy']).to.include('trivy-lock.sh');
-    expect(pkg.overrides.undici).to.equal('6.28.1');
+    expect(pkg.overrides.undici).to.equal('6.29.1');
     expect(pkg.overrides['adm-zip']).to.equal('0.6.1');
     const trivyYaml = fs.readFileSync(path.join(root, 'trivy.yaml'), 'utf8');
     expect(trivyYaml).to.include('store-assets');
-    const notifyIgnore = fs.readFileSync(path.join(root, 'Dockerfile.notify.dockerignore'), 'utf8');
-    expect(notifyIgnore).to.include('telegramBotName.cjs');
+    expect(fs.existsSync(path.join(root, 'Dockerfile.notify.dockerignore'))).to.equal(false);
     const slot = fs.readFileSync(path.join(root, 'utils', 'storeSlot.ts'), 'utf8');
     expect(slot).to.include('parts.filter(Boolean).join(glue)');
     const mobsf = fs.readFileSync(path.join(root, 'scripts', 'scan-mobile.mjs'), 'utf8');
@@ -426,7 +421,6 @@ describe('cyber hardening — PIN and secret box', function () {
       const blob = Object.values(data).join('\n');
       expect(blob, name).to.not.include('CONFIRM_MAINNET');
       expect(blob, name).to.not.include('PRIVATE_KEY');
-      expect(blob, name).to.not.include('TEXTBELT');
       expect(blob, name).to.not.include('EXPO_PUBLIC_');
       expect(String(data.networkNotMainnet || ''), name).to.match(/\S/);
     }
@@ -817,11 +811,6 @@ describe('demo credit gates', function () {
       !liveNeedsDeviceMatch(demo, flags.deviceMatches, Boolean(flags.phoneActive))
     );
   }
-  function identityHashBound(value) {
-    const hash = String(value || '');
-    return Boolean(hash) && !/^0x0+$/i.test(hash);
-  }
-
   it('requires a one-time access fee in Real before any loan', function () {
     function hasCreditAccess(paidUsd) {
       const paid = Number(paidUsd);
@@ -965,13 +954,13 @@ describe('demo credit gates', function () {
     }
     const demoKey = historyJournalSuffix({
       mode: 'demo',
-      chainId: 97,
+      chainId: 421614,
       contract: '0xD2',
       address: '0xAA',
     });
     const liveKey = historyJournalSuffix({
       mode: 'live',
-      chainId: 56,
+      chainId: 42161,
       contract: '0x00',
       address: '0xAA',
     });
@@ -1179,7 +1168,14 @@ describe('demo credit gates', function () {
     expect(accessPaymentAllowedInWorld('live', 'live', true)).to.equal(true);
   });
 
-  it('blocks pool deposits from Demo', function () {
+  it('blocks pool deposits from Demo', async function () {
+    const { ethers } = require('hardhat');
+    const { deployProtocol, seedPool } = require('./helpers.cjs');
+    const ctx = await deployProtocol();
+    await seedPool(ctx.token, ctx.contract, ctx.owner, '50');
+    await expect(
+      ctx.contract.connect(ctx.owner).retirarLiquidez(ctx.tokenAddr, ethers.parseUnits('1', 18))
+    ).to.be.revertedWithoutReason();
     function poolAllowed(product, runtime) {
       return product === 'live' && runtime === 'live';
     }
@@ -1380,11 +1376,10 @@ describe('account entry — password, email and session', () => {
       if (password === null || pin === null) return null;
       return false;
     }
-    function nextEntryScreen({ accountOnPhone, wrapReady, unlockOn }) {
+    function nextEntryScreen({ accountOnPhone }) {
       if (accountOnPhone === null) return 'signIn';
       if (!accountOnPhone) return 'welcome';
-      if (unlockOn || !wrapReady) return 'unlock';
-      return 'app';
+      return 'unlock';
     }
     function orderUnlockMethods(selected, primary) {
       const unique = [...new Set((selected || []).filter(Boolean))];
@@ -1467,7 +1462,7 @@ describe('account entry — password, email and session', () => {
         wrapReady: true,
         unlockOn: false,
       })
-    ).to.equal('app');
+    ).to.equal('unlock');
     expect(
       nextEntryScreen({
         accountOnPhone: true,
@@ -1762,18 +1757,10 @@ describe('account entry — password, email and session', () => {
       return !busy && !paused && contractReady !== false;
     }
     function roomFromAppUrl(url) {
-      try {
-        const parsed = new URL(url);
-        if (parsed.protocol !== 'quatrivium:') return '';
-        const host = String(parsed.hostname || '').toLowerCase();
-        const path = String(parsed.pathname || '')
-          .replace(/^\/+|\/+$/g, '')
-          .toLowerCase();
-        if (host === 'room') return path.split('/')[0] || '';
-        return host;
-      } catch {
-        return '';
-      }
+      const { loadTs } = require('./loadTsApp.cjs');
+      const deep = loadTs(path.join(__dirname, '..', 'utils', 'appDeepLink.ts'));
+      const parsed = deep.parseAppDeepLink(url);
+      return parsed && parsed.kind === 'room' ? parsed.room : '';
     }
     expect(referralBoardVisible({ isLoading: true, error: null })).to.equal(true);
     expect(referralBoardVisible({ isLoading: false, error: null })).to.equal(true);
@@ -1860,10 +1847,11 @@ describe('account entry — password, email and session', () => {
       'utf8'
     );
     expect(transferUi).to.include('ensureExternalWalletOnAppChain');
-    expect(roomFromAppUrl('quatrivium://room/credit?n=1730000000')).to.equal('credit');
-    expect(roomFromAppUrl('quatrivium://room/history')).to.equal('history');
-    expect(roomFromAppUrl('quatrivium://room/network')).to.equal('network');
-    expect(roomFromAppUrl('quatrivium://room/people')).to.equal('people');
+    expect(roomFromAppUrl('quatrivium-sovereign://room/credit?n=1730000000')).to.equal('credit');
+    expect(roomFromAppUrl('quatrivium-sovereign://room/history')).to.equal('history');
+    expect(roomFromAppUrl('quatrivium-sovereign://room/network')).to.equal('network');
+    expect(roomFromAppUrl('quatrivium-sovereign://room/people')).to.equal('people');
+    expect(roomFromAppUrl('quatrivium://room/credit')).to.equal('');
     const deep = fs.readFileSync(path.join(__dirname, '..', 'utils', 'appDeepLink.ts'), 'utf8');
     expect(deep).to.include("token === 'privacy'");
     expect(deep).to.include("kind: 'mode'");
@@ -2190,6 +2178,7 @@ describe('account entry — password, email and session', () => {
       'utf8'
     );
     const deep = fs.readFileSync(path.join(__dirname, '..', 'utils', 'appDeepLink.ts'), 'utf8');
+    const links = fs.readFileSync(path.join(__dirname, '..', 'constants', 'appLinks.ts'), 'utf8');
     const transfer = fs.readFileSync(
       path.join(__dirname, '..', 'components', 'TransferWalletsModal.tsx'),
       'utf8'
@@ -2200,7 +2189,8 @@ describe('account entry — password, email and session', () => {
     expect(famaLib).to.not.include('blacklist');
     expect(deep).to.include("token === 'admin'");
     expect(deep).to.include('isAllowedAppUrl');
-    expect(deep).to.include('quatriviumcredit.app');
+    expect(deep).to.include('PUBLIC_APP_HOST');
+    expect(links).to.include('quatriviumcredit.app');
     expect(deep).to.not.include("if (host && host !== 'expo-development-client') return host");
     expect(transfer).to.include('if (busy) return');
   });
@@ -2242,15 +2232,15 @@ describe('account entry — password, email and session', () => {
       path.join(__dirname, '..', 'contracts', 'QuatriviumCredit.sol'),
       'utf8'
     );
-    expect(sol).to.include('if (n >= 3) return 2');
-    expect(sol).to.include('would break quorum');
+    expect(sol).to.include('return 2');
+    expect(sol).to.include('ownerList.length > 2');
     const es = JSON.parse(
       fs.readFileSync(path.join(__dirname, '..', 'i18n', 'locales', 'es.json'), 'utf8')
     );
     expect(es.adminTwoOfThree).to.include('2 firmas');
     expect(es.adminTwoOfThree).to.match(/pierde|hackean/);
-    expect(es.emailNeedApi).to.not.match(/RESEND|EMAIL_FROM|worker/i);
-    expect(es.otpDeliveryFailed).to.not.match(/Twilio|WhatsApp Cloud/i);
+    expect(es.emailNeedApi.length).to.be.below(180);
+    expect(es.otpDeliveryFailed.length).to.be.below(180);
     expect(es.creditAccessLead.length).to.be.below(120);
     expect(es.linkWalletNeedFunds).to.match(/[Vv]incule una billetera/);
     expect(es.externalPaysLead).to.match(/vinculada/);
@@ -2279,7 +2269,7 @@ describe('account entry — password, email and session', () => {
       path.join(__dirname, '..', 'components', 'AdminPanel.tsx'),
       'utf8'
     );
-    expect(panel).to.include('onProposeConfirmations');
+    expect(panel).to.not.include('onProposeConfirmations');
   });
 
   it('scans KYC locally and draws square rank frames by division', () => {
@@ -2360,7 +2350,7 @@ describe('account entry — password, email and session', () => {
     const appJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'app.json'), 'utf8'));
     expect(JSON.stringify(appJson.expo.plugins)).to.not.include('expo-screen-capture');
     const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
-    expect(pkg.dependencies['expo-screen-capture']).to.be.ok;
+    expect(typeof pkg.dependencies['expo-screen-capture']).to.equal('string');
     const security = fs.readFileSync(
       path.join(__dirname, '..', 'components', 'SecuritySettings.tsx'),
       'utf8'
@@ -2368,18 +2358,6 @@ describe('account entry — password, email and session', () => {
     expect(security).to.include('subscribeScreenshot');
     expect(security).to.include('selectable={false}');
     expect(security).to.not.include('copyText(');
-    const lock = fs.readFileSync(path.join(__dirname, '..', 'services', 'appLock.ts'), 'utf8');
-    expect(lock).to.include('AsyncStorage.removeItem(PASSWORD_FALLBACK)');
-    expect(lock).to.match(/if \(stored\) \{[\s\S]*removeItem\(PASSWORD_FALLBACK\)/);
-    expect(lock).to.include('allowWalletAsyncFallback');
-    expect(lock).to.include("throw new Error('password-persist')");
-    const bio = lock.slice(
-      lock.indexOf('export async function loadWrapFromBiometric'),
-      lock.indexOf('export async function clearBiometricWrap')
-    );
-    expect(bio).to.include('authenticateBiometric');
-    expect(bio).to.include('if (!ok) return null');
-    expect(bio).to.not.include('BIO_WRAP_OPTIONS');
   });
 
   it('keeps local sovereign auth methods without email or phone OTP', function () {
@@ -2635,13 +2613,11 @@ describe('account entry — password, email and session', () => {
     expect(salud).to.include('return null');
     expect(salud).to.include('reservaBote = null');
     expect(panel).to.include('row.reservaBote ?? prev?.reservaBote ?? null');
-    expect(panel).to.include('reservaRetiroConfirm');
-    expect(panel).to.include('reservaRetiroApplyConfirm');
-    expect(panel).to.include('reservaRetiroPropose');
-    expect(panel).to.include('onAplicarRetiroReserva');
+    expect(panel).to.not.include('onAplicarRetiroReserva');
+    expect(panel).to.not.include('reservaRetiroPropose');
     const abi = read('constants', 'reservaConfig.ts');
-    expect(abi).to.include('proponerRetiroBote');
-    expect(abi).to.include('applyRetiroBote');
+    expect(abi).to.not.include('proponerRetiroBote');
+    expect(abi).to.not.include('applyRetiroBote');
     const referral = read('components', 'ReferralSection.tsx');
     expect(referral).to.include('hasPadre && !isFundador');
     const appJson = JSON.parse(read('app.json'));

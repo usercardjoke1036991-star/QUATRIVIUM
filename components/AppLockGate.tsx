@@ -16,6 +16,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { AppIcon } from './icons';
 import { AppText, AppTextInput } from './AppText';
 import { BrandSplash, BrandWordmark } from './BrandSplash';
+import { DeviceGuardNotice } from './DeviceGuardNotice';
 import { SecretInput } from './SecretInput';
 import { PasswordRulesHint } from './PasswordRulesHint';
 import {
@@ -24,21 +25,29 @@ import {
   getBiometricStatus,
   checkPassword,
   checkPin,
-  getPinLockRemaining,
+  pauseLockWait,
+  refreshLockChain,
+  resumeLockWait,
+  tickLockWait,
   isBiometricEnabled,
-  abortPasswordSetup,
+  clearRestorePasswordBackup,
+  discardCreatedPin,
   isPasswordSet,
   isPinSet,
+  readSignupPhoto,
   probePasswordSet,
   probePinSet,
   loadWrapFromBiometric,
   lockNow,
   setPassword,
   shouldRelockAfterBackground,
+  type SignupUndo,
 } from '../services/appLock';
+import { describeLockFailure, lockWaitCopy } from '../utils/lockFailureCopy';
+import { raceMs, reportLockFault, setLockFaultReporter } from '../utils/lockRace';
+import { beginTap, endTap } from '../utils/tapGuard';
 import { isValidMasterPassword } from '../utils/passwordPolicy';
 import {
-  addressFromPhrase,
   ensureAppWallet,
   generateSecretPhrase,
   getSecretPhrase,
@@ -55,6 +64,8 @@ import {
   saveClaimedUsername,
 } from '../services/accountUsername';
 import { lookupBoundWalletOnThisDevice } from '../services/deviceClaim';
+import { BOUND_UNKNOWN } from '../services/deviceBinding';
+import { restoreAccountOnDevice } from '../services/restoreAccount';
 import { isAuthenticatorEnabled, unlockWithAuthenticator } from '../services/authenticator';
 import {
   ensureUnlockEnabled,
@@ -83,7 +94,8 @@ import {
   signInUsernameAllowed,
   unlockPromptMethods,
   nextUnlockAfterBiometricFail,
-  restoreMatchesDevice,
+  phraseRestoreAfterPasswordUnlock,
+  restoreFromLockScreen,
   welcomeActions,
   welcomeShowsCreate,
   wrapReadyForApp,
@@ -126,22 +138,6 @@ function modeFromMethod(
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'] as const;
 
-function raceMs<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
-  return new Promise((resolve) => {
-    const timer = setTimeout(() => resolve(fallback), ms);
-    promise.then(
-      (value) => {
-        clearTimeout(timer);
-        resolve(value);
-      },
-      () => {
-        clearTimeout(timer);
-        resolve(fallback);
-      }
-    );
-  });
-}
-
 async function resolveSessionWrap(): Promise<{ wrapReady: boolean; address: string }> {
   await restoreSavedSessionWrap();
   if (!getWalletWrapKey()) return { wrapReady: false, address: '' };
@@ -170,6 +166,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
   const { colors } = useTheme();
   const [ready, setReady] = useState(false);
   const [locked, setLocked] = useState(false);
+  const [pinBlocked, setPinBlocked] = useState(false);
   const [pin, setPinDigits] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -187,11 +184,19 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
   const [hasAuth, setHasAuth] = useState(false);
   const [authCode, setAuthCode] = useState('');
   const [lockMs, setLockMs] = useState(0);
+  const lockTicket = useRef(0);
+  const issueLockTicket = () => {
+    lockTicket.current += 1;
+    return lockTicket.current;
+  };
+  const paintLockMs = (ms: number, ticket: number) => {
+    if (ticket === lockTicket.current) setLockMs(ms);
+  };
   const [recovering, setRecovering] = useState(false);
   const [recoverEmail, setRecoverEmail] = useState('');
   const [recoverCode, setRecoverCode] = useState('');
   const [recoverSent, setRecoverSent] = useState(false);
-  const [recoverDayLocked, _setRecoverDayLocked] = useState(false);
+  const [recoverDayLocked] = useState(false);
   const recoverWait = 0;
   const [sessionReady, setSessionReady] = useState(false);
   const [askingSignIn, setAskingSignIn] = useState(false);
@@ -199,7 +204,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
   const [keepOnPhone, setKeepOnPhone] = useState(true);
   const [restorePhrase, setRestorePhrase] = useState('');
   const [deviceClaimed, setDeviceClaimed] = useState(false);
-  const [claimedWallet, setClaimedWallet] = useState('');
+  const [walletMiss, setWalletMiss] = useState(false);
   const [pendingPhrase, setPendingPhrase] = useState('');
   const [phraseAcked, setPhraseAcked] = useState(false);
   const [accountUsername, setAccountUsername] = useState('');
@@ -213,7 +218,15 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
   const methodQueueRef = useRef<AuthMethod[]>([]);
   const kickIfSessionMovedRef = useRef<() => Promise<boolean>>(async () => false);
   const backgroundAt = useRef<number | null>(null);
+  const backgroundMono = useRef<number | null>(null);
   const passwordCommittedRef = useRef(false);
+  const attemptGuard = useRef(false);
+  const createGuard = useRef(false);
+
+  useEffect(() => {
+    setLockFaultReporter(() => setError(t('lockUnexpected')));
+    return () => setLockFaultReporter(null);
+  }, [t]);
 
   const applyQueuedMethod = async (method: AuthMethod, flags: UnlockFlags) => {
     const nextMode = modeFromMethod(method, flags.passwordSet, flags.pinSet, flags.authOn);
@@ -319,10 +332,12 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
           wallet = null;
         }
         if (!wallet?.address) {
+          setWalletMiss(true);
           setError(t('appWalletFailed'));
           setLocked(true);
           return;
         }
+        setWalletMiss(false);
         await raceMs(markSessionSaved(), 2500, undefined);
         setLocked(false);
         setNeedsSetup(!(await isPasswordSet()));
@@ -411,7 +426,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
     }
     if (wrapReady && (await resumePhraseRevealIfNeeded())) {
       setReady(true);
-      setLockMs(await getPinLockRemaining());
+      setLockMs(await refreshLockChain(true));
       return;
     }
     const sessionSaved = await isSessionSaved();
@@ -441,15 +456,9 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
         bioEnabled: bioReadyNow,
       });
       setAskingSignIn(false);
-      if (asked || !wrapReady) {
-        if (!asked) {
-          setUnlockMode('password');
-        }
-        lockNow();
-        setLocked(true);
-      } else {
-        setLocked(false);
-      }
+      if (!asked) setUnlockMode('password');
+      lockNow();
+      setLocked(true);
     } else {
       methodQueueRef.current = [];
       setMethodQueue([]);
@@ -457,7 +466,9 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
       setLocked(false);
     }
     setReady(true);
-    setLockMs(await getPinLockRemaining());
+    setLockMs(await refreshLockChain(true));
+    // startMethodQueue se crea en cada render; incluirlo reabriría el desbloqueo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const beginPasswordSetup = async (pinValue: string) => {
@@ -583,9 +594,25 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
     const onChange = (next: AppStateStatus) => {
       if (next === 'background' || next === 'inactive') {
         backgroundAt.current = Date.now();
+        backgroundMono.current = performance.now();
+        void pauseLockWait();
         return;
       }
-      if (next === 'active' && shouldRelockAfterBackground(backgroundAt.current)) {
+      if (next === 'active') {
+        const ticket = issueLockTicket();
+        void resumeLockWait().then(() =>
+          refreshLockChain(true).then((ms) => paintLockMs(ms, ticket))
+        );
+      }
+      if (
+        next === 'active' &&
+        shouldRelockAfterBackground(
+          backgroundAt.current,
+          Date.now(),
+          backgroundMono.current,
+          performance.now()
+        )
+      ) {
         Promise.all([
           isPasswordSet(),
           isPinSet(),
@@ -619,18 +646,29 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
           });
       }
       backgroundAt.current = null;
+      backgroundMono.current = null;
     };
     const sub = AppState.addEventListener('change', onChange);
     return () => sub.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const lockWaiting = lockMs > 0;
   useEffect(() => {
-    if (lockMs <= 0) return undefined;
-    const timer = setInterval(() => {
-      setLockMs((value) => Math.max(0, value - 1000));
+    if (!lockWaiting) return undefined;
+    const fast = setInterval(() => {
+      const ticket = issueLockTicket();
+      void tickLockWait().then((ms) => paintLockMs(ms, ticket));
     }, 1000);
-    return () => clearInterval(timer);
-  }, [lockMs]);
+    const slow = setInterval(() => {
+      const ticket = issueLockTicket();
+      void refreshLockChain(false).then((ms) => paintLockMs(ms, ticket));
+    }, 60_000);
+    return () => {
+      clearInterval(fast);
+      clearInterval(slow);
+    };
+  }, [lockWaiting]);
 
   const tryBiometric = async () => {
     if (!bioOn || !bioReady || lockMs > 0) return;
@@ -666,7 +704,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
   };
 
   const pressKey = async (key: string) => {
-    if (!key || busy || lockMs > 0) return;
+    if (!key || busy || lockMs > 0 || attemptGuard.current) return;
     if (key === '⌫') {
       setPinDigits((value) => value.slice(0, -1));
       setError('');
@@ -677,53 +715,71 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
     setPinDigits(next);
     if (next.length < PIN_LENGTH) return;
 
+    attemptGuard.current = true;
     setBusy(true);
-    const result = await checkPin(next);
-    setBusy(false);
-    if (result.ok) {
-      await finishUnlock(next);
-      return;
+    try {
+      const result = await checkPin(next);
+      if (result.ok) {
+        setPinBlocked(false);
+        await finishUnlock(next);
+        return;
+      }
+      if (result.pinBlocked || result.deviceKeyReset || result.deviceSecretLost) {
+        setPinBlocked(result.pinBlocked === true);
+        setUnlockMode('password');
+      }
+      setLockMs(result.remainingMs);
+      setError(describeLockFailure('pin', result, t));
+      setPinDigits('');
+    } catch {
+      reportLockFault();
+    } finally {
+      attemptGuard.current = false;
+      setBusy(false);
     }
-    setLockMs(result.remainingMs);
-    setError(
-      result.locked
-        ? t('lockCooldown', { seconds: Math.ceil(result.remainingMs / 1000) })
-        : t('lockPinWrong')
-    );
-    setPinDigits('');
   };
 
   const submitUnlockAuthenticator = async () => {
-    if (busy || lockMs > 0 || authCode.length !== 6) return;
+    if (busy || lockMs > 0 || attemptGuard.current || authCode.length !== 6) return;
+    attemptGuard.current = true;
     setBusy(true);
-    const ok = await unlockWithAuthenticator(authCode);
-    setBusy(false);
-    if (ok) {
-      await passQueuedMethod(askingSignIn);
-      return;
+    try {
+      const result = await unlockWithAuthenticator(authCode);
+      if (!result.ok && result.busy) return;
+      if (result.ok) {
+        await passQueuedMethod(askingSignIn);
+        return;
+      }
+      if (result.locked || result.storeUnknown) {
+        setLockMs(result.remainingMs);
+        setError(describeLockFailure('password', result, t));
+      } else {
+        setError(t('authenticatorWrong'));
+      }
+      setAuthCode('');
+    } finally {
+      attemptGuard.current = false;
+      setBusy(false);
     }
-    setError(t('authenticatorWrong'));
-    setAuthCode('');
   };
 
   const submitUnlockPassword = async () => {
-    if (busy || lockMs > 0 || !passwordInput) return;
+    if (busy || lockMs > 0 || attemptGuard.current || !passwordInput) return;
+    attemptGuard.current = true;
     setBusy(true);
     setError('');
     try {
       const result = await checkPassword(passwordInput);
       if (result.ok) {
+        setPinBlocked(false);
         await passQueuedMethod(askingSignIn);
         return;
       }
       setLockMs(result.remainingMs);
-      setError(
-        result.locked
-          ? t('lockCooldown', { seconds: Math.ceil(result.remainingMs / 1000) })
-          : t('lockPasswordWrong')
-      );
+      setError(describeLockFailure('password', result, t));
       setPasswordInput('');
     } finally {
+      attemptGuard.current = false;
       setBusy(false);
     }
   };
@@ -752,6 +808,15 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
   };
 
   const submitDeviceCredentials = async () => {
+    if (!beginTap(createGuard)) return;
+    try {
+      await submitDeviceCredentialsBody();
+    } finally {
+      endTap(createGuard);
+    }
+  };
+
+  const submitDeviceCredentialsBody = async () => {
     const username = normalizeUsername(accountUsername);
     if (!canSubmitDeviceCredentials(passwordInput, username)) {
       setError(isValidUsername(username) ? t('lockPasswordWeak') : t('usernameInvalid'));
@@ -765,10 +830,22 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
     setInviteError('');
     setBusy(true);
     setError('');
+    let hadPassword = true;
+    let hadPin = true;
+    let hadBound = BOUND_UNKNOWN;
+    let hadRaw: string | null | 'unreadable' = 'unreadable';
+    let undo: SignupUndo | null = null;
     try {
+      const photo = await readSignupPhoto();
+      if (!photo) throw new Error('wallet-persist');
+      hadPassword = photo.hadPassword;
+      hadPin = photo.hadPin;
+      hadBound = photo.hadBound;
+      hadRaw = photo.hadRaw;
       const created = generateSecretPhrase();
-      const wrap = await setPassword(passwordInput, pendingPin || undefined);
-      if (!wrap && !getWalletWrapKey()) {
+      const issued = await setPassword(passwordInput, pendingPin || undefined, { undoable: true });
+      if (issued && typeof issued !== 'string') undo = issued;
+      if (!getWalletWrapKey()) {
         throw new Error('locked');
       }
       passwordCommittedRef.current = true;
@@ -781,23 +858,34 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
       setPendingPhrase(created.phrase);
       setPhraseAcked(false);
       setSetupStage('phraseReveal');
+      undo?.finish();
+      clearRestorePasswordBackup();
     } catch (err) {
-      await abortPasswordSetup().catch(() => {});
-      await wipeAppWallet().catch(() => {});
+      if (!hadPassword && undo) {
+        await undo.revert().catch(() => {});
+      }
+      if (!hadPin) {
+        await discardCreatedPin().catch(() => {});
+      }
+      if (!hadPassword && !hadPin && hadBound === '' && hadRaw == null) {
+        await wipeAppWallet().catch(() => {});
+      }
       passwordCommittedRef.current = false;
       const code = err instanceof Error ? err.message : '';
       setError(
-        code === 'password-key'
-          ? t('lockPasswordPrivateKey')
-          : code === 'device-bound'
-            ? t('errDeviceBound')
-            : code === 'wallet-persist' || code === 'password-persist'
-              ? t('errWalletPersist')
-              : code === 'wallet-other-app' || code.includes('wallet-other-app')
-                ? t('errWalletOtherApp')
-                : code === 'username'
-                  ? t('usernameInvalid')
-                  : t('appWalletFailed')
+        code === 'pbkdf2-missing'
+          ? t('lockKdfMissing')
+          : code === 'password-key'
+            ? t('lockPasswordPrivateKey')
+            : code === 'device-bound'
+              ? t('errDeviceBound')
+              : code === 'wallet-persist' || code === 'password-persist'
+                ? t('errWalletPersist')
+                : code === 'wallet-other-app' || code.includes('wallet-other-app')
+                  ? t('errWalletOtherApp')
+                  : code === 'username'
+                    ? t('usernameInvalid')
+                    : t('appWalletFailed')
       );
     } finally {
       setBusy(false);
@@ -838,24 +926,30 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
       setError(isValidUsername(username) ? t('lockPasswordWeak') : t('usernameInvalid'));
       return;
     }
-    try {
-      if (!restoreMatchesDevice(claimedWallet, addressFromPhrase(restorePhrase))) {
-        setError(t('errWalletOtherApp'));
-        return;
-      }
-    } catch {
-      setError(t('seedInvalid'));
-      return;
-    }
     setBusy(true);
     setError('');
     try {
-      const wrap = await setPassword(passwordInput);
-      if (!wrap && !getWalletWrapKey()) {
-        throw new Error('locked');
+      const restored = await restoreAccountOnDevice({
+        phrase: restorePhrase,
+        password: passwordInput,
+      });
+      if (!restored.ok) {
+        setError(
+          restored.reason === 'store-unknown'
+            ? t('lockStoreUnknown')
+            : restored.reason === 'wallet-other-app'
+              ? t('errWalletOtherApp')
+              : restored.reason === 'phrase'
+                ? t('seedInvalid')
+                : restored.reason === 'password-persist' || restored.reason === 'wallet-persist'
+                  ? t('errWalletPersist')
+                  : restored.reason === 'device-bound'
+                    ? t('errDeviceBound')
+                    : t('appWalletFailed')
+        );
+        return;
       }
-      const wallet = await importFromPhrase(restorePhrase);
-      if (!wallet) throw new Error('phrase');
+      const wallet = restored.wallet;
       await rememberUsername(wallet.address, username);
       setHasPassword(true);
       setSetupWallet(wallet.address);
@@ -871,7 +965,6 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
       }
       setSetupStage('publicIdentity');
     } catch (err) {
-      await abortPasswordSetup().catch(() => {});
       const code = err instanceof Error ? err.message : '';
       setError(
         code === 'phrase' || code.includes('phrase')
@@ -912,13 +1005,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
       {
         const exists = await probePasswordSet(2000);
         setLockMs(checked.remainingMs);
-        setError(
-          checked.locked
-            ? t('lockCooldown', { seconds: Math.ceil(checked.remainingMs / 1000) })
-            : exists === false
-              ? t('signInNoAccount')
-              : t('lockPasswordWrong')
-        );
+        setError(describeLockFailure('password', checked, t, exists === false));
         return;
       }
     } catch {
@@ -950,24 +1037,24 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
   }, [needsSetup, locked]);
 
   useEffect(() => {
-    if (hasPassword || sessionReady) return;
+    if (sessionReady) return;
     let live = true;
     void lookupBoundWalletOnThisDevice()
-      .then((wallet) => {
+      .then((bound) => {
         if (!live) return;
-        setClaimedWallet(wallet);
-        setDeviceClaimed(Boolean(wallet));
+        if (bound.status === 'wallet') {
+          setDeviceClaimed(true);
+          return;
+        }
+        setDeviceClaimed(bound.status === 'unknown');
       })
       .catch(() => {
-        if (live) {
-          setClaimedWallet('');
-          setDeviceClaimed(false);
-        }
+        if (live) setDeviceClaimed(false);
       });
     return () => {
       live = false;
     };
-  }, [hasPassword, sessionReady]);
+  }, [sessionReady]);
 
   if (!ready) {
     return <BrandSplash />;
@@ -1056,7 +1143,10 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
                               : askingSignIn && !signInExtra
                                 ? t('signInLead')
                                 : lockMs > 0
-                                  ? t('lockCooldown', { seconds: Math.ceil(lockMs / 1000) })
+                                  ? t(
+                                      lockWaitCopy(lockMs)?.key || 'lockCooldown',
+                                      lockWaitCopy(lockMs)?.vars
+                                    )
                                   : unlockMode === 'password'
                                     ? t('lockUnlockLeadPassword')
                                     : unlockMode === 'authenticator'
@@ -1109,8 +1199,14 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
                 ))}
               </View>
             ) : null}
+            <DeviceGuardNotice />
             {error ? (
               <AppText style={[styles.error, { color: colors.danger }]}>{error}</AppText>
+            ) : null}
+            {busy ? (
+              <AppText style={[styles.error, { color: colors.textMuted }]}>
+                {t('lockKdfWait')}
+              </AppText>
             ) : null}
           </View>
 
@@ -1218,7 +1314,10 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
                 style={[styles.primary, { backgroundColor: colors.connect }]}
               >
                 {busy ? (
-                  <ActivityIndicator color="#111" />
+                  <>
+                    <ActivityIndicator color="#111" />
+                    <AppText style={styles.primaryText}>{t('lockKdfWait')}</AppText>
+                  </>
                 ) : (
                   <AppText style={styles.primaryText}>{t('signIn')}</AppText>
                 )}
@@ -1359,7 +1458,10 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
                 ]}
               >
                 {busy ? (
-                  <ActivityIndicator color="#111" />
+                  <>
+                    <ActivityIndicator color="#111" />
+                    <AppText style={styles.primaryText}>{t('lockKdfWait')}</AppText>
+                  </>
                 ) : (
                   <AppText style={styles.primaryText}>
                     {t(signInOnDevice ? 'signIn' : 'seedRestoreAction')}
@@ -1516,7 +1618,10 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
                 ]}
               >
                 {busy ? (
-                  <ActivityIndicator color="#111" />
+                  <>
+                    <ActivityIndicator color="#111" />
+                    <AppText style={styles.primaryText}>{t('lockKdfWait')}</AppText>
+                  </>
                 ) : (
                   <AppText style={styles.primaryText}>{t('createContinue')}</AppText>
                 )}
@@ -1637,7 +1742,10 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
                     ]}
                   >
                     {busy ? (
-                      <ActivityIndicator color="#111" />
+                      <>
+                        <ActivityIndicator color="#111" />
+                        <AppText style={styles.primaryText}>{t('lockKdfWait')}</AppText>
+                      </>
                     ) : (
                       <AppText style={styles.primaryText}>{t('saveSession')}</AppText>
                     )}
@@ -1682,7 +1790,10 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
                 style={[styles.primary, { backgroundColor: colors.connect }]}
               >
                 {busy ? (
-                  <ActivityIndicator color="#111" />
+                  <>
+                    <ActivityIndicator color="#111" />
+                    <AppText style={styles.primaryText}>{t('lockKdfWait')}</AppText>
+                  </>
                 ) : (
                   <AppText style={styles.primaryText}>{t('lockUnlock')}</AppText>
                 )}
@@ -1711,7 +1822,10 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
                 style={[styles.primary, { backgroundColor: colors.connect }]}
               >
                 {busy ? (
-                  <ActivityIndicator color="#111" />
+                  <>
+                    <ActivityIndicator color="#111" />
+                    <AppText style={styles.primaryText}>{t('lockKdfWait')}</AppText>
+                  </>
                 ) : (
                   <AppText style={styles.primaryText}>{t('lockUnlock')}</AppText>
                 )}
@@ -1783,6 +1897,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
           !unlockPrimaryOnly &&
           unlockChoices.includes('pin') &&
           hasPin &&
+          !pinBlocked &&
           unlockMode !== 'pin' ? (
             <TouchableOpacity
               onPress={() => {
@@ -1818,6 +1933,53 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
             >
               <AppText style={[styles.switchText, { color: colors.primary }]}>
                 {t('lockPasswordUseAuth')}
+              </AppText>
+            </TouchableOpacity>
+          ) : null}
+
+          {walletMiss &&
+          phraseRestoreAfterPasswordUnlock({
+            sessionOpen: Boolean(getWalletWrapKey()),
+            walletLoaded: false,
+          }) === 'phrase' ? (
+            <TouchableOpacity
+              onPress={() => {
+                setWalletMiss(false);
+                setNeedsSetup(true);
+                setSetupStage('restore');
+                setLocked(false);
+                setError('');
+                setRestorePhrase('');
+                setPasswordInput('');
+                setAccountUsername('');
+              }}
+              style={styles.switchMode}
+              accessibilityRole="button"
+              accessibilityLabel={t('lockRestoreWithPhrase')}
+            >
+              <AppText style={[styles.switchText, { color: colors.primary }]}>
+                {t('lockRestoreWithPhrase')}
+              </AppText>
+            </TouchableOpacity>
+          ) : null}
+
+          {locked && !needsSetup && restoreFromLockScreen('lock') === 'restore' ? (
+            <TouchableOpacity
+              onPress={() => {
+                setNeedsSetup(true);
+                setSetupStage('restore');
+                setLocked(false);
+                setError('');
+                setRestorePhrase('');
+                setPasswordInput('');
+                setAccountUsername('');
+              }}
+              style={styles.switchMode}
+              accessibilityRole="button"
+              accessibilityLabel={t('restoreAccount')}
+            >
+              <AppText style={[styles.switchText, { color: colors.primary }]}>
+                {t('restoreAccount')}
               </AppText>
             </TouchableOpacity>
           ) : null}

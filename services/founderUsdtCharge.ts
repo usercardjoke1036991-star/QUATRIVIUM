@@ -2,11 +2,12 @@
  * Cobra USDT a la fundadora por donar() desde la billetera interna.
  * La externa fondea la interna. El pool no se toca.
  */
-import { Contract, parseEther, parseUnits, type Eip1193Provider } from 'ethers';
+import { Contract, Interface, parseEther, parseUnits, type Eip1193Provider } from 'ethers';
 import { Alert, Linking } from 'react-native';
-import { ERC20_ABI } from '../constants/contractConfig';
+import { CONTRACT_ABI, ERC20_ABI } from '../constants/contractConfig';
 import { isOfficialWorldToken, type Token } from '../constants/tokens';
 import {
+  getContractAddress,
   getProviderWithFallback,
   isAccessPaymentEnabled,
   isCreditReady,
@@ -20,10 +21,26 @@ import { enviarToken } from './appWallet';
 import { loadRequiredExternalWallet } from './linkedWallet';
 import { beginExternalWalletHandoff } from './walletHandoff';
 import { ensureExternalWalletOnAppChain } from '../utils/walletChain';
-import { isAltaConfigured } from '../constants/altaConfig';
+import { ALTA_ABI, getAltaAddress, isAltaConfigured } from '../constants/altaConfig';
 import { cachedProtocolCaps, QuatriviumCreditService } from './quatriviumCreditService';
 import { recordMovement } from './movementHistory';
+import { approveFollows, quoteNetworkFee } from '../utils/fundsConfirmGate';
 import type { TranslationKey } from '../i18n/translations';
+
+async function movementFee(
+  method: string,
+  args: unknown[],
+  abi: string[] = CONTRACT_ABI,
+  to = getContractAddress(),
+  from?: string | null
+): Promise<string> {
+  try {
+    const data = new Interface(abi).encodeFunctionData(method, args);
+    return quoteNetworkFee(getProviderWithFallback(), { from, to, data });
+  } catch {
+    return 'no disponible';
+  }
+}
 
 const ARBITRUM_TESTNET_FAUCET = 'https://faucet.quicknode.com/arbitrum/sepolia';
 const MIN_GAS_WEI = parseEther('0.0001');
@@ -41,7 +58,16 @@ export type FounderChargeContext = {
   adminProvider: unknown;
   adminAddress?: string;
   openExternalWallet?: () => void;
-  confirmFunds: (purpose?: 'movement' | 'transfer') => Promise<boolean>;
+  confirmFunds: (
+    purpose?: 'movement' | 'transfer',
+    details?: {
+      amount: string;
+      symbol: string;
+      destination: string;
+      fee: string;
+      twoSignatures?: boolean;
+    }
+  ) => Promise<boolean>;
   t: Translate;
   refetch?: () => void;
   silent?: boolean;
@@ -119,7 +145,10 @@ async function ensureGasForTx(ctx: FounderChargeContext): Promise<boolean> {
       if (demoGas) {
         showNotice(ctx.t('errNeedGas'), ctx.t('errNeedGasTestnet'), [
           { text: ctx.t('cancel'), style: 'cancel' },
-          { text: ctx.t('openFaucet'), onPress: () => void Linking.openURL(ARBITRUM_TESTNET_FAUCET) },
+          {
+            text: ctx.t('openFaucet'),
+            onPress: () => void Linking.openURL(ARBITRUM_TESTNET_FAUCET),
+          },
         ]);
       } else {
         showNotice(ctx.t('errNeedGas'), ctx.t('errNeedGas'));
@@ -224,7 +253,31 @@ export async function chargeFounderUsdt(
     alertUser(ctx, ctx.t('amount'), ctx.t('invalidAmount'));
     return 'failed';
   }
-  if (!ctx.silent && !(await ctx.confirmFunds('movement'))) return 'cancelled';
+  const signupSpender = isAltaConfigured() ? getAltaAddress() : getContractAddress();
+  const signupRequired = isAltaConfigured() ? 4n * 10n ** 18n : BigInt(amountWei);
+  const signupApprove = await approveFollows(async () => {
+    const token = new Contract(ctx.token.address, ERC20_ABI, getProviderWithFallback());
+    return BigInt(await token.allowance(ctx.walletAddress, signupSpender));
+  }, signupRequired);
+  if (
+    !ctx.silent &&
+    !(await ctx.confirmFunds('movement', {
+      amount: human,
+      symbol: 'LUSD',
+      destination: ctx.founderAddress || ctx.token.address,
+      twoSignatures: signupApprove,
+      fee: isAltaConfigured()
+        ? await movementFee('pagarRegistro', [], ALTA_ABI, getAltaAddress(), ctx.walletAddress)
+        : await movementFee(
+            'donar',
+            [ctx.token.address, amountWei],
+            undefined,
+            undefined,
+            ctx.walletAddress
+          ),
+    }))
+  )
+    return 'cancelled';
   if (!(await fundInternalFromExternal(ctx, amountWei, ctx.token.address))) return 'failed';
   if (!(await ensureGasForTx(ctx))) return 'failed';
   try {
@@ -283,7 +336,27 @@ export async function chargePoolUsdt(
     alertUser(ctx, ctx.t('amount'), ctx.t('invalidAmount'));
     return 'failed';
   }
-  if (!ctx.silent && !(await ctx.confirmFunds('movement'))) return 'cancelled';
+  const verifyApprove = await approveFollows(async () => {
+    const token = new Contract(ctx.token.address, ERC20_ABI, getProviderWithFallback());
+    return BigInt(await token.allowance(ctx.walletAddress, getContractAddress()));
+  }, BigInt(amountWei));
+  if (
+    !ctx.silent &&
+    !(await ctx.confirmFunds('movement', {
+      amount: human,
+      symbol: 'LUSD',
+      destination: ctx.token.address,
+      twoSignatures: verifyApprove,
+      fee: await movementFee(
+        'pagarVerificacion',
+        [ctx.token.address, amountWei],
+        undefined,
+        undefined,
+        ctx.walletAddress
+      ),
+    }))
+  )
+    return 'cancelled';
   if (!(await fundInternalFromExternal(ctx, amountWei, ctx.token.address))) return 'failed';
   if (!(await ensureGasForTx(ctx))) return 'failed';
   try {

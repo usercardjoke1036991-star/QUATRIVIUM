@@ -38,6 +38,7 @@ export function CreditAccessGate({
         {t(alreadyInWallet ? 'creditAccessAlreadyInWallet' : 'creditAccessGateLead')}
       </AppText>
       <AppText style={[styles.meta, { color: colors.textMuted }]}>{t('creditAccessLead')}</AppText>
+      <AppText style={[styles.meta, { color: colors.textMuted }]}>{t('altaSplitNote')}</AppText>
       {walletAddress ? <LinkedWalletCard internalWallet={walletAddress} compact /> : null}
       {!canPay ? (
         <AppText style={[styles.pending, { color: colors.warnText }]}>

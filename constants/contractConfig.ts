@@ -1,17 +1,21 @@
-import { BSC_MAINNET, BSC_TESTNET, isTestnetOnlyToken } from './bsc';
+import { ARBITRUM_MAINNET, ARBITRUM_SEPOLIA, isTestnetOnlyToken } from './arbitrum';
 import { DEPLOYED_TESTNET } from './deployedAddresses';
 import { getContractAddress, getRuntimeMode } from './rpcConfig';
 
 export { getContractAddress };
 
 export function getUsdtAddress(): string {
-  if (getRuntimeMode() === 'live') return BSC_MAINNET.usdt;
-  const fromEnv = (process.env.EXPO_PUBLIC_USDT_ADDRESS || '').toLowerCase();
+  if (getRuntimeMode() === 'live') return ARBITRUM_MAINNET.lusd;
+  const fromEnv = (
+    process.env.EXPO_PUBLIC_LUSD_ADDRESS ||
+    process.env.EXPO_PUBLIC_USDT_ADDRESS ||
+    ''
+  ).toLowerCase();
   if (fromEnv && isTestnetOnlyToken(fromEnv)) return fromEnv;
-  if (fromEnv && fromEnv.startsWith('0x') && fromEnv !== BSC_MAINNET.usdt.toLowerCase()) {
+  if (fromEnv && fromEnv.startsWith('0x') && fromEnv !== ARBITRUM_MAINNET.lusd.toLowerCase()) {
     return fromEnv;
   }
-  return DEPLOYED_TESTNET.usdt || BSC_TESTNET.usdt;
+  return DEPLOYED_TESTNET.usdt || ARBITRUM_SEPOLIA.usdt;
 }
 
 export const ERC20_ABI = [
@@ -38,21 +42,13 @@ export const CONTRACT_ABI = [
   'function requiredConfirmations() view returns (uint256)',
   'function addAdmin(address newAdmin)',
   'function removeAdmin(address admin)',
-  'function setFeeCollector(address newCollector)',
-  'function setRequiredConfirmations(uint256 _required)',
-  'function setTokenConfig(address token, address feed, bool enabled)',
-  'function setOwner(address newOwner)',
-  'function setFundador(address next)',
-  'function setFeeBP(uint256 _feeBP)',
-  'function setNivel(uint256 id, uint256 montoPrestamo, uint256 plazo, uint256 tasaInteresBP)',
+  'function pausarPrestamosNuevos()',
+  'function proponerFundador(address next)',
+  'function cancelarFundador()',
+  'function aplicarFundador()',
   'function setInterestModelParams(uint256 _tasaBaseBP, uint256 _puntoOptimoUtilBP, uint256 _pendiente1BP, uint256 _pendiente2BP)',
   'function setReputationParams(uint256 _puntosPago, uint256 _penalizacion, uint256 _thresholdGov)',
-  'function setMorosidad(address usuario, bool moroso)',
   'function setSecurityParams(uint256 _maxOriginationsPerWindow, uint256 _maxUtilizationBps)',
-  'function originationsInWindow() view returns (uint256)',
-  'function originatedChicoInWindow() view returns (uint256)',
-  'function originatedPrincipalInWindow() view returns (uint256)',
-  'function originationWindowStart() view returns (uint256)',
   'function maxOriginationsPerWindow() view returns (uint256)',
   'function maxUtilizationBps() view returns (uint256)',
   'function SELLO_PRIMERA() view returns (uint256)',
@@ -62,14 +58,11 @@ export const CONTRACT_ABI = [
   'function reservaPrimeraToken(address) view returns (address)',
   'function totalReservadoPrimera(address) view returns (uint256)',
   'function liberarSelloPrimeraSiExpiro(address token, address user)',
-  'function ORIGINATION_WINDOW() view returns (uint256)',
-  'function feeBasisPoints() view returns (uint256)',
   'function BONO_ACTIVACION() view returns (uint256)',
   'function TIMELOCK_DELAY() view returns (uint256)',
   'function COOLDOWN_PRESTAMO() view returns (uint256)',
   'function esMoroso(address) view returns (bool)',
   'function calcularTasaUtilizacion(address tokenAddress) view returns (uint256)',
-  'function feeCollector() view returns (address)',
   'function fundador() view returns (address)',
   'function humanosVerificados(address) view returns (bool)',
   'function redGenealogica(address) view returns (address padre, bool bonoActivacionCobrado)',
@@ -78,7 +71,6 @@ export const CONTRACT_ABI = [
   'function usuarios(address) view returns (uint256 nivelActual, uint256 montoActivo, uint256 vencimiento, bool enMora, address monedaActivo, uint256 tasaAplicadaBP)',
   'function obtenerHistorialUsuario(address usuario) view returns (uint256 puntosReputacion, bool moroso, uint256 pagadosATiempo, uint256 morosos, uint256 totalPenalizaciones)',
   'function obtenerRedReputacion(address usuario) view returns (uint256 puntos, uint256 bonosCobrados, uint256 umbral, uint256 bono, uint256 puntosPorReferido)',
-  'function puntosRed(address) view returns (uint256)',
   'function PUNTOS_POR_REFERIDO() view returns (uint256)',
   'function UMBRAL_BONO_RED() view returns (uint256)',
   'function BONO_RED_USDT() view returns (uint256)',
@@ -100,9 +92,6 @@ export const CONTRACT_ABI = [
   'function obtenerTasaInteresActual(address tokenAddress) view returns (uint256)',
   'function totalLiquidity(address) view returns (uint256)',
   'function outstandingLoans(address) view returns (uint256)',
-  'function collectedFees(address) view returns (uint256)',
-  'function retirarComisiones()',
-  'function retirarComisionesToken(address token)',
   'function marcarMorosoSiVencido(address usuario)',
   'function liquidate(address deudor, address tokenAddress)',
   'event AfiliadoRegistrado(address indexed usuario, address indexed padre)',

@@ -1,5 +1,7 @@
 import { useState, useRef } from 'react';
 import { showNotice } from '../utils/appNotice';
+import { NETWORK_CONFIG } from '../constants/rpcConfig';
+import { discardPendingSends } from '../services/writeRpc';
 import { QuatriviumCreditService } from '../services/quatriviumCreditService';
 import { humanizeTxError } from '../utils/txErrors';
 import { parseInviteInput } from '../utils/inviteCode';
@@ -34,13 +36,44 @@ export const useWeb3Transactions = () => {
       await Promise.race([
         transactionFn(),
         new Promise<never>((_, reject) => {
-          timer = setTimeout(() => reject(new Error('tx-timeout')), 90_000);
+          timer = setTimeout(() => reject(new Error('tx-pending')), 90_000);
         }),
       ]);
       showNotice(t('ready'), successMessage || t('txConfirmed', { action: actionName }));
       return { success: true };
     } catch (error: unknown) {
       const errorMessage = humanizeTxError(error);
+      const raw = error instanceof Error ? error.message : '';
+      if (raw.includes('broadcast-unseen')) {
+        showNotice(t('rpcSendUnseen'), t('rpcSendUnseenWait'));
+        return { success: false, error: 'broadcast-unseen' };
+      }
+      if (
+        raw.includes('tx-pending') ||
+        raw.includes('tx-timeout') ||
+        raw.includes('pending-nonce')
+      ) {
+        const hash = (error as { hash?: string }).hash || '';
+        showNotice(t('rpcSendPending'), hash || t('rpcSendPending'), [
+          { text: t('cancel'), style: 'cancel' },
+          {
+            text: t('discardPending'),
+            onPress: () => {
+              showNotice(t('discardPending'), t('discardPendingWarn'), [
+                { text: t('cancel'), style: 'cancel' },
+                {
+                  text: t('discardPending'),
+                  style: 'destructive',
+                  onPress: () => {
+                    void discardPendingSends(NETWORK_CONFIG.chainId);
+                  },
+                },
+              ]);
+            },
+          },
+        ]);
+        return { success: false, error: 'tx-pending' };
+      }
       showNotice(t('error'), errorMessage);
       return { success: false, error: errorMessage };
     } finally {
@@ -152,22 +185,6 @@ export const useWeb3Transactions = () => {
     return { success: false, error: 'pool locked' } as TransactionResult;
   };
 
-  const retirarComisiones = async () => {
-    return executeTransaction(
-      'retirarComisiones',
-      () => QuatriviumCreditService.retirarComisiones(),
-      t('adminTimelockProposed')
-    );
-  };
-
-  const retirarComisionesToken = async (tokenAddress: string) => {
-    return executeTransaction(
-      'retirarComisionesToken',
-      () => QuatriviumCreditService.retirarComisionesToken(tokenAddress),
-      t('adminTimelockProposed')
-    );
-  };
-
   const cancelAdminAction = async (id: number) => {
     return executeTransaction(
       'cancelAdminAction',
@@ -200,42 +217,10 @@ export const useWeb3Transactions = () => {
     );
   };
 
-  const proposeFeeCollector = async (address: string) => {
-    return executeTransaction(
-      'setFeeCollector',
-      () => QuatriviumCreditService.proposeFeeCollector(address),
-      t('adminTimelockProposed')
-    );
-  };
-
   const proposeFundador = async (address: string) => {
     return executeTransaction(
       'setFundador',
       () => QuatriviumCreditService.proposeFundador(address),
-      t('adminTimelockProposed')
-    );
-  };
-
-  const proposeOwner = async (address: string) => {
-    return executeTransaction(
-      'setOwner',
-      () => QuatriviumCreditService.proposeOwner(address),
-      t('adminTimelockProposed')
-    );
-  };
-
-  const proposeRequiredConfirmations = async (required: number) => {
-    return executeTransaction(
-      'setRequiredConfirmations',
-      () => QuatriviumCreditService.proposeRequiredConfirmations(required),
-      t('adminTimelockProposed')
-    );
-  };
-
-  const proposeSetTokenConfig = async (token: string, feed: string, enabled: boolean) => {
-    return executeTransaction(
-      'setTokenConfig',
-      () => QuatriviumCreditService.proposeSetTokenConfig(token, feed, enabled),
       t('adminTimelockProposed')
     );
   };
@@ -279,18 +264,12 @@ export const useWeb3Transactions = () => {
     pagarCuotas,
     depositarLiquidez,
     retirarLiquidez,
-    retirarComisiones,
-    retirarComisionesToken,
     cancelAdminAction,
     executeAdminAction,
     confirmAdminAction,
     proposeAddAdmin,
     proposeRemoveAdmin,
-    proposeFeeCollector,
-    proposeRequiredConfirmations,
-    proposeSetTokenConfig,
     proposeFundador,
-    proposeOwner,
     liquidarDeudor,
     marcarMorosoSiVencido,
   };

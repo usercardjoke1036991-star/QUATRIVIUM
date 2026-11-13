@@ -57,7 +57,10 @@ export function wrapReadyForApp(wrapPresent: boolean, walletOpened: boolean): bo
   return Boolean(wrapPresent && walletOpened);
 }
 
-/** Hay cuenta en este teléfono: desbloqueo. Iniciar sesión solo si el almacén no responde. */
+/**
+ * Hay cuenta en este teléfono: un arranque en frío siempre pide el candado.
+ * Iniciar sesión solo si el almacén no responde. La llave en memoria no salta el candado.
+ */
 export function nextEntryScreen(input: {
   accountOnPhone: boolean | null;
   sessionSaved: boolean;
@@ -66,8 +69,25 @@ export function nextEntryScreen(input: {
 }): EntryScreen {
   if (input.accountOnPhone === null) return 'signIn';
   if (!input.accountOnPhone) return 'welcome';
-  if (input.unlockOn || !input.wrapReady) return 'unlock';
-  return 'app';
+  return 'unlock';
+}
+
+/**
+ * La contraseña abrió la sesión y el cofre no cargó: en esa pantalla se ofrece la frase.
+ * Si la billetera cargó, o la sesión no está abierta, no.
+ */
+export function phraseRestoreAfterPasswordUnlock(input: {
+  sessionOpen: boolean;
+  walletLoaded: boolean;
+}): 'phrase' | null {
+  if (input.sessionOpen && !input.walletLoaded) return 'phrase';
+  return null;
+}
+
+/** Desde la pantalla de bloqueo se puede recuperar la cuenta con la frase. */
+export function restoreFromLockScreen(screen: 'lock' | 'welcome' | 'app'): 'restore' | null {
+  if (screen === 'lock' || screen === 'welcome') return 'restore';
+  return null;
 }
 
 export type WelcomeAction = 'createPhrase' | 'restoreAccount' | 'signIn';
@@ -78,7 +98,7 @@ export function welcomeActions(accountOnPhone: boolean, deviceClaimed = false): 
   return ['createPhrase', 'restoreAccount'];
 }
 
-export function restoreMatchesDevice(claimedWallet: string, phraseWallet: string): boolean {
+function restoreMatchesDevice(claimedWallet: string, phraseWallet: string): boolean {
   const claimed = String(claimedWallet || '').toLowerCase();
   const phrase = String(phraseWallet || '').toLowerCase();
   if (!claimed || claimed === '0x0000000000000000000000000000000000000000') return true;
@@ -203,4 +223,9 @@ export function afterUnlockNext(input: {
   if (!input.walletOpened) return 'restore';
   if (!input.phraseAcked && input.hasPhrase) return 'phraseReveal';
   return 'app';
+}
+
+if (__DEV__) {
+  const host = globalThis as { __qcDev?: Record<string, Record<string, unknown>> };
+  (host.__qcDev ??= {}).entry = { restoreMatchesDevice };
 }

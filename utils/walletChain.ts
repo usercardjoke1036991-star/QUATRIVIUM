@@ -1,5 +1,5 @@
 import type { Eip1193Provider } from 'ethers';
-import { BSC_MAINNET, BSC_TESTNET } from '../constants/bsc';
+import { ARBITRUM_MAINNET, ARBITRUM_SEPOLIA } from '../constants/arbitrum';
 import { NETWORK_CONFIG, getRuntimeMode } from '../constants/rpcConfig';
 import { networkFailureError } from './txErrors';
 
@@ -22,8 +22,8 @@ export function needsWalletAddChain(error: unknown): boolean {
 }
 
 function chainAddParams(expected: number) {
-  const live = expected === BSC_MAINNET.chainId || getRuntimeMode() === 'live';
-  const chain = live ? BSC_MAINNET : BSC_TESTNET;
+  const live = expected === ARBITRUM_MAINNET.chainId || getRuntimeMode() === 'live';
+  const chain = live ? ARBITRUM_MAINNET : ARBITRUM_SEPOLIA;
   return {
     chainId: `0x${expected.toString(16)}`,
     chainName: live ? 'Arbitrum One' : 'Arbitrum Sepolia',

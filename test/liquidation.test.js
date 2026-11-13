@@ -1,6 +1,6 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const { deployProtocol, seedPool, registerAndFund, proposeAndExecute } = require('./helpers.cjs');
+const { deployProtocol, seedPool, registerAndFund } = require('./helpers.cjs');
 
 describe('QuatriviumCredit - Liquidation', function () {
   async function advanceCooldown() {
@@ -23,7 +23,9 @@ describe('QuatriviumCredit - Liquidation', function () {
     await contract.connect(user).solicitarPrestamo(tokenAddr, 0);
 
     const userInfo = await contract.usuarios(user.address);
-    await ethers.provider.send('evm_setNextBlockTimestamp', [Number(userInfo.vencimiento) + 10]);
+    await ethers.provider.send('evm_setNextBlockTimestamp', [
+      Number(userInfo.vencimiento) + 48 * 60 * 60 + 10,
+    ]);
     await ethers.provider.send('evm_mine');
 
     await token.mint(liquidator.address, ethers.parseUnits('10', 18));
@@ -38,7 +40,7 @@ describe('QuatriviumCredit - Liquidation', function () {
     expect(await contract.prestamosCerrados(user.address)).to.equal(1n);
   });
 
-  it('takes the liquidation fee from interest without dividing first', async () => {
+  it('writes off an L1 default, pays the liquidator a net prize, and clears outstanding', async () => {
     const {
       token,
       contract,
@@ -54,18 +56,29 @@ describe('QuatriviumCredit - Liquidation', function () {
 
     const userInfo = await contract.usuarios(user.address);
     const debt = await contract.obtenerDeuda(user.address);
-    await ethers.provider.send('evm_setNextBlockTimestamp', [Number(userInfo.vencimiento) + 10]);
+    await ethers.provider.send('evm_setNextBlockTimestamp', [
+      Number(userInfo.vencimiento) + 48 * 60 * 60 + 10,
+    ]);
     await ethers.provider.send('evm_mine');
 
     await token.mint(liquidator.address, ethers.parseUnits('10', 18));
     await token.connect(liquidator).approve(contractAddr, ethers.MaxUint256);
+    const interest = debt.interes;
+    const principal = debt.principal;
+    let reward = (principal * 5n) / 100n;
+    if (reward > interest) reward = interest;
+    const liqBefore = await contract.totalLiquidity(tokenAddr);
+    const fondoBefore = await contract.fondoSeguro(tokenAddr);
+    const outBefore = await contract.outstandingLoans(tokenAddr);
+    const balBefore = await token.balanceOf(liquidator.address);
     await contract.connect(liquidator).liquidate(user.address, tokenAddr);
 
-    const interest = debt.interes;
-    const totalDue = debt.total;
-    const feeBp = await contract.feeBasisPoints();
-    const expectedFee = (interest * totalDue * feeBp) / (totalDue * 10000n);
-    expect(await contract.collectedFees(tokenAddr)).to.equal(expectedFee);
+    expect(await contract.outstandingLoans(tokenAddr)).to.equal(outBefore - principal);
+    const liqDelta = (await contract.totalLiquidity(tokenAddr)) - liqBefore;
+    const fondoDelta = (await contract.fondoSeguro(tokenAddr)) - fondoBefore;
+    expect(liqDelta + fondoDelta).to.equal(-(principal + reward));
+    expect(await token.balanceOf(liquidator.address)).to.equal(balBefore + reward);
+    expect(reward).to.be.gt(0n);
   });
 
   it('lets a liquidated user borrow again after cooldown', async () => {
@@ -82,7 +95,9 @@ describe('QuatriviumCredit - Liquidation', function () {
     await registerAndFund(token, contract, user);
     await contract.connect(user).solicitarPrestamo(tokenAddr, 0);
     const userInfo = await contract.usuarios(user.address);
-    await ethers.provider.send('evm_setNextBlockTimestamp', [Number(userInfo.vencimiento) + 10]);
+    await ethers.provider.send('evm_setNextBlockTimestamp', [
+      Number(userInfo.vencimiento) + 48 * 60 * 60 + 10,
+    ]);
     await ethers.provider.send('evm_mine');
     await token.mint(liquidator.address, ethers.parseUnits('10', 18));
     await token.connect(liquidator).approve(contractAddr, ethers.MaxUint256);
@@ -94,13 +109,12 @@ describe('QuatriviumCredit - Liquidation', function () {
   });
 
   it('rejects disabling a token while loans are outstanding', async () => {
-    const { token, contract, owner, user, tokenAddr, feedAddr } = await deployProtocol();
+    const { token, contract, owner, user, tokenAddr } = await deployProtocol();
     await seedPool(token, contract, owner, '500');
     await registerAndFund(token, contract, user);
     await contract.connect(user).solicitarPrestamo(tokenAddr, 0);
 
-    await expect(proposeAndExecute(contract, owner, 'setTokenConfig', [tokenAddr, feedAddr, false]))
-      .to.be.reverted;
+    expect(contract.interface.hasFunction('setTokenConfig')).to.equal(false);
   });
 
   it('liquidates overdue loans permissionlessly without any pause gate', async () => {
@@ -117,7 +131,9 @@ describe('QuatriviumCredit - Liquidation', function () {
     await registerAndFund(token, contract, user);
     await contract.connect(user).solicitarPrestamo(tokenAddr, 0);
     const userInfo = await contract.usuarios(user.address);
-    await ethers.provider.send('evm_setNextBlockTimestamp', [Number(userInfo.vencimiento) + 10]);
+    await ethers.provider.send('evm_setNextBlockTimestamp', [
+      Number(userInfo.vencimiento) + 48 * 60 * 60 + 10,
+    ]);
     await ethers.provider.send('evm_mine');
     await token.mint(liquidator.address, ethers.parseUnits('10', 18));
     await token.connect(liquidator).approve(contractAddr, ethers.MaxUint256);
@@ -131,10 +147,14 @@ describe('QuatriviumCredit - Liquidation', function () {
     await registerAndFund(token, contract, user, '20');
     await contract.connect(user).solicitarPrestamo(tokenAddr, 0);
     const userInfo = await contract.usuarios(user.address);
-    await ethers.provider.send('evm_setNextBlockTimestamp', [Number(userInfo.vencimiento) + 10]);
+    await ethers.provider.send('evm_setNextBlockTimestamp', [
+      Number(userInfo.vencimiento) + 48 * 60 * 60 + 10,
+    ]);
     await ethers.provider.send('evm_mine');
     await token.mint(user.address, ethers.parseUnits('10', 18));
     await token.connect(user).approve(contractAddr, ethers.MaxUint256);
-    await expect(contract.connect(user).liquidate(user.address, tokenAddr)).to.be.reverted;
+    await expect(
+      contract.connect(user).liquidate(user.address, tokenAddr)
+    ).to.be.revertedWithoutReason();
   });
 });

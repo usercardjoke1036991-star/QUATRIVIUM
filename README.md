@@ -1,91 +1,52 @@
-# Quatrivium Finance · Edición Soberana
+# QUATRIVIUM
 
-<!-- AUTO-README:START -->
+App de microcrédito descentralizada en Arbitrum One (`chainId` 42161) con LUSD `0x93b346b6BC2548dA6A1E7d98E9a421B42541425b`. La paridad es 1:1. No hay oráculo de precio, ni servidor, ni configuración para el usuario. La billetera se crea en el teléfono. Los avisos son locales.
 
-## Quatrivium Finance
+El alta son 4 LUSD: 1 al fundador, 1 al bote de Reserva, 1 apartado para quien invitó y 1 de sello al pool. De ese sello, el 5 % queda en el fondo de seguro. Sin invitación, o si quien invitó no tiene el alta y el primer nivel pagados, ese 1 apartado entra al pool al pagar el primer nivel 1. Si ese nivel no se paga en 7 días, también entra al pool. No se puede uno invitar a sí mismo. El fundador cobra ese 1 LUSD y el 15 % del interés en la misma transacción. El pool no se puede retirar. Tres admins votan 2 de 3, con 72 h de espera y sin caducidad. La pausa de préstamos nuevos usa esa misma votación, se levanta sola a los 7 días y no puede repetirse hasta pasar otros 7 días. Pagos, liquidaciones y Reserva no se pausan.
 
-**Quatrivium Finance** es un protocolo y aplicación móvil 100% soberana e inmutable de microcrédito on-chain sin colateral sobre **Arbitrum One** (`chainId: 42161`) operando con **Liquity USD (LUSD)** (`0x93b346b6BC2548dA6A1E7d98E9a421B42541425b`). El usuario genera localmente su billetera HD BIP-39 de 24 palabras (cifrada con AES-256-GCM en el llavero seguro del dispositivo), completa el alta única de **4 LUSD** on-chain, solicita préstamos en LUSD desde el fondo de liquidez, los paga antes del vencimiento y sube de nivel hasta el nivel 1000.
+Reserva: nivel 10 o más, bloqueo de 30 días, tope del 12 % anual pagado del bote, capital siempre devuelto. El fondo de seguro es el 5 % de lo que entra al pool y cubre la deuda de un impago. Si no alcanza, esa pérdida baja la liquidez del pool. La liquidación espera 48 h más la caída que muestra el feed del sequencer y 1 h después de que vuelve. El liquidador no pone el principal. Para cobrar unilevel, padrino, fama o racha hay que tener el alta y el L1 pagados.
 
-- **Tipo de proyecto:** `node` (React Native / Expo 54 + Solidity 0.8.24 / Hardhat)
-- **Red Principal (Cuenta Real):** Arbitrum One (`chainId: 42161`) · Gas: `ETH`
-- **Red de Pruebas (Modo Demo):** Arbitrum Sepolia (`chainId: 421614`) · Gas: `ETH`
-- **Stablecoin Soberana:** LUSD (`0x93b346b6BC2548dA6A1E7d98E9a421B42541425b`) — inmutable y sin función de `blacklist()`
-- **Oráculo On-Chain:** Chainlink LUSD/USD en Arbitrum One (`0x0411D28c94d85A36bC72Cb0f875dfA8371D8fFfF`)
-- **Identidad de Aplicación:** Paquete `com.quatrivium.sovereign` · Esquema `quatrivium-sovereign://` · Distribución directa vía APK verificado por SHA-256
+Sin Rust y sin pruebas de conocimiento cero. Sin servidor y sin tienda de aplicaciones. El mensaje privado por Nostr está oculto: no hay cifrado NIP-17/44.
 
-### Arquitectura Soberana (Qué funciona)
-- **Contratos 100% Inmutables y Sin Kill-Switches:** `QuatriviumCredit.sol`, `QuatriviumAlta.sol`, `QuatriviumFamaCaja.sol`, `QuatriviumReserva.sol` y `QuatriviumFamaLib.sol` operan sin `Pausable`, sin `blacklist`, sin `attester` centralizado y sin requisitos de KYC, SMS/OTP ni correo electrónico.
-- **Alta Única de 4 LUSD (`pagarRegistro`):** Un único pago on-chain de 4 LUSD activa la cuenta en el protocolo (1 LUSD a la tesorería fundadora, 1 LUSD al bote de Reserva, 1 LUSD de registro al pool y 1 LUSD apartado en `QuatriviumAlta` para quien invitó de forma directa al liquidar el primer Nivel 1).
-- **Fama y Canje:** 100 puntos de fama por cada 1 LUSD donado o aportado al pool desde la primera unidad. El alta no acredita fama de red. Conversión en `QuatriviumFamaCaja`: 250 de fama = 1 LUSD del fondo común.
-- **Comisiones Unilevel (40 Generaciones):** Del interés pagado al cancelar un préstamo se reparte: Gen 1 (15%), Gen 2 (8%), Gen 3 (6%), Gen 4 (4%), Gen 5 (2%), Gen 6–12 (0,8%) y Gen 13–40 (0,4%). El fondo retiene al menos el 40%.
-- **Racha Diaria:** Suma 100 de fama por día UTC válido cuando un invitado directo liquida un crédito. Hitos de racha (7, 30, 100 y 365 días) pagan 5, 25, 100 y 500 LUSD del fondo.
-- **Reserva (Nivel 10+):** Bloqueo voluntario de LUSD por 30 días en `QuatriviumReserva` (separado del fondo de préstamos), mínimo 1 LUSD, con restitución íntegra del principal al vencimiento, rendimiento estimado de hasta el 12% anual según disponibilidad del bote y extra de comisión generacional (10% desde 50 LUSD, 20% desde 500 LUSD).
-- **App Móvil Soberana (Expo 54 · React Native 0.81.5 · TypeScript):** 17 idiomas completos (`es`, `en`, `zh`, `hi`, `ar`, `bn`, `pt`, `ru`, `ur`, `id`, `fr`, `ja`, `de`, `ko`, `tr`, `vi`, `it`), billetera interna BIP-39 de 24 palabras, bloqueo local por contraseña/PIN/biometría/TOTP, notificaciones locales en el dispositivo y rotación soberana de 5 RPCs públicos de Arbitrum One.
+El detalle cerrado, el mapa y lo que falta están en `HANDOFF.md`. Hardhat 321, Foundry 54. Credit: 23330 bytes, 1246 libres de 24576.
 
-### Módulos Principales
-- Pantalla principal — `app/index.tsx`
-- Layout Expo — `app/_layout.tsx`
-- Configuración Web3 (Arbitrum One / Sepolia) — `web3Config.tsx` · `constants/bsc.ts` · `constants/rpcConfig.ts`
-- Direcciones desplegadas — `constants/deployedAddresses.ts`
-- Contratos Inteligentes — `contracts/QuatriviumCredit.sol`, `contracts/QuatriviumAlta.sol`, `contracts/QuatriviumFamaCaja.sol`, `contracts/QuatriviumReserva.sol`, `contracts/libraries/QuatriviumFamaLib.sol`
-- Script Maestro de Despliegue — `scripts/deploy-arbitrum-sovereign.cjs`
-- Handlers — `hooks/useHomeHandlers.ts`
-- Estado on-chain — `hooks/useWeb3Balances.ts`
-- Transacciones — `hooks/useWeb3Transactions.ts`
-- Servicio de contrato — `services/quatriviumCreditService.ts`
-- Billetera HD local — `services/appWallet.ts`
-- Candado y seguridad local — `services/appLock.ts` · `services/authPrefs.ts` · `services/authenticator.ts`
-- Historial on-chain — `services/movementHistory.ts` · `components/MovementHistory.tsx`
-- Almacenamiento cifrado — `services/secureStorageService.ts`
-- Portal Web de Invitación y Descarga Directa APK — `web/invite/index.html` · `web/index.html`
+## Probar
 
-### Comandos Principales
-
-```powershell
-npm install
-npm run start
-npm run typecheck
-npm run lint
-npm test
-npm run compile
-npm run security:check
-npm run production:check:ci
-npm run deploy:arbitrum
-npm run deploy:arbitrum:sepolia
-```
-
-<!-- AUTO-README:END -->
-
-## Arquitectura en Arbitrum One (LUSD)
-
-| Parámetro | Valor |
-|---|---|
-| Red Principal (Real) | Arbitrum One (`chainId: 42161`) |
-| Red de Pruebas (Demo) | Arbitrum Sepolia (`chainId: 421614`) |
-| Token Estable | Liquity USD (`LUSD`) — `0x93b346b6BC2548dA6A1E7d98E9a421B42541425b` |
-| Oráculo Chainlink LUSD/USD | `0x0411D28c94d85A36bC72Cb0f875dfA8371D8fFfF` |
-| Moneda Nativa de Gas | Ether (`ETH`) — Umbral mínimo en app: `0.0001 ETH` |
-| Paquete Android / iOS | `com.quatrivium.sovereign` |
-| Deep-Link Scheme | `quatrivium-sovereign://` |
-
-## Verificación Local y Pruebas
+Node 22.
 
 ```bash
+npm ci --ignore-scripts
+npm test
+forge test --fuzz-runs 32
 npm run typecheck
 npm run lint
-npm test
+npm run format:check
 ```
 
-En cada `push` y `pull_request` a `main`, el pipeline de GitHub Actions (`.github/workflows/ci.yml`) ejecuta automáticamente `npm test`, `npm run typecheck`, `npm run lint`, `npm run security:check`, `npm run production:check:ci`, Gitleaks y TruffleHog.
+`npm run typecheck` revisa los 17 idiomas y rechaza servicios que esta app ya no usa. Foundry necesita `lib/forge-std` (no está en git).
 
-## Despliegue de Contratos (Cuando se decida ejecutar en red)
+## Abierto
 
-El script maestro `scripts/deploy-arbitrum-sovereign.cjs` despliega en orden `QuatriviumFamaLib`, `QuatriviumCredit`, `QuatriviumAlta`, `QuatriviumFamaCaja` y `QuatriviumReserva`, ejecuta los enlaces cruzados y escribe automáticamente las direcciones en `constants/deployedAddresses.ts`:
+- Bajo: una segunda cuenta puede cobrar el LUSD apartado de la primera. Cuesta los otros 3 LUSD más el interés del nivel 1.
+- Bajo: `soltarPadrino` no suelta ese LUSD si el padre viniera vacío. El registro normal no hace eso.
+- Bajo: algunos tests de dinero todavía leen texto. La lista está en `AUDITORIA.md`.
+- Medio: `npm audit` marca `handlebars` en las herramientas, no en la app.
+- Medio: el cifrado NIP-17/44 no está implementado.
 
-```bash
-# En Arbitrum Sepolia (421614):
-npm run deploy:arbitrum:sepolia
+## Pendiente antes de dinero real
 
-# En Arbitrum One Mainnet (42161):
-CONFIRM_MAINNET=yes npm run deploy:arbitrum
-```
+Auditoría externa de los contratos. La billetera del fundador tiene que ser de varias firmas o física, y el despliegue no sigue sin `CONFIRM_FOUNDER_WALLET=yes`.
+
+## Pendiente cuando Jose lo ordene
+
+Nada de esto se ha hecho. El orden es: 1) compilar el APK y calcular su SHA-256, 2) desplegar en Arbitrum One y escribir las direcciones en `constants/deployedAddresses.ts`, 3) publicar la huella del certificado y el hash en `QuatriviumApk`, 4) IPFS, 5) ENS.
+
+La clave que estuvo en el historial (commits `10553d4` y `dc40f15`, archivo `.env.worker.example`) ya fue revocada. El valor no se copia.
+
+## Pendiente de despliegue
+
+Los contratos no están desplegados. En `constants/deployedAddresses.ts` las direcciones de Credit, Reserva, fama y alta siguen vacías.
+
+La dirección de fundador tiene que ser una billetera de varias firmas o una billetera física con respaldo. Si esa llave se pierde, nadie publica hashes ni cobra la parte del fundador. El despliegue lo avisa y no sigue sin `CONFIRM_FOUNDER_WALLET=yes`.
+
+La app compara la huella del certificado con el que está firmada contra la publicada en `QuatriviumApk`. Esa lectura nativa se prueba al compilar el APK. Mientras tanto, cualquier persona puede comparar a mano el hash del archivo descargado con el registro de la red. Si el registro está vacío o la lectura falla, la app dice «versión no verificada».

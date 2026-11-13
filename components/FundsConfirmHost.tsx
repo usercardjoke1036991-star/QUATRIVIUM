@@ -12,12 +12,20 @@ import {
   type AuthPurpose,
 } from '../services/authPrefs';
 import { listSecurityConfirmMethods, type FundsConfirmPurpose } from '../services/fundsConfirm';
+import {
+  addressEdges,
+  adminConfirmPlan,
+  fundsConfirmPlan,
+  fundsDetailsComplete,
+  type FundsTxDetails,
+} from '../utils/fundsConfirmGate';
 import { SecretInput } from './SecretInput';
 import { AppText } from './AppText';
 import type { TranslationKey } from '../i18n/translations';
+import { describeLockFailure } from '../utils/lockFailureCopy';
 
 interface FundsConfirmValue {
-  confirmFunds: (purpose?: FundsConfirmPurpose) => Promise<boolean>;
+  confirmFunds: (purpose?: FundsConfirmPurpose, details?: FundsTxDetails) => Promise<boolean>;
 }
 
 const FundsConfirmContext = createContext<FundsConfirmValue | null>(null);
@@ -31,10 +39,13 @@ export const FundsConfirmHost: React.FC<{ children: React.ReactNode }> = ({ chil
   const [code, setCode] = useState('');
   const [method, setMethod] = useState<AuthMethod>('password');
   const [purpose, setPurpose] = useState<FundsConfirmPurpose>('transfer');
+  const [tx, setTx] = useState<FundsTxDetails | null>(null);
+  const [ackOnly, setAckOnly] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const resolver = useRef<((ok: boolean) => void) | null>(null);
   const inflight = useRef<Promise<boolean> | null>(null);
+  const secretGuard = useRef(false);
 
   const finish = useCallback((ok: boolean) => {
     resolver.current?.(ok);
@@ -45,6 +56,8 @@ export const FundsConfirmHost: React.FC<{ children: React.ReactNode }> = ({ chil
     setCode('');
     setBusy(false);
     setError('');
+    setTx(null);
+    setAckOnly(false);
   }, []);
 
   const askSecret = (next: AuthMethod) =>
@@ -54,97 +67,139 @@ export const FundsConfirmHost: React.FC<{ children: React.ReactNode }> = ({ chil
       setOpen(true);
     });
 
-  const confirmFunds = useCallback(async (nextPurpose: FundsConfirmPurpose = 'transfer') => {
-    if (inflight.current) return inflight.current;
-    const run = (async () => {
-      if (nextPurpose === 'security') {
-        setPurpose('security');
-        const queue = await listSecurityConfirmMethods();
+  const confirmFunds = useCallback(
+    async (nextPurpose: FundsConfirmPurpose = 'transfer', details?: FundsTxDetails) => {
+      if (inflight.current) return inflight.current;
+      const run = (async () => {
+        if (nextPurpose === 'admin') {
+          setPurpose('admin');
+          setTx(details ?? null);
+          setAckOnly(true);
+          if (!adminConfirmPlan(details).canApprove) return false;
+          return askSecret('password');
+        }
+        if (nextPurpose === 'security') {
+          setPurpose('security');
+          setTx(null);
+          setAckOnly(false);
+          const queue = await listSecurityConfirmMethods();
+          if (!queue.length) return false;
+          for (const chosen of queue) {
+            if (chosen === 'biometric') {
+              if (await loadWrapFromBiometric()) return true;
+              continue;
+            }
+            return askSecret(chosen);
+          }
+          return false;
+        }
+        const slot: AuthPurpose =
+          nextPurpose === 'transfer' || nextPurpose === 'movement' ? 'funds' : nextPurpose;
+        const protectionOn = await isAuthEnabled(slot);
+        const plan = fundsConfirmPlan({ movesFunds: true, protectionOn, details });
+        setPurpose(nextPurpose);
+        setTx(details ?? null);
+        setAckOnly(plan.mode === 'button');
+        if (plan.mode === 'button') return askSecret('password');
+        const preferred = await getAuthMethods(slot);
+        const queue: AuthMethod[] = [];
+        for (const method of preferred) {
+          if (await isMethodReady(method)) queue.push(method);
+        }
         if (!queue.length) return false;
         for (const chosen of queue) {
-          if (chosen === 'biometric') {
-            if (await loadWrapFromBiometric()) return true;
-            continue;
-          }
-          return askSecret(chosen);
+          const ok = await askSecret(chosen);
+          if (!ok) return false;
         }
-        return false;
+        return plan.canApprove;
+      })();
+      inflight.current = run;
+      try {
+        return await run;
+      } finally {
+        inflight.current = null;
       }
-      const slot: AuthPurpose =
-        nextPurpose === 'transfer' || nextPurpose === 'movement' ? 'funds' : nextPurpose;
-      if (!(await isAuthEnabled(slot))) return true;
-      setPurpose(nextPurpose);
-      const preferred = await getAuthMethods(slot);
-      const queue: AuthMethod[] = [];
-      for (const method of preferred) {
-        if (await isMethodReady(method)) queue.push(method);
-      }
-      if (!queue.length) return false;
-      for (const chosen of queue) {
-        if (chosen === 'biometric') {
-          const wrap = await loadWrapFromBiometric();
-          if (!wrap) return false;
-          continue;
-        }
-        const ok = await askSecret(chosen);
-        if (!ok) return false;
-      }
-      return true;
-    })();
-    inflight.current = run;
-    try {
-      return await run;
-    } finally {
-      inflight.current = null;
-    }
-  }, []);
+    },
+    []
+  );
 
   const submitSecret = async () => {
-    if (busy) return;
-    if (method === 'pin') {
-      if (pin.length !== 6) return;
+    if (busy || secretGuard.current) return;
+    secretGuard.current = true;
+    try {
+      if (
+        purpose !== 'security' &&
+        purpose !== 'admin' &&
+        !fundsConfirmPlan({
+          movesFunds: true,
+          protectionOn: !ackOnly,
+          details: tx,
+        }).canApprove
+      ) {
+        return;
+      }
+      if (ackOnly) {
+        finish(true);
+        return;
+      }
+      if (method === 'biometric') {
+        setBusy(true);
+        const wrap = await loadWrapFromBiometric();
+        setBusy(false);
+        if (!wrap) {
+          setError(t('fundsConfirmBiometricFail'));
+          return;
+        }
+        finish(true);
+        return;
+      }
+      if (method === 'pin') {
+        if (pin.length < 6 || pin.length > 12) return;
+        setBusy(true);
+        const checked = await checkPin(pin);
+        if (!checked.ok) {
+          setError(describeLockFailure('pin', checked, t));
+          setPin('');
+          setBusy(false);
+          return;
+        }
+        finish(true);
+        return;
+      }
+      if (method === 'authenticator') {
+        if (code.length !== 6) return;
+        setBusy(true);
+        const checked = await verifyAuthenticator(code);
+        if (!checked.ok && checked.busy) {
+          setBusy(false);
+          return;
+        }
+        if (!checked.ok) {
+          setError(
+            checked.locked || checked.storeUnknown || checked.totpBlocked
+              ? describeLockFailure('password', checked, t)
+              : t('authenticatorWrong')
+          );
+          setCode('');
+          setBusy(false);
+          return;
+        }
+        finish(true);
+        return;
+      }
+      if (!password) return;
       setBusy(true);
-      const checked = await checkPin(pin);
+      const checked = await checkPassword(password);
       if (!checked.ok) {
-        setError(
-          checked.locked
-            ? t('lockCooldown', { seconds: Math.ceil(checked.remainingMs / 1000) })
-            : t('lockPinWrong')
-        );
-        setPin('');
+        setError(describeLockFailure('password', checked, t));
+        setPassword('');
         setBusy(false);
         return;
       }
       finish(true);
-      return;
+    } finally {
+      secretGuard.current = false;
     }
-    if (method === 'authenticator') {
-      if (code.length !== 6) return;
-      setBusy(true);
-      const ok = await verifyAuthenticator(code);
-      if (!ok) {
-        setError(t('authenticatorWrong'));
-        setCode('');
-        setBusy(false);
-        return;
-      }
-      finish(true);
-      return;
-    }
-    if (!password) return;
-    setBusy(true);
-    const checked = await checkPassword(password);
-    if (!checked.ok) {
-      setError(
-        checked.locked
-          ? t('lockCooldown', { seconds: Math.ceil(checked.remainingMs / 1000) })
-          : t('lockPasswordWrong')
-      );
-      setPassword('');
-      setBusy(false);
-      return;
-    }
-    finish(true);
   };
 
   const value = useMemo(() => ({ confirmFunds }), [confirmFunds]);
@@ -157,19 +212,28 @@ export const FundsConfirmHost: React.FC<{ children: React.ReactNode }> = ({ chil
           ? 'securityConfirmTitle'
           : purpose === 'movement'
             ? 'fundsConfirmMovement'
-            : 'fundsConfirmTitle';
+            : purpose === 'admin'
+              ? 'adminConfirmTitle'
+              : 'fundsConfirmTitle';
   const prompt =
     method === 'pin'
       ? t('fundsConfirmPrompt')
       : method === 'authenticator'
         ? t('fundsConfirmPromptAuth')
         : t('fundsConfirmPromptPassword');
-  const canSubmit =
-    method === 'pin'
-      ? pin.length === 6
-      : method === 'authenticator'
-        ? code.length === 6
-        : Boolean(password);
+  const moneyOk =
+    purpose === 'security' ||
+    (purpose === 'admin' ? adminConfirmPlan(tx).canApprove : fundsDetailsComplete(tx));
+  const edges = tx ? addressEdges(tx.destination) : null;
+  const canSubmit = !moneyOk
+    ? false
+    : ackOnly || method === 'biometric'
+      ? true
+      : method === 'pin'
+        ? pin.length >= 6 && pin.length <= 12
+        : method === 'authenticator'
+          ? code.length === 6
+          : Boolean(password);
 
   return (
     <FundsConfirmContext.Provider value={value}>
@@ -178,13 +242,45 @@ export const FundsConfirmHost: React.FC<{ children: React.ReactNode }> = ({ chil
         <View style={styles.backdrop}>
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <AppText style={[styles.title, { color: colors.text }]}>{t(titleKey)}</AppText>
-            <AppText style={[styles.lead, { color: colors.textMuted }]}>{prompt}</AppText>
-            {method === 'pin' ? (
+            {purpose === 'admin' && tx ? (
+              <View style={styles.tx}>
+                <AppText style={{ color: colors.text }}>{tx.action}</AppText>
+                <AppText style={{ color: colors.text }}>{tx.target}</AppText>
+              </View>
+            ) : tx ? (
+              <View style={styles.tx}>
+                <AppText style={{ color: colors.text }}>
+                  {t('fundsTxAmount', { amount: tx.amount, symbol: tx.symbol })}
+                </AppText>
+                <AppText style={{ color: colors.text }}>
+                  {t('fundsTxDestination')}{' '}
+                  {edges ? (
+                    <AppText style={{ color: colors.text }}>
+                      <AppText style={styles.edge}>{edges.start}</AppText>
+                      {edges.full.slice(6, -4)}
+                      <AppText style={styles.edge}>{edges.end}</AppText>
+                    </AppText>
+                  ) : (
+                    tx.destination || '—'
+                  )}
+                </AppText>
+                <AppText style={{ color: colors.textMuted }}>
+                  {t('fundsTxFee', { fee: tx.fee })}
+                </AppText>
+                {tx.twoSignatures ? (
+                  <AppText style={{ color: colors.text }}>{t('fundsTwoSignatures')}</AppText>
+                ) : null}
+              </View>
+            ) : null}
+            <AppText style={[styles.lead, { color: colors.textMuted }]}>
+              {ackOnly ? t('fundsConfirmAckLead') : prompt}
+            </AppText>
+            {ackOnly || method === 'biometric' ? null : method === 'pin' ? (
               <SecretInput
                 value={pin}
-                onChangeText={(value) => setPin(value.replace(/\D/g, '').slice(0, 6))}
+                onChangeText={(value) => setPin(value.replace(/\D/g, '').slice(0, 12))}
                 keyboardType="number-pad"
-                maxLength={6}
+                maxLength={12}
                 placeholder="••••••"
               />
             ) : method === 'authenticator' ? (
@@ -211,9 +307,14 @@ export const FundsConfirmHost: React.FC<{ children: React.ReactNode }> = ({ chil
               style={[styles.button, { backgroundColor: colors.connect }]}
             >
               {busy ? (
-                <ActivityIndicator color="#111" />
+                <>
+                  <ActivityIndicator color="#111" />
+                  <AppText style={styles.buttonText}>{t('lockKdfWait')}</AppText>
+                </>
               ) : (
-                <AppText style={styles.buttonText}>{t('ready')}</AppText>
+                <AppText style={styles.buttonText}>
+                  {ackOnly ? t('fundsConfirmAck') : t('ready')}
+                </AppText>
               )}
             </TouchableOpacity>
             <TouchableOpacity onPress={() => finish(false)}>
@@ -252,6 +353,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     textAlign: 'center',
+  },
+  tx: {
+    marginTop: 12,
+    gap: 4,
+  },
+  edge: {
+    fontWeight: '800',
   },
   lead: {
     fontSize: 13,

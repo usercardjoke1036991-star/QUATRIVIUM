@@ -3,31 +3,28 @@ pragma solidity ^0.8.24;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {AggregatorV3Interface} from "../interfaces/AggregatorV3Interface.sol";
 import {IQuatriviumFamaCaja} from "../interfaces/IQuatriviumFamaCaja.sol";
 import {Usuario} from "./Usuario.sol";
 
 interface ICreditDisp {
     function dispersionCongelada(address usuario) external view returns (bool);
+    function cobradorListo(address who) external view returns (bool);
 }
 
 /**
  * @title QuatriviumFamaLib
- * @notice Ganchos y peg. El bytecode de la librería no cuenta para EIP-170 del núcleo.
+ * @notice Ganchos de fama. LUSD vale 1 USD fijo: no hay feed externo.
  *         QUATRIVIUM soberano: sin lista negra, sin attester y sin pausa. El boost de
  *         Reserva se anota on-chain al pagar cada comisión (ver `_avisarReserva`).
  */
 library QuatriviumFamaLib {
     using SafeERC20 for IERC20;
 
-    /// @notice Antigüedad máxima del oráculo: heartbeat de 24 h de Chainlink LUSD/USD
-    ///         en Arbitrum One + 1 h de margen. Con LUSD estable el feed no se mueve antes.
-    uint256 internal constant PEG_MAX_EDAD = 25 hours;
-
     uint256 internal constant BONO_ACTIVACION = 1e18;
     uint256 internal constant POOL_FLOOR_BP = 4000;
     uint256 internal constant FUNDADOR_BP = 1500;
     uint256 internal constant PISO_CAJA_BP = 2000;
+    uint256 internal constant SEGURO_BP = 500;
     uint8 internal constant MAX_LINEA = 40;
     uint256 internal constant CARRIL_REF_BP = 1000;
     uint256 internal constant CARRIL_CHICO_PISO = 50e18;
@@ -233,6 +230,7 @@ library QuatriviumFamaLib {
     );
     event BonoActivacionPagado(address indexed padre, address indexed referido, uint256 monto, address indexed token);
     event InteresRetenidoPool(address indexed token, uint256 monto);
+    event ReservaBoostFallido(address indexed reserva, address indexed beneficiario, uint256 monto);
 
     /// @notice Donar y aportar: 100 fama por cada 1 USDT, desde el primero.
     function ptsDonacion(uint256, uint256 amount) external pure returns (uint256) {
@@ -277,7 +275,7 @@ library QuatriviumFamaLib {
             IQuatriviumFamaCaja(hermano).wipe(who);
             return;
         }
-        IQuatriviumFamaCaja(hermano).acreditar(who, pts);
+        IQuatriviumFamaCaja(hermano).acreditarVisible(who, pts);
     }
 
     function onCierre(address hermano, address deudor, address padre) external {
@@ -379,6 +377,11 @@ library QuatriviumFamaLib {
             );
             if (pagadoBono > 0) {
                 usoBonoA = true;
+                reputacion[padre] += 100;
+                emit ReputationUpdated(padre, reputacion[padre]);
+                if (hermano != address(0)) {
+                    IQuatriviumFamaCaja(hermano).acreditarFamaRed(deudor);
+                }
                 emit BonoActivacionPagado(padre, deudor, pagadoBono, token);
             } else {
                 red[deudor].bonoActivacionCobrado = false;
@@ -421,6 +424,8 @@ library QuatriviumFamaLib {
         if (amount > remaining) amount = remaining;
         if (amount == 0 || to == address(0) || to == deudor) return 0;
         if (generacion != 0 && ICreditDisp(address(this)).dispersionCongelada(to)) return 0;
+        // El cobrador sin alta y sin L1 pagado no saca su parte: se queda en el pool.
+        if (generacion != 0 && !ICreditDisp(address(this)).cobradorListo(to)) return 0;
         pago.safeTransfer(to, amount);
         emit ComisionGeneracional(to, deudor, generacion, amount, token);
         if (generacion != 0) _avisarReserva(reserva, to, amount, deudor, generacion, remaining);
@@ -434,8 +439,14 @@ library QuatriviumFamaLib {
         if (ok && raw.length >= 32) r = abi.decode(raw, (address));
     }
 
+    /// @dev EIP-150 entrega como mucho gasleft * 63/64. 180000 * 64 / 63 + el CALL.
+    uint256 private constant AVISO_RESERVA = 180000;
+    uint256 private constant AVISO_MINIMO = (AVISO_RESERVA * 64) / 63 + 1 + 7000;
+
     /// @dev Boost 100 % on-chain: Reserva liquida el extra de esta comisión (sin attester).
-    ///      Un fallo de Reserva nunca bloquea el pago del préstamo; el gas queda acotado.
+    ///      Si el gas no llega a AVISO_MINIMO, este aviso revierte el pago entero.
+    ///      La app no pone un tope a mano: ethers estima el gas antes de cada envío.
+    ///      Un fallo de Reserva, con gas suficiente, no bloquea el pago. El call queda en 180000.
     function _avisarReserva(
         address reserva,
         address beneficiario,
@@ -443,11 +454,12 @@ library QuatriviumFamaLib {
         address deudor,
         uint8 generacion,
         uint256 remaining
-    ) private {
+    ) internal {
         if (reserva == address(0)) return;
+        if (gasleft() < AVISO_MINIMO) revert();
         bytes32 salt = keccak256(abi.encode(deudor, generacion, block.timestamp, remaining));
         // slither-disable-next-line unchecked-lowlevel
-        (bool ok, ) = reserva.call{gas: 180000}(
+        (bool ok, ) = reserva.call{gas: AVISO_RESERVA}(
             abi.encodeWithSignature(
                 "pagarBoostComision(address,uint256,bytes32)",
                 beneficiario,
@@ -455,7 +467,7 @@ library QuatriviumFamaLib {
                 salt
             )
         );
-        ok;
+        if (!ok) emit ReservaBoostFallido(reserva, beneficiario, monto);
     }
 
     function alimentarPool(
@@ -469,59 +481,76 @@ library QuatriviumFamaLib {
         token.safeTransferFrom(msg.sender, address(this), amount);
     }
 
-    /// @notice Alta directa solo si no hay contrato Alta. Si Alta llama, el usuario es quien firmó,
-    /// salvo cargoDe(), que apunta al deudor cuando vence el padrino.
+    /// @notice Solo el contrato Alta puede alimentar el pool. cargoDe() apunta al deudor
+    /// cuando vence el padrino. No hay camino si Alta no está fijada.
     function usuarioVerificacion(address hermano, address caller, address origin)
         external
         view
         returns (address user)
     {
-        (bool okA, bytes memory rawA) = hermano.staticcall(abi.encodeWithSignature("alta()"));
-        address alta = (okA && rawA.length >= 32) ? abi.decode(rawA, (address)) : address(0);
-        if (origin != caller) {
-            require(alta == caller);
-            user = origin;
-            if (alta != address(0)) {
-                (bool okU, bytes memory rawU) = alta.staticcall(abi.encodeWithSignature("cargoDe()"));
-                if (okU && rawU.length >= 32) {
-                    address cargo = abi.decode(rawU, (address));
-                    if (cargo != address(0)) user = cargo;
-                }
-            }
-            return user;
+        address alta = _leerAlta(hermano);
+        require(alta != address(0) && alta == caller);
+        user = origin;
+        (bool okU, bytes memory rawU) = alta.staticcall(abi.encodeWithSignature("cargoDe()"));
+        if (okU && rawU.length >= 32) {
+            address cargo = abi.decode(rawU, (address));
+            if (cargo != address(0)) user = cargo;
         }
-        require(alta == address(0));
-        return caller;
     }
 
-    /// @notice Si Fama tiene Alta, el préstamo exige el pago de 4 USDT (registroHecho).
+    /// @notice El préstamo exige registroHecho en el Alta fijado. Cero o sin contrato revierte.
     function requireAltaPagada(address hermano, address user) external view {
-        (bool okA, bytes memory rawA) = hermano.staticcall(abi.encodeWithSignature("alta()"));
-        if (!(okA && rawA.length >= 32)) return;
-        address alta = abi.decode(rawA, (address));
-        if (alta == address(0)) return;
+        require(altaRegistrada(hermano, user));
+    }
+
+    function altaRegistrada(address hermano, address user) public view returns (bool) {
+        address alta = _leerAlta(hermano);
+        if (alta == address(0)) return false;
         (bool ok, bytes memory data) = alta.staticcall(
             abi.encodeWithSignature("registroHecho(address)", user)
         );
-        require(ok && data.length >= 32 && abi.decode(data, (bool)));
+        return ok && data.length >= 32 && abi.decode(data, (bool));
     }
 
-    function assertPeg(AggregatorV3Interface feed) external view {
-        require(address(feed) != address(0));
-        (
-            uint80 roundId,
-            int256 price,
-            uint256 startedAt,
-            uint256 updatedAt,
-            uint80 answeredInRound
-        ) = feed.latestRoundData();
-        require(price > 0);
-        uint8 dec = feed.decimals();
-        require(dec >= 2 && dec <= 18);
-        int256 threshold = int256(uint256(98) * (10 ** uint256(dec - 2)));
-        require(price >= threshold);
-        require(updatedAt > 0 && updatedAt <= block.timestamp && block.timestamp - updatedAt <= PEG_MAX_EDAD);
-        require(roundId > 0 && answeredInRound == roundId);
-        require(startedAt > 0 && startedAt <= updatedAt);
+    /// @notice 5 % de cada entrada al pool. El resto queda prestable.
+    function partirSeguro(uint256 amount) public pure returns (uint256 alPool, uint256 alSeguro) {
+        alSeguro = (amount * SEGURO_BP) / 10000;
+        alPool = amount - alSeguro;
+    }
+
+    /// @dev `entered` ya se sumó a la liquidez. Mueve el 5 % al fondo de seguro.
+    function apartarSeguro(
+        mapping(address => uint256) storage totalLiquidity,
+        mapping(address => uint256) storage fondoSeguro,
+        address token,
+        uint256 entered
+    ) external {
+        if (entered == 0) return;
+        (, uint256 seguro) = partirSeguro(entered);
+        if (seguro == 0) return;
+        require(totalLiquidity[token] >= seguro, "seguro");
+        totalLiquidity[token] -= seguro;
+        fondoSeguro[token] += seguro;
+    }
+
+    /// @dev Cubre una pérdida por impago moviendo contabilidad del fondo al pool. No saca tokens.
+    function cubrirImpago(
+        mapping(address => uint256) storage totalLiquidity,
+        mapping(address => uint256) storage fondoSeguro,
+        address token,
+        uint256 perdida
+    ) external returns (uint256 cubierto) {
+        if (perdida == 0) return 0;
+        uint256 fondo = fondoSeguro[token];
+        cubierto = perdida <= fondo ? perdida : fondo;
+        if (cubierto == 0) return 0;
+        fondoSeguro[token] = fondo - cubierto;
+        totalLiquidity[token] += cubierto;
+    }
+
+    function _leerAlta(address hermano) private view returns (address alta) {
+        if (hermano == address(0)) return address(0);
+        (bool okA, bytes memory rawA) = hermano.staticcall(abi.encodeWithSignature("alta()"));
+        if (okA && rawA.length >= 32) alta = abi.decode(rawA, (address));
     }
 }

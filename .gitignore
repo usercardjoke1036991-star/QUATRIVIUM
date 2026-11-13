@@ -36,7 +36,6 @@ yarn-error.*
 # local env files
 .env
 .env.worker
-deploy/hetzner/.env
 .env*.local
 .notify-data.json
 
@@ -55,7 +54,8 @@ typechain-types/
 # Foundry (no mezclar con cache/ de Hardhat)
 forge-out/
 forge-cache/
-lib/
+lib/*
+!lib/forge-std
 
 # APKs / signing local
 *.apk

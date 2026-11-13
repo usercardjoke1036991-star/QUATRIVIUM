@@ -1,5 +1,4 @@
 const { expect } = require('chai');
-const { ethers } = require('hardhat');
 const { deployProtocol, seedPool, registerAndFund } = require('./helpers.cjs');
 
 describe('QuatriviumCredit - no destroy account and sovereign wallet access', function () {
@@ -14,7 +13,7 @@ describe('QuatriviumCredit - no destroy account and sovereign wallet access', fu
     expect(contract.interface.hasFunction('pausarContrato')).to.equal(false);
     expect(contract.interface.hasFunction('banWallet')).to.equal(false);
 
-    await contract.connect(extra).registrarHumanoConPadre(ethers.ZeroAddress);
+    await registerAndFund(token, contract, extra);
     await expect(contract.connect(extra).solicitarPrestamo(tokenAddr, 0)).to.not.be.reverted;
     expect(await token.balanceOf(user.address)).to.be.gt(0n);
     expect(tokenAddr).to.be.a('string');

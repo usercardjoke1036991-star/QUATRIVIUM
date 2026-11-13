@@ -1,4 +1,4 @@
-import { getProviderWithFallback } from '../constants/rpcConfig';
+import { firstConfirmedReceipt, ownReceiptNodes } from '../services/writeRpc';
 
 const HASH = /^0x[0-9a-fA-F]{64}$/;
 const DEFAULT_MS = 45_000;
@@ -18,15 +18,32 @@ function sleep(ms: number): Promise<void> {
 /** Espera el recibo en el RPC de la app. Nunca usa tx.wait() de WalletConnect (se cuelga). */
 export async function waitMined(tx: MinedTx, timeoutMs = DEFAULT_MS) {
   const hash = typeof tx.hash === 'string' ? tx.hash : '';
-  if (!HASH.test(hash)) throw new Error('tx-timeout');
-  const provider = getProviderWithFallback();
+  if (!HASH.test(hash)) throw new Error('tx-pending');
+  const seen = (tx as { broadcastSeen?: number }).broadcastSeen ?? 0;
+  const unseen = (tx as { broadcastKind?: string }).broadcastKind === 'pending' && seen < 1;
+  if (unseen) {
+    const pending = new Error('tx-pending');
+    (pending as Error & { hash: string }).hash = hash;
+    throw pending;
+  }
+  const attached = (
+    tx as {
+      provider?: {
+        quatriviumReceipts?: boolean;
+        getTransactionReceipt?: (hash: string) => Promise<unknown>;
+      };
+    }
+  ).provider;
+  const readReceipt =
+    attached && attached.quatriviumReceipts && typeof attached.getTransactionReceipt === 'function'
+      ? attached.getTransactionReceipt.bind(attached)
+      : (wanted: string) => firstConfirmedReceipt(wanted, ownReceiptNodes());
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try {
-      const receipt = await Promise.race([
-        provider.getTransactionReceipt(hash),
-        sleep(RPC_MS).then(() => null),
-      ]);
+      const receipt = (await Promise.race([readReceipt(hash), sleep(RPC_MS).then(() => null)])) as {
+        status?: number | bigint;
+      } | null;
       if (receipt) {
         if (Number(receipt.status) === 0) throw new Error('tx-reverted');
         return receipt;
@@ -36,5 +53,7 @@ export async function waitMined(tx: MinedTx, timeoutMs = DEFAULT_MS) {
     }
     await sleep(POLL_MS);
   }
-  throw new Error('tx-timeout');
+  const pending = new Error('tx-pending');
+  (pending as Error & { hash: string }).hash = hash;
+  throw pending;
 }

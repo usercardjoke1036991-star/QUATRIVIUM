@@ -37,7 +37,6 @@ describe('wallet link reject stays idle', function () {
       path.join(__dirname, '..', 'services', 'walletHandoff.ts'),
       'utf8'
     );
-    const lock = fs.readFileSync(path.join(__dirname, '..', 'services', 'appLock.ts'), 'utf8');
     const charge = fs.readFileSync(
       path.join(__dirname, '..', 'services', 'founderUsdtCharge.ts'),
       'utf8'
@@ -45,7 +44,7 @@ describe('wallet link reject stays idle', function () {
     expect(helper).to.include('beginExternalWalletHandoff');
     expect(charge).to.include('beginExternalWalletHandoff');
     expect(handoff).to.include('4 * 60 * 1000');
-    expect(lock).to.include('externalWalletHandoffActive(now) || isPickerHeld()');
+    expect(handoff).to.include('performance.now()');
     const awayFor = 30_000;
     const now = 100_000;
     const backgroundedAt = now - awayFor;

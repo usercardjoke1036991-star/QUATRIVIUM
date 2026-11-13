@@ -4,6 +4,8 @@ pragma solidity ^0.8.24;
 import {Test} from "forge-std/Test.sol";
 import {QuatriviumCredit} from "../contracts/QuatriviumCredit.sol";
 import {QuatriviumFamaCaja} from "../contracts/QuatriviumFamaCaja.sol";
+import {QuatriviumReserva} from "../contracts/QuatriviumReserva.sol";
+import {QuatriviumAlta} from "../contracts/QuatriviumAlta.sol";
 import {QuatriviumLeveling} from "../contracts/QuatriviumLeveling.sol";
 import {ERC20Mock} from "../contracts/mocks/ERC20Mock.sol";
 import {MockV3Aggregator} from "../contracts/mocks/MockV3Aggregator.sol";
@@ -13,6 +15,7 @@ contract QuatriviumCreditForgeTest is Test {
     ERC20Mock internal token;
     MockV3Aggregator internal feed;
     QuatriviumCredit internal credit;
+    QuatriviumAlta internal alta;
     address internal owner;
     uint256 internal ownerPk;
     address internal user;
@@ -26,21 +29,24 @@ contract QuatriviumCreditForgeTest is Test {
 
         token = new ERC20Mock();
         feed = new MockV3Aggregator(8, 100000000);
-        address[] memory admins = new address[](1);
+        address[] memory admins = new address[](3);
         admins[0] = owner;
+        admins[1] = makeAddr("admin-b");
+        admins[2] = makeAddr("admin-c");
         uint64 nonce = vm.getNonce(owner);
         address predictedCredit = vm.computeCreateAddress(owner, nonce + 1);
+        address predictedReserva = vm.computeCreateAddress(owner, nonce + 2);
+        address predictedAlta = vm.computeCreateAddress(owner, nonce + 3);
         vm.startPrank(owner);
-        QuatriviumFamaCaja fama = new QuatriviumFamaCaja(address(token), predictedCredit);
+        QuatriviumFamaCaja fama = new QuatriviumFamaCaja(address(token), predictedCredit, predictedAlta, predictedReserva);
         credit = new QuatriviumCredit(
             address(token),
-            address(feed),
-            payable(owner),
-            500,
             admins,
-            1,
-            address(fama)
+            address(fama),
+            address(0)
         );
+        new QuatriviumReserva(address(token), owner, predictedCredit, address(fama), predictedAlta, admins);
+        alta = new QuatriviumAlta(address(token), predictedCredit, predictedReserva);
         vm.stopPrank();
         require(address(credit) == predictedCredit, "credit pred");
         require(credit.famaHermano() == address(fama), "fama hermano");
@@ -74,14 +80,16 @@ contract QuatriviumCreditForgeTest is Test {
     function test_lp_cannot_redeem() public {
         uint256 value = credit.valorLp(owner, address(token));
         vm.prank(owner, owner);
-        vm.expectRevert();
+        vm.expectRevert(bytes(""));
         credit.retirarLiquidez(address(token), value);
-        assertEq(credit.valorLp(owner, address(token)), 500 ether);
+        assertEq(credit.valorLp(owner, address(token)), 475 ether);
+        assertEq(credit.fondoSeguro(address(token)), 25 ether);
+        assertEq(credit.totalLiquidity(address(token)) + credit.fondoSeguro(address(token)), 500 ether);
     }
 
     function test_contract_cannot_register() public {
         RegistrarProxy proxy = new RegistrarProxy(credit);
-        vm.expectRevert();
+        vm.expectRevert(QuatriviumCredit.NoEsEOA.selector);
         proxy.registrar();
     }
 
@@ -95,7 +103,7 @@ contract QuatriviumCreditForgeTest is Test {
         vm.prank(stranger, stranger);
         token.approve(address(credit), type(uint256).max);
         vm.prank(stranger, stranger);
-        vm.expectRevert();
+        vm.expectRevert(bytes(""));
         credit.pagarPrestamo(address(token), 1 ether);
 
         (, uint256 montoActivo,,,,) = credit.usuarios(user);
@@ -114,17 +122,21 @@ contract QuatriviumCreditForgeTest is Test {
     function _onboard(address who) internal {
         vm.prank(who, who);
         credit.registrarHumanoConPadre(address(0));
-        token.mint(who, 50 ether);
+        token.mint(who, 54 ether);
         vm.prank(who);
         token.approve(address(credit), type(uint256).max);
+        vm.prank(who);
+        token.approve(address(alta), type(uint256).max);
+        vm.prank(who, who);
+        alta.pagarRegistro();
     }
 
     function _assertNav() internal view {
         uint256 cash = token.balanceOf(address(credit));
         uint256 outstanding = credit.outstandingLoans(address(token));
         uint256 liquidity = credit.totalLiquidity(address(token));
-        uint256 fees = credit.collectedFees(address(token));
-        assertEq(cash + outstanding, liquidity + fees, "NAV broken");
+        uint256 fondo = credit.fondoSeguro(address(token));
+        assertEq(cash + outstanding, liquidity + fondo, "NAV broken");
     }
 }
 

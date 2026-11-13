@@ -1,11 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-  Alert,
-  AppState,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, AppState, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useI18n } from '../i18n/LanguageContext';
 import { useTheme } from '../theme/ThemeContext';
 import { AppIcon, type IconName } from './icons';
@@ -42,13 +36,7 @@ import type { TranslationKey } from '../i18n/translations';
 import { AppText } from './AppText';
 
 type RowStatus = 'done' | 'todo' | 'warn';
-type Panel =
-  | 'menu'
-  | 'pin'
-  | 'fingerprint'
-  | 'phrase'
-  | 'methods'
-  | 'authenticator';
+type Panel = 'menu' | 'pin' | 'fingerprint' | 'phrase' | 'methods' | 'authenticator';
 
 export const SecuritySettings: React.FC = () => {
   const { t } = useI18n();
@@ -77,25 +65,17 @@ export const SecuritySettings: React.FC = () => {
   });
 
   const refreshPhrase = async () => {
-    const [
-      exists,
-      ack,
-      pin,
-      password,
-      bioStatus,
-      bioEnabled,
-      authenticator,
-      prefs,
-    ] = await Promise.all([
-      hasSecretPhrase(),
-      isPhraseBackedUp(),
-      isPinSet(),
-      isPasswordSet(),
-      getBiometricStatus(),
-      isBiometricEnabled(),
-      isAuthenticatorEnabled(),
-      loadAuthPrefs(),
-    ]);
+    const [exists, ack, pin, password, bioStatus, bioEnabled, authenticator, prefs] =
+      await Promise.all([
+        hasSecretPhrase(),
+        isPhraseBackedUp(),
+        isPinSet(),
+        isPasswordSet(),
+        getBiometricStatus(),
+        isBiometricEnabled(),
+        isAuthenticatorEnabled(),
+        loadAuthPrefs(),
+      ]);
     setHasPhrase(exists);
     setBackedUp(ack);
     setPinSet(pin);

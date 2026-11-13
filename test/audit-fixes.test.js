@@ -29,17 +29,36 @@ describe('audit fixes', function () {
   });
 
   it('uses a movement title when the funds lock is not a wallet transfer', function () {
-    const purpose = read('services/fundsConfirm.ts');
-    const host = read('components/FundsConfirmHost.tsx');
-    const home = read('hooks/useHomeHandlers.ts');
-    const charge = read('services/founderUsdtCharge.ts');
-    expect(purpose).to.include("'movement'");
-    expect(host).to.include("purpose === 'movement'");
-    expect(host).to.include("'fundsConfirmMovement'");
-    expect((home.match(/confirmFunds\('movement'\)/g) || []).length).to.be.at.least(7);
-    expect(charge.match(/confirmFunds\('movement'\)/g) || []).to.have.length(2);
-    expect(home).to.include("confirmFunds('loanRequest')");
-    expect(home).to.include("confirmFunds('loanPay')");
+    const { loadTs } = require('./loadTsApp.cjs');
+    const gate = loadTs(path.join(__dirname, '..', 'utils', 'fundsConfirmGate.ts'));
+    const plan = gate.fundsConfirmPlan({
+      movesFunds: true,
+      protectionOn: true,
+      details: {
+        amount: '1',
+        symbol: 'LUSD',
+        destination: '0x1111111111111111111111111111111111111111',
+        fee: '0.001 ETH',
+      },
+    });
+    expect(plan.showScreen).to.equal(true);
+    expect(plan.mode).to.equal('secret');
+    expect(plan.canApprove).to.equal(true);
+    const withoutProtection = gate.fundsConfirmPlan({
+      movesFunds: true,
+      protectionOn: false,
+      details: {
+        amount: '1',
+        symbol: 'LUSD',
+        destination: '0x1111111111111111111111111111111111111111',
+        fee: '0.001 ETH',
+      },
+    });
+    expect(withoutProtection.mode).to.equal('button');
+    const es = JSON.parse(read('i18n/locales/es.json'));
+    expect(es.fundsConfirmMovement).to.match(/movimiento/i);
+    expect(es.loanConfirmRequestTitle).to.match(/préstamo/i);
+    expect(es.loanConfirmPayTitle).to.match(/pago/i);
   });
 
   it('says the parked signup USDT and the liquidate reward match the contract', function () {
@@ -48,8 +67,9 @@ describe('audit fixes', function () {
     expect(es.bonusPending).to.not.match(/pool|fondo|bolsa/i);
     expect(es.referralEarnFirst).to.include('{bonus}');
     expect(es.referralEarnFirst).to.match(/apartado en el alta/i);
-    expect(es.liquidarLead).to.match(/5% del principal/i);
-    expect(es.liquidarConfirm).to.match(/5% del principal/i);
+    expect(es.liquidarLead).to.match(/menor entre el 5% y el interés/i);
+    expect(es.liquidarLead).to.match(/no paga el principal/i);
+    expect(es.liquidarConfirm).to.match(/no transferirá el principal/i);
     expect(es.settingsAdminLead).to.match(/cofundador/i);
     const en = JSON.parse(read('i18n/locales/en.json'));
     expect(en.settingsAdminLead).to.match(/cofounder/i);

@@ -21,11 +21,6 @@ SOURCES = {
         "https://trustwallet.com/assets/images/favicon.png",
         "https://avatars.githubusercontent.com/u/32179889?s=512&v=4",
     ],
-    "binance": [
-        "https://public.bnbstatic.com/static/binance-w3w/ton-provider/binancew3w.png",
-        "https://icons.llamao.fi/icons/wallets/binance-wallet?w=256&h=256",
-        "https://icons.llamao.fi/icons/wallets/binance?w=256&h=256",
-    ],
     "okx": [
         "https://static.okx.com/cdn/web3/assets/imgs/70d223c0-8527-40c1-8292-b3cc10b53d88.png",
         "https://static.okx.com/cdn/web3/assets/imgs/be493af9-09fe-4e93-af0d-d6c4b040cea9.png",

@@ -1,112 +1,62 @@
-# 🧠 CONTEXTO DEL PROYECTO: Quatrivium Finance · Edición Soberana
+# CONTEXTO — QUATRIVIUM
 
-## ¿Qué es este proyecto?
-**Quatrivium Finance** es un protocolo y aplicación móvil 100% soberana e inmutable de microcrédito on-chain sin colateral sobre **Arbitrum One** (`chainId: 42161`) utilizando **Liquity USD (LUSD)** (`0x93b346b6BC2548dA6A1E7d98E9a421B42541425b`).
-El usuario crea o restaura su billetera HD local BIP-39 de 24 palabras, completa el alta única de **4 LUSD** on-chain, solicita préstamos en LUSD del pool de liquidez, los paga antes del vencimiento y sube de nivel para acceder a montos mayores (hasta el nivel 1000). Si no paga, entra en mora y sus beneficios quedan bloqueados hasta regularizar.
+## Qué es
 
-## Tipo de proyecto
-- **Stack:** React Native 0.81 · Expo 54 · React 19 · TypeScript · Solidity 0.8.24 · ethers v6
-- **Tipo:** Sovereign Mobile DeFi App + Immutable Smart Contracts (Arbitrum L2)
-- **Estado actual:** Arquitectura soberana completada en código (Fases 1, 2 y 3) para **Arbitrum One (`chainId: 42161`)** en Cuenta Real y **Arbitrum Sepolia (`chainId: 421614`)** en Modo Demo. Paquete Android/iOS `com.quatrivium.sovereign`, esquema deep-link `quatrivium-sovereign://`, distribución directa vía APK verificado por SHA-256.
+Protocolo y app de microcrédito sin colateral en Arbitrum One (chainId 42161) con LUSD `0x93b346b6BC2548dA6A1E7d98E9a421B42541425b`, 18 decimales, paridad 1:1 y sin oráculo de precio. Solidity 0.8.24. App Expo 54 / React Native 0.81 / TypeScript. Paquete `com.quatrivium.sovereign`.
 
----
+No hay servidor de la empresa. La billetera nace en el teléfono (`services/appWallet.ts`). WalletConnect es opcional. Los RPC públicos están en `constants/rpcConfig.ts`.
 
-## Arquitectura y estructura
+## Reglas cerradas
 
-```
-QUATRIVIUM-main/
-├── app/index.tsx                  # Pantalla principal (orquesta con hooks soberanos)
-├── app/_layout.tsx                # Placeholder Expo Router (arranque real: App.js)
-├── babel.config.js                # Babel / Expo
-├── metro.config.js                # Metro + stub snarkjs
-├── hardhat.config.cjs             # Hardhat: compilación, tests y deploy en Arbitrum One / Sepolia
-├── foundry.toml                   # Foundry overlay (forge-out/forge-cache)
-├── forge-test/                    # Fuzz e invariantes Foundry
-├── web3Config.tsx                 # AppKit / WalletConnect (Arbitrum One 42161 y Arbitrum Sepolia 421614)
-├── components/                    # UI: WalletSection, LoanTierCard, AdminPanel, SecuritySettings…
-├── hooks/                         # useWeb3Balances, useWeb3Transactions, useHomeHandlers
-├── services/                      # quatriviumCreditService, appWallet, appLock, movementHistory…
-├── contracts/
-│   ├── QuatriviumCredit.sol       # Núcleo inmutable sin Pausable ni blacklist (EIP-170 ≤ 24576 B)
-│   ├── QuatriviumAlta.sol         # Hermano: alta única de 4 LUSD y bono de activación L1
-│   ├── QuatriviumReserva.sol      # Hermano: bloqueo 30d en LUSD, techo 12% anual del bote
-│   ├── QuatriviumFamaCaja.sol     # Hermano: fama de caja, racha y canje contra el pool
-│   ├── QuatriviumLeveling.sol     # Hermano: solicitudes e hitos de nivel
-│   ├── libraries/QuatriviumFamaLib.sol # Peg Chainlink LUSD/USD, bono L1, fama (delegatecall)
-│   ├── interfaces/                # AggregatorV3Interface (Chainlink)
-│   └── mocks/                     # ERC20Mock, MockV3Aggregator (tests y testnet)
-├── test/                          # Suites Hardhat de contabilidad, soberanía, seguridad, UI e i18n
-├── scripts/
-│   ├── deploy-arbitrum-sovereign.cjs # Script maestro de despliegue en Arbitrum One (42161) / Sepolia (421614)
-│   ├── bscNetworks.cjs            # Configuración RPC y constantes de Arbitrum One / Sepolia y LUSD
-│   ├── check-i18n.mjs             # Verificador de los 17 idiomas y 1245 claves
-│   ├── check-production.mjs       # Verificador de configuración soberana para CI y producción
-│   └── security-check.mjs         # Verificador de seguridad estática y ausencia de secretos
-├── web/
-│   ├── index.html                 # Portal web soberano
-│   ├── invite/index.html          # Portal de invitación deep-link quatrivium-sovereign:// + descarga APK + SHA-256
-│   └── .well-known/assetlinks.json # Digital Asset Links para com.quatrivium.sovereign
-├── i18n/ (17 locales)             # ar, bn, de, en, es, fr, hi, id, it, ja, ko, pt, ru, tr, ur, vi, zh
-├── constants/                     # bsc.ts, rpcConfig.ts, deployedAddresses.ts, tokens.ts, loanTiers.ts
-├── .env.example                   # Variables de entorno documentadas para despliegue en Arbitrum
-└── eas.json                       # Perfiles de build para Arbitrum Sepolia (421614) y Arbitrum One (42161)
+- Tres admins, votación fija 2 de 3, espera 72 h, sin caducidad. Votan su entrada, su salida y la pausa de préstamos nuevos. Nadie pausa solo. La pausa se levanta sola a los 7 días y después hay 7 días de descanso. No frena pagos ni liquidaciones.
+- `retirarLiquidez` revierte. Nadie saca el pool.
+- Alta de 4 LUSD en `QuatriviumAlta.pagarRegistro`: 1 al fundador, 1 al bote de Reserva, 1 apartado para quien invitó y 1 de sello a Credit. De ese sello, el 5 % queda en el fondo de seguro y el 95 % en la liquidez. Entrar sin invitación cuelga del fundador. Ese 1 apartado no se queda bloqueado: al pagar el primer nivel 1 va a quien invitó si ya tiene alta y nivel 1, y si no, al pool. A los 7 días sin ese pago, entra al pool. Una misma cuenta no puede ser su propio invitador. El fundador cobra además el 15 % del interés en la misma transacción. Solo él rota su billetera, con 72 h. No necesita alta ni L1.
+- Donar y aportar dan fama visible y no se canjean por LUSD del pool. Solo la fama de intereses pagados se convierte.
+- Fondo de seguro: 5 % de las entradas al pool. Solo paga el premio del impago.
+- Reserva: nivel ≥ 10, 30 días, tope 12 % anual del bote, principal siempre devuelto. Sin owner ni retiro del bote.
+- Liquidación: 48 h más la caída leída de la ronda anterior del feed y 1 h tras volver. `answer == 0` es sequencer arriba aunque la ronda tenga meses. Si el feed falla o `startedAt` es cero, se pospone la liquidación. El liquidador no pone el principal: el seguro absorbe la deuda y el premio (el menor entre 5 % y el interés) sale del contrato. Feed `0xFdB631F5EE196F0ed6FAa767959853A9F217697D`, obligatorio si chainId es 42161.
+- Unilevel, padrino, fama y racha exigen alta y L1 (`cobradorListo`). Si no, esa parte entra al pool. La racha solo cuenta nivel ≥ 2 pagado a tiempo.
+- Avisos locales. No hay mensaje privado por Nostr: el cifrado NIP-17/44 no está hecho y `prepareNostrPayload` devuelve null. La mora no se publica. Ranking leído de eventos de la cadena.
+- Sin Rust y sin pruebas de conocimiento cero. Sin servidor y sin tienda de aplicaciones. La lista de nombres prohibidos está en `HANDOFF.md`.
+- Distribución: APK firmado, con huella del certificado y hash en `QuatriviumApk`. Nada de eso está publicado.
+
+La escalera de 1000 niveles y los porcentajes de arriba no se tocan sin una orden nueva.
+
+## Contratos
+
+| Archivo | Rol |
+| --- | --- |
+| `contracts/QuatriviumCredit.sol` | Préstamos, pool, interés, liquidación, admins, sequencer, fondo. 23330 bytes. Libres: 1246 de 24576. |
+| `contracts/QuatriviumAlta.sol` | Alta de 4 LUSD. |
+| `contracts/QuatriviumReserva.sol` | Bloqueos y bote. |
+| `contracts/QuatriviumFamaCaja.sol` | Fama, canje y racha. |
+| `contracts/libraries/QuatriviumFamaLib.sol` | Reparto y seguro. |
+| `contracts/QuatriviumApk.sol` | Historial de hashes. Solo el fundador publica. |
+| `contracts/QuatriviumLeveling.sol`, `contracts/LoanLadder.sol` | Hitos y niveles 101–1000, fuera de Credit. |
+
+Direcciones de despliegue: vacías en `constants/deployedAddresses.ts`, salvo el LUSD y la billetera de donación `0x5023bf46dB7458B9bb9152a7ffE64f195CD1a047`. No inventar las otras.
+
+## Cómo probar
+
+```bash
+npm ci --ignore-scripts
+npm test
+forge test --fuzz-runs 32
+npm run typecheck
+npm run lint
+npm run format:check
 ```
 
----
+Despliegue, solo con orden explícita: `CONFIRM_MAINNET=yes npm run deploy:arbitrum`.
 
-## Stack tecnológico
-- **App:** React Native 0.81 / Expo 54 / React 19 / TypeScript (strict)
-- **Web3:** ethers v6 / Reown AppKit (WalletConnect) / wagmi
-- **Contratos:** Solidity 0.8.24 / OpenZeppelin v5 (`ReentrancyGuard`, `SafeERC20`) — **sin `Pausable`, sin `blacklist`, sin `attester`**
-- **Red blockchain:** Arbitrum Sepolia (`chainId: 421614`) en Demo · Arbitrum One (`chainId: 42161`) en Cuenta Real
-- **Stablecoin principal:** Liquity USD (`LUSD`) — `0x93b346b6BC2548dA6A1E7d98E9a421B42541425b` (18 decimales, descentralizada e inmutable)
-- **Oráculo de precios:** Chainlink LUSD/USD en Arbitrum One — `0x0411D28c94d85A36bC72Cb0f875dfA8371D8fFfF`
-- **Moneda de gas:** Ether (`ETH`) nativo en Arbitrum L2 (`MIN_GAS_WEI = 0.0001 ETH`)
-- **Seguridad mobile:** `expo-secure-store` (AES-256-GCM) / biometría / PIN 6 dígitos / contraseña maestra / TOTP local / frase BIP-39 de 24 palabras
-- **Notificaciones:** 100% locales en el dispositivo (`services/localReminders.ts`), sin servidores externos ni workers Web2
-- **i18n:** 17 idiomas completos, 1245 claves verificadas con `scripts/check-i18n.mjs`, soporte RTL (árabe, urdu)
+## Estado
 
----
+Rama `cursor/soberania-contratos-8e15`. Tras el arreglo del feed: Hardhat 306, Foundry 51. El mapa de commits está en `HANDOFF.md`.
 
-## Decisiones de Arquitectura Soberana
-- **Inmutabilidad y Cero Censura:** Se eliminaron por completo `Pausable`, `pausarContrato()`, `despausarContrato()`, `pauseBoost()`, `blacklist`, `setBlacklist()`, `kycExigido`, `identidadExigida` y `attester`. Ningún administrador ni tercero puede congelar el protocolo ni bloquear direcciones.
-- **Soberanía de Identidad:** No se solicita correo electrónico, número de teléfono (SMS/OTP) ni documentos de identidad (KYC). La única identidad del usuario es su par de llaves criptográficas BIP-39 de 24 palabras y su registro on-chain.
-- **Stablecoin Inmutable (`LUSD`):** Toda la contabilidad de préstamos, pagos, donaciones, Reserva y bonos opera en `LUSD` (`0x93b346b6BC2548dA6A1E7d98E9a421B42541425b`) sobre Arbitrum One, eliminando el riesgo de congelamiento centralizado de emisores custodial.
-- **Resiliencia RPC en Arbitrum One:** `constants/bsc.ts` y `constants/rpcConfig.ts` rotan automáticamente entre 5 endpoints RPC públicos independientes (`arb1.arbitrum.io`, `arbitrum-one-rpc.publicnode.com`, `1rpc.io/arb`, `arbitrum.drpc.org`, `rpc.ankr.com/arbitrum`).
-- **Alta Única On-Chain de 4 LUSD (`QuatriviumAlta.pagarRegistro`):**
-  - 1 LUSD a la billetera fundadora
-  - 1 LUSD al bote de `QuatriviumReserva`
-  - 1 LUSD de registro al pool de `QuatriviumCredit`
-  - 1 LUSD apartado en `QuatriviumAlta` para quien invitó de forma directa (se libera cuando el referido paga su primer préstamo de Nivel 1; si no lo paga en 7 días, puede enviarse al pool mediante `vencerPadrinoAlPool`).
-- **Pool Cerrado (`retirarLiquidez` revierte):** El capital aportado al fondo común de préstamos permanece en el contrato para respaldar la línea de crédito y no es reembolsable; aporta 100 puntos de fama de caja por cada 1 LUSD.
-- **Reserva Independiente (`QuatriviumReserva`):** Instrumento separado del fondo de préstamos, disponible desde el nivel 10, con bloqueo de 30 días (mínimo 1 LUSD), devolución íntegra del principal al vencimiento y rendimiento estimado de hasta el 12% anual pagado exclusivamente desde la provisión del bote de Reserva.
-- **Distribución Soberana del APK:** Paquete `com.quatrivium.sovereign` y esquema `quatrivium-sovereign://`. Se distribuye directamente mediante APK firmado y verificado con su hash SHA-256 en el portal web `web/invite/index.html`, sin depender de tiendas centralizadas.
+Abierto: dos hallazgos bajos del alta (segunda cuenta, y `soltarPadrino` si el padre viniera vacío), tests que leen texto, e `image-size` (pide un SDK de Expo nuevo). `handlebars` ya está resuelto con 4.7.10. NIP-17/44 sigue sin hacerse: `prepareNostrPayload` devuelve null.
 
----
+Pendiente antes de dinero real: auditoría externa de los contratos, y que la billetera del fundador sea de varias firmas o física, con `CONFIRM_FOUNDER_WALLET=yes`.
 
-## Niveles de crédito (`constants/loanTiers.ts` + `LoanTierSeed.sol` + `LoanLadder.sol`)
+Pendiente cuando Jose lo ordene, y nada de esto se ha hecho: 1) compilar el APK y calcular su SHA-256, 2) desplegar en Arbitrum One y escribir las direcciones en `constants/deployedAddresses.ts`, 3) publicar la huella del certificado y el hash en `QuatriviumApk`, 4) IPFS, 5) ENS.
 
-**1000 niveles**, desde **1 LUSD** hasta **1 000 000 LUSD**. Los niveles 1–100 se definen en tabla (`LoanTierSeed`) y los niveles 101–1000 mediante fórmula determinista (`LoanLadder`) para cumplir con el límite EIP-170 (≤ 24 576 bytes).
-
-| Nivel | Principal (LUSD) | Plazo | Tasa Plana | Interés (LUSD) | Cuotas | Solicitudes |
-|------:|-----------------:|------:|-----------:|---------------:|:------:|:------------|
-| 1 | 1 LUSD | 7 días | 100% | 1.00 LUSD | 1 | 3 |
-| 10 | 100 LUSD | 50 días | 34% | 34.00 LUSD | 3 | 5 |
-| 11 | 120 LUSD | 50 días | 33,71% | 40.45 LUSD | 3 | 10 |
-| 100 | 10 000 LUSD | 90 días | 8% | 800.00 LUSD | 3 | 455 |
-| 101 | 11 100 LUSD | 90 días | 7,99% | 886.89 LUSD | 3 | 460 |
-| 1000 | **1 000 000 LUSD** | 180 días | 4,06% | 40 600.00 LUSD | 12 | 4955 |
-
----
-
-## Seguridad on-chain y cliente
-| Protección | Estado |
-|---|---|
-| `ReentrancyGuard` | ✅ En todas las funciones de movimiento de fondos |
-| `SafeERC20` | ✅ En todas las transferencias y aprobaciones ERC-20 |
-| Sin Kill-Switches (`Pausable` / `blacklist` eliminados) | ✅ Inmutabilidad total del protocolo |
-| Timelock 72h + Multisig 2-de-3 | ✅ Para parámetros administrativos permitidos |
-| `tx.origin == msg.sender` | ✅ Registro, préstamo, pago, depósito y liquidación solo desde EOA |
-| Oráculo Chainlink LUSD/USD | ✅ Validación de peg `>= 0.98 USD` y frescura de ronda |
-| Cifrado local AES-256-GCM | ✅ Semilla BIP-39 de 24 palabras protegida en `expo-secure-store` |
-| Verificación de código e i18n | ✅ `tsc --noEmit`, `check-i18n.mjs` (17 idiomas), `hardhat test` |
+La clave que estuvo en el historial (commits `10553d4` y `dc40f15`, archivo `.env.worker.example`) ya fue revocada. El valor no se copia.

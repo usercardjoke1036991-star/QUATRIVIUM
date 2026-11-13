@@ -1,27 +1,60 @@
 const { ethers } = require('hardhat');
 const { getLinkedCreditFactory } = require('../scripts/linkCredit.cjs');
 
-async function deployFamaAndCredit(factory, tokenAddr, feedAddr, owner, feeBp, admins, confirms) {
+async function deployFamaAndCredit(
+  factory,
+  tokenAddr,
+  owner,
+  feeBp,
+  admins,
+  confirms,
+  sequencerOpt
+) {
+  let sequencerAddress = sequencerOpt;
+  let sequencer = null;
+  if (sequencerAddress == null) {
+    const Aggregator = await ethers.getContractFactory('MockV3Aggregator');
+    sequencer = await Aggregator.deploy(0, 0);
+    const block = await ethers.provider.getBlock('latest');
+    // Ronda real: answer 0 (arriba) con marcas en el pasado, no "ahora" disfrazado de cero.
+    const marca = block.timestamp - 7200;
+    await sequencer.setRound(1, 0, marca, marca, 1);
+    sequencerAddress = await sequencer.getAddress();
+  }
   const nonce = await ethers.provider.getTransactionCount(owner.address);
   const famaAddr = ethers.getCreateAddress({ from: owner.address, nonce });
   const creditAddr = ethers.getCreateAddress({ from: owner.address, nonce: nonce + 1 });
+  const reservaAddr = ethers.getCreateAddress({ from: owner.address, nonce: nonce + 2 });
+  const altaAddr = ethers.getCreateAddress({ from: owner.address, nonce: nonce + 3 });
   const Fama = await ethers.getContractFactory('QuatriviumFamaCaja');
-  const fama = await Fama.deploy(tokenAddr, creditAddr);
+  const fama = await Fama.deploy(tokenAddr, creditAddr, altaAddr, reservaAddr);
   await fama.waitForDeployment();
   const contract = await factory.deploy(
     tokenAddr,
-    feedAddr,
-    owner.address,
-    feeBp,
     admins,
-    confirms,
-    await fama.getAddress()
+    await fama.getAddress(),
+    sequencerAddress
   );
+  void feeBp;
+  void confirms;
   await contract.waitForDeployment();
   if ((await contract.getAddress()).toLowerCase() !== creditAddr.toLowerCase()) {
     throw new Error('predicted Credit address mismatch');
   }
-  return { contract, fama };
+  const Reserva = await ethers.getContractFactory('QuatriviumReserva');
+  const reserva = await Reserva.deploy(
+    tokenAddr,
+    owner.address,
+    creditAddr,
+    famaAddr,
+    altaAddr,
+    admins
+  );
+  await reserva.waitForDeployment();
+  const Alta = await ethers.getContractFactory('QuatriviumAlta');
+  const alta = await Alta.deploy(tokenAddr, creditAddr, reservaAddr);
+  await alta.waitForDeployment();
+  return { contract, fama, reserva, alta, sequencer };
 }
 
 async function deployProtocol(opts = {}) {
@@ -34,19 +67,24 @@ async function deployProtocol(opts = {}) {
 
   const Token = await ethers.getContractFactory('ERC20Mock');
   const Aggregator = await ethers.getContractFactory('MockV3Aggregator');
-  const QuatriviumCredit = await getLinkedCreditFactory(ethers);
+  const QuatriviumCredit = await getLinkedCreditFactory(
+    ethers,
+    opts.harness ? 'QuatriviumCreditHarness' : 'QuatriviumCredit'
+  );
 
   const token = await Token.deploy();
   const feed = await Aggregator.deploy(8, pegAnswer);
   const tokenAddr = await token.getAddress();
   const feedAddr = await feed.getAddress();
-  const admins = opts.admins || [owner.address];
-  const confirms = opts.confirms ?? 1;
+  const admins = opts.admins || [owner.address, user.address, extra.address];
+  if (admins.length !== 3) {
+    throw new Error('QuatriviumCredit exige exactamente 3 admins');
+  }
+  const confirms = 2;
 
-  const { contract, fama } = await deployFamaAndCredit(
+  const { contract, fama, reserva, alta, sequencer } = await deployFamaAndCredit(
     QuatriviumCredit,
     tokenAddr,
-    feedAddr,
     owner,
     feeBp,
     admins,
@@ -59,6 +97,9 @@ async function deployProtocol(opts = {}) {
     feed,
     contract,
     fama,
+    reserva,
+    alta,
+    sequencer,
     owner,
     user,
     extra,
@@ -111,11 +152,41 @@ async function attestIdentity(contract, user, phoneSalt = 'phone', deviceSalt = 
   await contract.connect(user).vincularIdentidad(phoneHash, deviceHash, deadline, v, r, s);
 }
 
+async function qualifyCollector(token, contract, user) {
+  const fama = await ethers.getContractAt('QuatriviumFamaCaja', await contract.famaHermano());
+  const alta = await ethers.getContractAt('QuatriviumAlta', await fama.alta());
+  const tokenAddr = await token.getAddress();
+  const contractAddr = await contract.getAddress();
+  if (!(await contract.humanosVerificados(user.address))) {
+    await contract.connect(user).registrarHumanoConPadre(ethers.ZeroAddress);
+  }
+  await token.mint(user.address, ethers.parseUnits('8', 18));
+  await token.connect(user).approve(contractAddr, ethers.MaxUint256);
+  if (!(await alta.registroHecho(user.address))) {
+    await token.connect(user).approve(await alta.getAddress(), ethers.MaxUint256);
+    await alta.connect(user).pagarRegistro();
+  }
+  if (!(await contract.l1Pagado(user.address))) {
+    await contract.connect(user).solicitarPrestamo(tokenAddr, 1);
+    const debt = await contract.obtenerDeuda(user.address);
+    await contract.connect(user).pagarPrestamo(tokenAddr, debt.total);
+    await ethers.provider.send('evm_increaseTime', [48 * 60 * 60]);
+    await ethers.provider.send('evm_mine');
+  }
+}
+
 async function registerAndFund(token, contract, user, amount = '50', padre = ethers.ZeroAddress) {
   const contractAddr = await contract.getAddress();
   await contract.connect(user).registrarHumanoConPadre(padre);
   await token.mint(user.address, ethers.parseUnits(amount, 18));
   await token.connect(user).approve(contractAddr, ethers.MaxUint256);
+  const fama = await ethers.getContractAt('QuatriviumFamaCaja', await contract.famaHermano());
+  const alta = await ethers.getContractAt('QuatriviumAlta', await fama.alta());
+  if (!(await alta.registroHecho(user.address))) {
+    await token.mint(user.address, ethers.parseUnits('4', 18));
+    await token.connect(user).approve(await alta.getAddress(), ethers.MaxUint256);
+    await alta.connect(user).pagarRegistro();
+  }
 }
 
 async function proposeAndExecute(contract, signer, fragment, args = [], extraConfirmers = []) {
@@ -149,12 +220,11 @@ async function drainToken(token, from, to) {
 }
 
 async function assertNavInvariant(token, contract, tokenAddr, contractAddr) {
-  const { expect } = require('chai');
   const cash = await token.balanceOf(contractAddr);
   const outstanding = await contract.outstandingLoans(tokenAddr);
   const liquidity = await contract.totalLiquidity(tokenAddr);
-  const fees = await contract.collectedFees(tokenAddr);
-  expectAmt(cash + outstanding, liquidity + fees);
+  const fondo = await contract.fondoSeguro(tokenAddr);
+  expectAmt(cash + outstanding, liquidity + fondo);
 }
 
 function expectAmt(actual, expected) {
@@ -170,6 +240,7 @@ module.exports = {
   signAttest,
   encodeAttestPacked,
   registerAndFund,
+  qualifyCollector,
   proposeAndExecute,
   drainToken,
   assertNavInvariant,

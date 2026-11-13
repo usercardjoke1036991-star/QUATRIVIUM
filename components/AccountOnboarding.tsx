@@ -144,7 +144,9 @@ export const AccountOnboarding: React.FC<AccountOnboardingProps> = ({
     };
   }, [walletAddress]);
 
-  const onboardingDone = Boolean((sponsorLocked || isRegistered) && hasCompletedWalletLink(linkedWallet));
+  const onboardingDone = Boolean(
+    (sponsorLocked || isRegistered) && hasCompletedWalletLink(linkedWallet)
+  );
 
   useEffect(() => {
     if (!sponsorLocked || triedRegister.current || skipAutoRegister || !registrationKnown) return;

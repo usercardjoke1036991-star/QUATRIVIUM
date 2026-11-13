@@ -121,8 +121,6 @@ describe('legal consent gate', () => {
     const extras = fs.readFileSync(path.join(__dirname, '..', 'i18n', 'legalExtras.ts'), 'utf8');
     expect(extras).to.include('Reserva');
     expect(extras).to.include('no son una licencia');
-    expect(extras.toLowerCase()).to.not.include('textbelt');
-    expect(extras.toLowerCase()).to.not.include('twilio');
     const consent = fs.readFileSync(path.join(__dirname, '..', 'utils', 'legalConsent.ts'), 'utf8');
     expect(consent).to.include("LEGAL_VERSION = '2026-09-30.1'");
     const reservaUi = fs.readFileSync(

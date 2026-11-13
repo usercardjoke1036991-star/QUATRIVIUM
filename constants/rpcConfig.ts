@@ -1,6 +1,6 @@
 import { FallbackProvider, JsonRpcProvider, isAddress, type AbstractProvider } from 'ethers';
 import { isHttpsUrl } from '../utils/sanitize';
-import { ARBITRUM_MAINNET, ARBITRUM_SEPOLIA, ZERO_ADDRESS } from './bsc';
+import { ARBITRUM_MAINNET, ARBITRUM_SEPOLIA, ZERO_ADDRESS } from './arbitrum';
 import { DEPLOYED_MAINNET, DEPLOYED_TESTNET } from './deployedAddresses';
 
 export type AppMode = 'demo' | 'live';
@@ -93,15 +93,14 @@ export function subscribeRuntimeMode(listener: () => void): () => void {
   };
 }
 
-export function resetRpcCache(): void {
-  cachedProvider = null;
-  lastRpcCheck = 0;
-}
+let cachedProvider: AbstractProvider | null = null;
+let lastRpcCheck = 0;
 
 export function setRuntimeMode(mode: AppMode): void {
   if (runtimeMode === mode) return;
   runtimeMode = mode;
-  resetRpcCache();
+  cachedProvider = null;
+  lastRpcCheck = 0;
   modeListeners.forEach((listener) => listener());
 }
 
@@ -135,9 +134,10 @@ const DEMO_RPCS = [
   ...ARBITRUM_SEPOLIA.rpc,
 ].filter(usableRpc);
 
-const LIVE_RPCS = [process.env.EXPO_PUBLIC_ARBITRUM_MAINNET_RPC_PRIMARY, ...ARBITRUM_MAINNET.rpc].filter(
-  usableRpc
-);
+const LIVE_RPCS = [
+  process.env.EXPO_PUBLIC_ARBITRUM_MAINNET_RPC_PRIMARY,
+  ...ARBITRUM_MAINNET.rpc,
+].filter(usableRpc);
 
 export const RPC_URLS = {
   get primary() {
@@ -166,6 +166,31 @@ export function getActiveContractNetwork(): 'mainnet' | 'testnet' {
   return runtimeMode === 'live' ? 'mainnet' : 'testnet';
 }
 
+/** Dos URL del mismo host son un solo RPC. Una clave en la URL no entra. */
+export function dedupeRpcHosts(urls: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const url of urls) {
+    if (!url.startsWith('https://') || /[?&](?:apikey|key)=/i.test(url)) continue;
+    let host = '';
+    try {
+      host = new URL(url).hostname.toLowerCase();
+    } catch {
+      continue;
+    }
+    if (!host || seen.has(host)) continue;
+    seen.add(host);
+    out.push(url);
+  }
+  return out;
+}
+
+/** Los RPC públicos de la red activa. Sin clave de proveedor. */
+export function publicRpcList(): string[] {
+  const list = runtimeMode === 'live' ? ARBITRUM_MAINNET.rpc : ARBITRUM_SEPOLIA.rpc;
+  return dedupeRpcHosts(list);
+}
+
 function uniqueHttpsRpcs(): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
@@ -180,8 +205,6 @@ function uniqueHttpsRpcs(): string[] {
   return out;
 }
 
-let cachedProvider: AbstractProvider | null = null;
-let lastRpcCheck = 0;
 const RPC_CHECK_MS = 60_000;
 
 async function quorumChainId(urls: string[], expected: number): Promise<void> {
@@ -265,7 +288,8 @@ export async function assertTrustedRpc(provider?: AbstractProvider): Promise<Abs
   await quorumChainId(uniqueHttpsRpcs(), NETWORK_CONFIG.chainId);
   const network = await withRpcTimeout(resolved.getNetwork(), 8_000);
   if (Number(network.chainId) !== NETWORK_CONFIG.chainId) {
-    resetRpcCache();
+    cachedProvider = null;
+    lastRpcCheck = 0;
     throw new Error('RPC chain mismatch');
   }
 
@@ -273,7 +297,8 @@ export async function assertTrustedRpc(provider?: AbstractProvider): Promise<Abs
   if (isContractConfigured() && isAddress(address)) {
     const code = await withRpcTimeout(resolved.getCode(address), 8_000);
     if (!code || code === '0x') {
-      resetRpcCache();
+      cachedProvider = null;
+      lastRpcCheck = 0;
       throw new Error('El RPC no ve el contrato de Quatrivium Finance en esta red.');
     }
   }

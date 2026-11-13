@@ -9,6 +9,8 @@ interface ICreditAlta {
     function fundador() external view returns (address);
     function pagarVerificacion(address token_, uint256 amount) external;
     function verificadoAlPool(address) external view returns (uint256);
+    function cobradorListo(address) external view returns (bool);
+    function ingresarAlPool(address token_, uint256 amount) external;
 }
 
 interface IReservaAlta {
@@ -71,6 +73,12 @@ contract QuatriviumAlta is ReentrancyGuard {
         if (monto == 0 || padre == address(0) || padre == deudor) return 0;
         padrinoApartado[deudor] = 0;
         padrinoExpira[deudor] = 0;
+        if (!credit.cobradorListo(padre)) {
+            token.forceApprove(address(credit), monto);
+            credit.ingresarAlPool(address(token), monto);
+            emit PadrinoSoltado(deudor, address(credit), monto);
+            return 0;
+        }
         token.safeTransfer(padre, monto);
         emit PadrinoSoltado(deudor, padre, monto);
         return monto;

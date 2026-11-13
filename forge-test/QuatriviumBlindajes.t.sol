@@ -7,8 +7,6 @@ import {QuatriviumFamaCaja} from "../contracts/QuatriviumFamaCaja.sol";
 import {QuatriviumReserva} from "../contracts/QuatriviumReserva.sol";
 import {QuatriviumAlta} from "../contracts/QuatriviumAlta.sol";
 import {ERC20Mock} from "../contracts/mocks/ERC20Mock.sol";
-import {MockV3Aggregator} from "../contracts/mocks/MockV3Aggregator.sol";
-
 /// @notice Tres casos que el Handler grande no cubre: padrino sin Alta, cuotas y sello vs grande.
 contract QuatriviumBlindajesTest is Test {
     QuatriviumCreditHarness internal credit;
@@ -30,27 +28,24 @@ contract QuatriviumBlindajesTest is Test {
         hijo = makeAddr("hijo");
         ballena = makeAddr("ballena");
         token = new ERC20Mock();
-        MockV3Aggregator feed = new MockV3Aggregator(8, 100000000);
-        address[] memory admins = new address[](1);
+        address[] memory admins = new address[](3);
         admins[0] = owner;
+        admins[1] = makeAddr("admin-b");
+        admins[2] = makeAddr("admin-c");
         uint64 nonce = vm.getNonce(owner);
-        address predicted = vm.computeCreateAddress(owner, nonce + 1);
+        address predictedCredit = vm.computeCreateAddress(owner, nonce + 1);
+        address predictedReserva = vm.computeCreateAddress(owner, nonce + 2);
+        address predictedAlta = vm.computeCreateAddress(owner, nonce + 3);
         vm.startPrank(owner, owner);
-        fama = new QuatriviumFamaCaja(address(token), predicted);
+        fama = new QuatriviumFamaCaja(address(token), predictedCredit, predictedAlta, predictedReserva);
         credit = new QuatriviumCreditHarness(
             address(token),
-            address(feed),
-            payable(owner),
-            500,
             admins,
-            1,
-            address(fama)
+            address(fama),
+            address(0)
         );
-        reserva = new QuatriviumReserva(address(token), owner, address(credit), address(fama));
+        reserva = new QuatriviumReserva(address(token), owner, address(credit), address(fama), predictedAlta, admins);
         alta = new QuatriviumAlta(address(token), address(credit), address(reserva));
-        reserva.setAltaFuente(address(alta));
-        fama.setReserva(address(reserva));
-        fama.setAlta(address(alta));
         token.mint(owner, 50_000 ether);
         token.approve(address(credit), type(uint256).max);
         credit.depositarLiquidez(address(token), 20_000 ether);
@@ -60,7 +55,7 @@ contract QuatriviumBlindajesTest is Test {
     function test_con_alta_el_sello_no_entra_por_verificar() public {
         _onboard(hijo, address(0));
         vm.prank(hijo, hijo);
-        vm.expectRevert();
+        vm.expectRevert(bytes(""));
         credit.pagarVerificacion(address(token), 1 ether);
     }
 
@@ -68,7 +63,7 @@ contract QuatriviumBlindajesTest is Test {
         _onboard(padre, address(0));
         _onboard(hijo, padre);
         vm.prank(hijo, hijo);
-        vm.expectRevert();
+        vm.expectRevert(bytes(""));
         credit.solicitarPrestamo(address(token), 1);
     }
 
@@ -134,7 +129,7 @@ contract QuatriviumBlindajesTest is Test {
     function _assertNav() internal view {
         assertEq(
             token.balanceOf(address(credit)) + credit.outstandingLoans(address(token)),
-            credit.totalLiquidity(address(token)) + credit.collectedFees(address(token)),
+            credit.totalLiquidity(address(token)) + credit.fondoSeguro(address(token)),
             "NAV"
         );
     }

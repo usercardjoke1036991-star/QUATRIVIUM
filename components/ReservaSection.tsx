@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from 'react-native';
 import type { Signer } from 'ethers';
-import { formatUnits } from 'ethers';
+import { Contract, formatUnits, Interface, parseUnits } from 'ethers';
 import { useI18n } from '../i18n/LanguageContext';
 import { useTheme } from '../theme/ThemeContext';
 import {
@@ -26,6 +26,16 @@ import {
   reservaErrorKey,
   type ReservaPreview,
 } from '../services/reservaService';
+import { useFundsConfirm } from './FundsConfirmHost';
+import {
+  approveFollows,
+  fundsTx,
+  quoteNetworkFee,
+  reservaConfirmAmount,
+} from '../utils/fundsConfirmGate';
+import { ERC20_ABI, getUsdtAddress } from '../constants/contractConfig';
+import { getProviderWithFallback } from '../constants/rpcConfig';
+import { getReservaAddress, RESERVA_ABI } from '../constants/reservaConfig';
 import { AppSubsection } from './AppSection';
 import { AppText, AppTextInput } from './AppText';
 import { AppIcon } from './icons';
@@ -55,6 +65,7 @@ export function ReservaSection({
 }: ReservaSectionProps) {
   const { t } = useI18n();
   const { colors } = useTheme();
+  const { confirmFunds } = useFundsConfirm();
   const [amount, setAmount] = useState(String(RESERVA_MIN_LOCK_USDT));
   const [acked, setAcked] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -142,6 +153,39 @@ export function ReservaSection({
     return { usd, tramo, pct };
   }, [amountOk, lockUsd, preview?.activa, preview?.principalWei]);
 
+  async function confirmMove(
+    kind: 'lock' | 'unlock' | 'renew',
+    method: 'bloquear' | 'desbloquear' | 'renovar',
+    args: unknown[],
+    destination: string
+  ) {
+    const principal = preview ? formatUnits(preview.principalWei, 18) : null;
+    const amount = reservaConfirmAmount(kind, parsed, principal);
+    if (!amount) return false;
+    let fee = 'no disponible';
+    try {
+      const data = new Interface(RESERVA_ABI).encodeFunctionData(method, args);
+      fee = await quoteNetworkFee(getProviderWithFallback(), {
+        from: walletAddress,
+        to: getReservaAddress(),
+        data,
+      });
+    } catch {
+      fee = 'no disponible';
+    }
+    let twoSignatures = false;
+    if (kind === 'lock' && walletAddress) {
+      twoSignatures = await approveFollows(
+        async () => {
+          const token = new Contract(getUsdtAddress(), ERC20_ABI, getProviderWithFallback());
+          return BigInt(await token.allowance(walletAddress, getReservaAddress()));
+        },
+        parseUnits(amount, 18)
+      );
+    }
+    return confirmFunds('movement', { ...fundsTx(amount, destination, fee), twoSignatures });
+  }
+
   async function run(
     action: () => Promise<void>,
     okKey: 'reservaBlockedOk' | 'reservaUnlockedOk' | 'reservaRenewedOk'
@@ -166,6 +210,7 @@ export function ReservaSection({
     <View style={styles.stack}>
       <AppSubsection title={t('reservaTitle')} defaultOpen icon="lock">
         <AppText style={[styles.lead, { color: colors.text }]}>{t('reservaLead')}</AppText>
+        <AppText style={[styles.lead, { color: colors.text }]}>{t('reservaPotDepends')}</AppText>
         <AppText style={[styles.meta, { color: colors.textMuted }]}>{t('reservaLockOnce')}</AppText>
         <AppText style={[styles.lead, { color: colors.text }]}>
           {t('reservaCommissionLead')}
@@ -329,10 +374,19 @@ export function ReservaSection({
           <TouchableOpacity
             disabled={!canLock}
             onPress={() =>
-              void run(
-                () => bloquearReserva(signer as Signer, parsed || '0', hasPadre),
-                'reservaBlockedOk'
-              )
+              void (async () => {
+                const ok = await confirmMove(
+                  'lock',
+                  'bloquear',
+                  [parseUnits(parsed || '0', 18)],
+                  getReservaAddress()
+                );
+                if (!ok) return;
+                await run(
+                  () => bloquearReserva(signer as Signer, parsed || '0', hasPadre),
+                  'reservaBlockedOk'
+                );
+              })()
             }
             style={[styles.button, { backgroundColor: canLock ? colors.primary : colors.chip }]}
           >
@@ -361,7 +415,11 @@ export function ReservaSection({
             <TouchableOpacity
               disabled={!canUnlock}
               onPress={() =>
-                void run(() => desbloquearReserva(signer as Signer), 'reservaUnlockedOk')
+                void (async () => {
+                  const ok = await confirmMove('unlock', 'desbloquear', [], walletAddress);
+                  if (!ok) return;
+                  await run(() => desbloquearReserva(signer as Signer), 'reservaUnlockedOk');
+                })()
               }
               style={[styles.button, { backgroundColor: canUnlock ? colors.primary : colors.chip }]}
             >
@@ -379,7 +437,11 @@ export function ReservaSection({
             <TouchableOpacity
               disabled={!canRenew}
               onPress={() =>
-                void run(() => renovarReserva(signer as Signer, hasPadre), 'reservaRenewedOk')
+                void (async () => {
+                  const ok = await confirmMove('renew', 'renovar', [], getReservaAddress());
+                  if (!ok) return;
+                  await run(() => renovarReserva(signer as Signer, hasPadre), 'reservaRenewedOk');
+                })()
               }
               style={[styles.button, { backgroundColor: canRenew ? colors.primary : colors.chip }]}
             >
