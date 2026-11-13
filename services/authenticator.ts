@@ -62,7 +62,7 @@ function toHex(bytes: Uint8Array): string {
 }
 
 /** HKDF del secreto TOTP con el secreto del teléfono. El TOTP solo no abre la llave. */
-export function totpDeviceWrapKey(secret: string, deviceHex: string): string {
+function totpDeviceWrapKey(secret: string, deviceHex: string): string {
   const out = hkdf(
     sha256,
     utf8(`${secret}:${deviceHex}`),
@@ -98,7 +98,7 @@ export async function isAuthenticatorEnabled(): Promise<boolean> {
   }
 }
 
-export async function loadAuthenticatorSecret(): Promise<string | null> {
+async function loadAuthenticatorSecret(): Promise<string | null> {
   try {
     return await SecureStore.getItemAsync(KEY);
   } catch {

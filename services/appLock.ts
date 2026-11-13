@@ -157,6 +157,7 @@ let passwordReplaceToken: {
   address: string;
   expiresMono: number;
 } | null = null;
+let passwordGeneration = 0;
 const REPLACE_TOKEN_MS = 60_000;
 const STORE_UNKNOWN = Symbol('store-unknown');
 
@@ -887,6 +888,29 @@ export async function isPasswordSet(): Promise<boolean> {
   return (await probePasswordSet()) === true;
 }
 
+/** La foto del alta. Si el llavero no responde, el mismo plazo de la carga devuelve null. */
+export async function readSignupPhoto(): Promise<{
+  hadPassword: boolean;
+  hadPin: boolean;
+  hadBound: string;
+  hadRaw: string | null | 'unreadable';
+} | null> {
+  const { BOUND_UNKNOWN, getBoundWallet } = await import('./deviceBinding');
+  const { readRawWallet } = await import('./appWallet');
+  const { raceMs } = await import('../utils/lockRace');
+  return raceMs(
+    (async () => {
+      const hadPassword = await isPasswordSet().catch(() => true);
+      const hadPin = await isPinSet().catch(() => true);
+      const hadBound = await getBoundWallet().catch(() => BOUND_UNKNOWN);
+      const hadRaw = await readRawWallet().catch(() => 'unreadable' as const);
+      return { hadPassword, hadPin, hadBound, hadRaw };
+    })(),
+    1500,
+    null
+  );
+}
+
 function passwordRounds(record: PasswordRecord): number {
   const n = Number(record.rounds || PIN_ROUNDS);
   if (!Number.isFinite(n)) return PIN_ROUNDS;
@@ -1078,7 +1102,7 @@ export async function persistLocalRecoveryWrap(wrap = getWalletWrapKey()): Promi
   }
 }
 
-export async function loadLocalRecoveryWrap(): Promise<string | null> {
+async function loadLocalRecoveryWrap(): Promise<string | null> {
   try {
     const raw = String(
       (await SecureStore.getItemAsync(RECOVERY_WRAP, BIO_WRAP_OPTIONS)) || ''
@@ -1517,7 +1541,15 @@ export async function clearPin(current: string): Promise<boolean> {
   return true;
 }
 
-async function capturePasswordBackup(token: string): Promise<void> {
+type PasswordSlots = { secure: string | null; fallback: string | null };
+
+/** El alta que puede deshacerse devuelve esto. No caduca: es de quien llama. */
+export type SignupUndo = {
+  revert: () => Promise<void>;
+  finish: () => void;
+};
+
+async function readPasswordSlots(): Promise<PasswordSlots> {
   let secure: string | null = null;
   let fallback: string | null = null;
   try {
@@ -1530,7 +1562,65 @@ async function capturePasswordBackup(token: string): Promise<void> {
   } catch {
     fallback = null;
   }
-  passwordBackup = { secure, fallback, token };
+  return { secure, fallback };
+}
+
+function samePasswordSlots(left: PasswordSlots, right: PasswordSlots): boolean {
+  return (
+    (left.secure || null) === (right.secure || null) &&
+    (left.fallback || null) === (right.fallback || null)
+  );
+}
+
+async function restorePasswordSlots(slots: PasswordSlots): Promise<void> {
+  try {
+    if (slots.secure) {
+      await SecureStore.setItemAsync(PASSWORD_KEY, slots.secure, OPTIONS);
+    } else {
+      await SecureStore.deleteItemAsync(PASSWORD_KEY);
+    }
+  } catch {
+    /* ignore */
+  }
+  try {
+    if (slots.fallback) {
+      await AsyncStorage.setItem(PASSWORD_FALLBACK, slots.fallback);
+    } else {
+      await AsyncStorage.removeItem(PASSWORD_FALLBACK);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+function openSignupUndo(
+  prior: PasswordSlots,
+  written: PasswordSlots,
+  generation: number
+): SignupUndo {
+  let used = false;
+  return {
+    finish() {
+      used = true;
+    },
+    async revert() {
+      if (used) return;
+      used = true;
+      const current = await readPasswordSlots();
+      if (passwordGeneration !== generation || !samePasswordSlots(current, written)) {
+        reportLockFault();
+        return;
+      }
+      await restorePasswordSlots(prior);
+      clearPasswordBackup();
+      clearWalletSession();
+    },
+  };
+}
+
+async function capturePasswordBackup(token: string): Promise<void> {
+  const slots = await readPasswordSlots();
+  passwordBackup = { secure: slots.secure, fallback: slots.fallback, token };
 }
 
 function clearPasswordBackup(): void {
@@ -1595,7 +1685,7 @@ export async function setPassword(
     keepLockCounters?: boolean;
     undoable?: boolean;
   }
-): Promise<string> {
+): Promise<string | SignupUndo> {
   if (!isValidMasterPassword(password)) {
     throw passwordError(password);
   }
@@ -1618,7 +1708,7 @@ export async function setPassword(
     );
     if (!sessionOpen && !tokenOk) throw new Error('password-locked');
     if (tokenOk && issued) passwordReplaceToken = null;
-  } else {
+  } else if (!options?.undoable) {
     const freshToken = Crypto.randomUUID();
     await capturePasswordBackup(freshToken);
     passwordReplaceToken = {
@@ -1633,7 +1723,8 @@ export async function setPassword(
       throw error;
     }
   }
-  if (!passwordBackup) await capturePasswordBackup('');
+  if (!options?.undoable && !passwordBackup) await capturePasswordBackup('');
+  const undoPrior = options?.undoable ? await readPasswordSlots() : null;
   const salt = Crypto.randomUUID();
   const material = await derivePinMaterial(password, salt, PIN_PBKDF2_ROUNDS);
   const record: PasswordRecord = {
@@ -1664,30 +1755,45 @@ export async function setPassword(
   } else {
     throw new Error('password-persist');
   }
-  const previousWrap = getWalletWrapKey();
-  if (previousWrap) {
-    const { rewrapWalletWithNewKey } = await import('./appWallet');
-    await rewrapWalletWithNewKey(async () => {
+  const written: PasswordSlots = stored
+    ? { secure: serialized, fallback: null }
+    : { secure: undoPrior?.secure ?? null, fallback: serialized };
+  const generation = ++passwordGeneration;
+  const undo =
+    options?.undoable && undoPrior ? openSignupUndo(undoPrior, written, generation) : null;
+  try {
+    const previousWrap = getWalletWrapKey();
+    if (previousWrap) {
+      const { rewrapWalletWithNewKey } = await import('./appWallet');
+      await rewrapWalletWithNewKey(async () => {
+        setWalletWrapKey(nextWrap);
+        return nextWrap;
+      });
+    } else {
       setWalletWrapKey(nextWrap);
-      return nextWrap;
-    });
-  } else {
-    setWalletWrapKey(nextWrap);
+    }
+    if (conveniencePin) {
+      await persistPinWrap(conveniencePin);
+    }
+    if (await isBiometricEnabled()) {
+      await persistWrapForBiometric(nextWrap);
+    }
+    await persistCompanionWraps(nextWrap);
+    if (!options?.keepLockCounters) await writeGate(emptyGate());
+  } catch (error) {
+    if (undo) await undo.revert();
+    throw error;
   }
-  if (conveniencePin) {
-    await persistPinWrap(conveniencePin);
+  if (undo) {
+    clearPasswordBackup();
+    return undo;
   }
-  if (await isBiometricEnabled()) {
-    await persistWrapForBiometric(nextWrap);
-  }
-  await persistCompanionWraps(nextWrap);
-  if (!options?.keepLockCounters) await writeGate(emptyGate());
-  if (!options?.undoable && !options?.keepLockCounters) clearPasswordBackup();
+  if (!options?.keepLockCounters) clearPasswordBackup();
   return nextWrap;
 }
 
 /** Si el alta falla después de guardar la clave, restaura la copia del mismo token. */
-export async function abortPasswordSetup(token?: string): Promise<void> {
+async function abortPasswordSetup(token?: string): Promise<void> {
   const backup = passwordBackup;
   const issued = passwordReplaceToken;
   const issuedToken = issued?.token || '';
@@ -1696,26 +1802,7 @@ export async function abortPasswordSetup(token?: string): Promise<void> {
   if (issued && Number.isFinite(issued.expiresMono) && replaceNow() > issued.expiresMono) return;
   passwordBackup = null;
   passwordReplaceToken = null;
-  if (backup) {
-    try {
-      if (backup.secure) {
-        await SecureStore.setItemAsync(PASSWORD_KEY, backup.secure, OPTIONS);
-      } else {
-        await SecureStore.deleteItemAsync(PASSWORD_KEY);
-      }
-    } catch {
-      /* ignore */
-    }
-    try {
-      if (backup.fallback) {
-        await AsyncStorage.setItem(PASSWORD_FALLBACK, backup.fallback);
-      } else {
-        await AsyncStorage.removeItem(PASSWORD_FALLBACK);
-      }
-    } catch {
-      /* ignore */
-    }
-  }
+  if (backup) await restorePasswordSlots(backup);
   clearWalletSession();
 }
 
@@ -2021,5 +2108,7 @@ if (__DEV__) {
     replaceClockNow,
     probeDeviceProtection,
     currentUndoToken,
+    abortPasswordSetup,
+    loadLocalRecoveryWrap,
   };
 }

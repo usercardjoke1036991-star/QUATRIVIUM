@@ -93,15 +93,14 @@ export function subscribeRuntimeMode(listener: () => void): () => void {
   };
 }
 
-export function resetRpcCache(): void {
-  cachedProvider = null;
-  lastRpcCheck = 0;
-}
+let cachedProvider: AbstractProvider | null = null;
+let lastRpcCheck = 0;
 
 export function setRuntimeMode(mode: AppMode): void {
   if (runtimeMode === mode) return;
   runtimeMode = mode;
-  resetRpcCache();
+  cachedProvider = null;
+  lastRpcCheck = 0;
   modeListeners.forEach((listener) => listener());
 }
 
@@ -206,8 +205,6 @@ function uniqueHttpsRpcs(): string[] {
   return out;
 }
 
-let cachedProvider: AbstractProvider | null = null;
-let lastRpcCheck = 0;
 const RPC_CHECK_MS = 60_000;
 
 async function quorumChainId(urls: string[], expected: number): Promise<void> {
@@ -291,7 +288,8 @@ export async function assertTrustedRpc(provider?: AbstractProvider): Promise<Abs
   await quorumChainId(uniqueHttpsRpcs(), NETWORK_CONFIG.chainId);
   const network = await withRpcTimeout(resolved.getNetwork(), 8_000);
   if (Number(network.chainId) !== NETWORK_CONFIG.chainId) {
-    resetRpcCache();
+    cachedProvider = null;
+    lastRpcCheck = 0;
     throw new Error('RPC chain mismatch');
   }
 
@@ -299,7 +297,8 @@ export async function assertTrustedRpc(provider?: AbstractProvider): Promise<Abs
   if (isContractConfigured() && isAddress(address)) {
     const code = await withRpcTimeout(resolved.getCode(address), 8_000);
     if (!code || code === '0x') {
-      resetRpcCache();
+      cachedProvider = null;
+      lastRpcCheck = 0;
       throw new Error('El RPC no ve el contrato de Quatrivium Finance en esta red.');
     }
   }

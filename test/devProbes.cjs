@@ -24,4 +24,20 @@ function attachWrite(write) {
   Object.assign(write, bag('write'));
 }
 
-module.exports = { attachLock, attachKdf, attachAuth, attachDevice, attachWrite };
+function attachWallet(wallet) {
+  Object.assign(wallet, bag('wallet'));
+}
+
+function attachEntry(entry) {
+  Object.assign(entry, bag('entry'));
+}
+
+module.exports = {
+  attachLock,
+  attachKdf,
+  attachAuth,
+  attachDevice,
+  attachWrite,
+  attachWallet,
+  attachEntry,
+};

@@ -30,17 +30,18 @@ import {
   resumeLockWait,
   tickLockWait,
   isBiometricEnabled,
-  abortOpenAttempt,
   clearRestorePasswordBackup,
   discardCreatedPin,
   isPasswordSet,
   isPinSet,
+  readSignupPhoto,
   probePasswordSet,
   probePinSet,
   loadWrapFromBiometric,
   lockNow,
   setPassword,
   shouldRelockAfterBackground,
+  type SignupUndo,
 } from '../services/appLock';
 import { describeLockFailure, lockWaitCopy } from '../utils/lockFailureCopy';
 import { raceMs, reportLockFault, setLockFaultReporter } from '../utils/lockRace';
@@ -52,7 +53,6 @@ import {
   getSecretPhrase,
   isPhraseBackedUp,
   loadAppWallet,
-  readRawWallet,
   wipeAppWallet,
   importFromPhrase,
   isValidSecretPhrase,
@@ -64,7 +64,7 @@ import {
   saveClaimedUsername,
 } from '../services/accountUsername';
 import { lookupBoundWalletOnThisDevice } from '../services/deviceClaim';
-import { BOUND_UNKNOWN, getBoundWallet } from '../services/deviceBinding';
+import { BOUND_UNKNOWN } from '../services/deviceBinding';
 import { restoreAccountOnDevice } from '../services/restoreAccount';
 import { isAuthenticatorEnabled, unlockWithAuthenticator } from '../services/authenticator';
 import {
@@ -830,14 +830,22 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
     setInviteError('');
     setBusy(true);
     setError('');
-    const hadPassword = await isPasswordSet().catch(() => true);
-    const hadPin = await isPinSet().catch(() => true);
-    const hadBound = await getBoundWallet().catch(() => BOUND_UNKNOWN);
-    const hadRaw = await readRawWallet().catch(() => 'unreadable' as const);
+    let hadPassword = true;
+    let hadPin = true;
+    let hadBound = BOUND_UNKNOWN;
+    let hadRaw: string | null | 'unreadable' = 'unreadable';
+    let undo: SignupUndo | null = null;
     try {
+      const photo = await readSignupPhoto();
+      if (!photo) throw new Error('wallet-persist');
+      hadPassword = photo.hadPassword;
+      hadPin = photo.hadPin;
+      hadBound = photo.hadBound;
+      hadRaw = photo.hadRaw;
       const created = generateSecretPhrase();
-      const wrap = await setPassword(passwordInput, pendingPin || undefined, { undoable: true });
-      if (!wrap && !getWalletWrapKey()) {
+      const issued = await setPassword(passwordInput, pendingPin || undefined, { undoable: true });
+      if (issued && typeof issued !== 'string') undo = issued;
+      if (!getWalletWrapKey()) {
         throw new Error('locked');
       }
       passwordCommittedRef.current = true;
@@ -850,10 +858,11 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
       setPendingPhrase(created.phrase);
       setPhraseAcked(false);
       setSetupStage('phraseReveal');
+      undo?.finish();
       clearRestorePasswordBackup();
     } catch (err) {
-      if (!hadPassword) {
-        await abortOpenAttempt().catch(() => {});
+      if (!hadPassword && undo) {
+        await undo.revert().catch(() => {});
       }
       if (!hadPin) {
         await discardCreatedPin().catch(() => {});

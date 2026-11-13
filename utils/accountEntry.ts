@@ -98,7 +98,7 @@ export function welcomeActions(accountOnPhone: boolean, deviceClaimed = false): 
   return ['createPhrase', 'restoreAccount'];
 }
 
-export function restoreMatchesDevice(claimedWallet: string, phraseWallet: string): boolean {
+function restoreMatchesDevice(claimedWallet: string, phraseWallet: string): boolean {
   const claimed = String(claimedWallet || '').toLowerCase();
   const phrase = String(phraseWallet || '').toLowerCase();
   if (!claimed || claimed === '0x0000000000000000000000000000000000000000') return true;
@@ -223,4 +223,9 @@ export function afterUnlockNext(input: {
   if (!input.walletOpened) return 'restore';
   if (!input.phraseAcked && input.hasPhrase) return 'phraseReveal';
   return 'app';
+}
+
+if (__DEV__) {
+  const host = globalThis as { __qcDev?: Record<string, Record<string, unknown>> };
+  (host.__qcDev ??= {}).entry = { restoreMatchesDevice };
 }

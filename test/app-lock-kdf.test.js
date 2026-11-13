@@ -20,6 +20,7 @@ let boundFault = '';
 let failPasswordWrite = false;
 let walletWriteFault = '';
 let walletReplacedOnce = false;
+let failFallbackRestore = false;
 let hideBoundConfirm = false;
 let crashOnSecretPromote = false;
 let rejectDeviceAuth = false;
@@ -111,6 +112,9 @@ installMock('@react-native-async-storage/async-storage', {
     return memory.has(`mem:${key}`) ? memory.get(`mem:${key}`) : null;
   },
   async setItem(key, value) {
+    if (failFallbackRestore && key === ['quatrivium', 'appWallet', 'v1', 'fallback'].join('.')) {
+      throw new Error('fallback-disk');
+    }
     memory.set(`mem:${key}`, value);
   },
   async removeItem(key) {
@@ -162,6 +166,8 @@ probes.attachKdf(kdf);
 probes.attachLock(lock);
 probes.attachAuth(auth);
 probes.attachDevice(device);
+probes.attachWallet(wallet);
+probes.attachEntry(entry);
 
 for (const [from, to] of [
   ['setVerifyBudgetForTests', 'setVerifyBudget'],
@@ -201,6 +207,7 @@ describe('app lock PBKDF2', function () {
     failPasswordWrite = false;
     walletWriteFault = '';
     walletReplacedOnce = false;
+    failFallbackRestore = false;
     hideBoundConfirm = false;
     lock.setVerifyBudgetForTests(null);
     lock.setLockPhaseForTests(null);
@@ -2129,14 +2136,14 @@ describe('app lock PBKDF2', function () {
   });
 
   async function failedFirstCreate(phrase) {
-    await lock.setPassword(PASSWORD, undefined, { undoable: true });
+    const undo = await lock.setPassword(PASSWORD, undefined, { undoable: true });
     let code = '';
     try {
       await wallet.importFromPhrase(phrase, { markBackedUp: false });
     } catch (error) {
       code = error instanceof Error ? error.message : 'throw';
     }
-    await lock.abortPasswordSetup(lock.takeRestoreTokenForAbort());
+    if (undo && typeof undo.revert === 'function') await undo.revert();
     return code;
   }
 
@@ -2407,5 +2414,142 @@ describe('app lock PBKDF2', function () {
     expect(failed).to.equal(true);
     expect(memory.get(WALLET_SLOT)).to.equal(blob);
     expect(memory.get(fallbackKey)).to.equal(blob);
+  });
+
+  it('undoes a failed signup after the overwrite token expired', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    const absent = memory.get('quatrivium.lock.password');
+    const undo = await lock.setPassword(PASSWORD, undefined, { undoable: true });
+    lock.advanceReplaceClockForTests(61_000);
+    await undo.revert();
+    expect(memory.get('quatrivium.lock.password') === absent, 'registro 61 s después').to.equal(
+      true
+    );
+    await lock.setPassword(PASSWORD);
+    const before = memory.get('quatrivium.lock.password');
+    const again = await lock.setPassword('Nueva-9z', undefined, { undoable: true });
+    lock.advanceReplaceClockForTests(61_000);
+    await again.revert();
+    expect(memory.get('quatrivium.lock.password') === before, 'registro anterior').to.equal(true);
+    expect((await lock.checkPassword(PASSWORD)).ok).to.equal(true);
+  });
+
+  it('a signup undo does nothing the second time', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    const undo = await lock.setPassword(PASSWORD, undefined, { undoable: true });
+    await undo.revert();
+    const after = memory.get('quatrivium.lock.password');
+    let faults = 0;
+    race.setLockFaultReporter(() => {
+      faults += 1;
+    });
+    await undo.revert();
+    race.setLockFaultReporter(null);
+    expect(memory.get('quatrivium.lock.password') === after).to.equal(true);
+    expect(faults).to.equal(0);
+    expect(await lock.isPasswordSet()).to.equal(false);
+  });
+
+  it('a signup undo does nothing after the signup finishes', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    const undo = await lock.setPassword(PASSWORD, undefined, { undoable: true });
+    const kept = memory.get('quatrivium.lock.password');
+    undo.finish();
+    let faults = 0;
+    race.setLockFaultReporter(() => {
+      faults += 1;
+    });
+    await undo.revert();
+    race.setLockFaultReporter(null);
+    expect(memory.get('quatrivium.lock.password') === kept).to.equal(true);
+    expect(faults).to.equal(0);
+    expect((await lock.checkPassword(PASSWORD)).ok).to.equal(true);
+  });
+
+  it('a signup undo does not delete a password written by a later setPassword', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    const undo = await lock.setPassword(PASSWORD, undefined, { undoable: true });
+    await lock.setPassword('Nueva-9z');
+    const kept = memory.get('quatrivium.lock.password');
+    let faults = 0;
+    race.setLockFaultReporter(() => {
+      faults += 1;
+    });
+    await undo.revert();
+    race.setLockFaultReporter(null);
+    expect(memory.get('quatrivium.lock.password') === kept).to.equal(true);
+    expect(faults).to.equal(1);
+    expect(await lock.isPasswordSet()).to.equal(true);
+    expect((await lock.checkPassword('Nueva-9z')).ok).to.equal(true);
+  });
+
+  it('a signup snapshot that never answers errors, writes nothing, and the next tap enters', async function () {
+    const guard = loadTs(path.join(__dirname, '..', 'utils', 'tapGuard.ts'));
+    const store = require('expo-secure-store');
+    const previous = store.getItemAsync;
+    const held = { current: false };
+    let hang = true;
+    store.getItemAsync = async (key, options) => {
+      if (hang && key === WALLET_SLOT) return new Promise(() => {});
+      return previous(key, options);
+    };
+    const beforePassword = memory.get('quatrivium.lock.password');
+    const beforeWallet = memory.get(WALLET_SLOT);
+    const send = async () => {
+      if (!guard.beginTap(held)) return 'blocked';
+      try {
+        const photo = await lock.readSignupPhoto();
+        if (!photo) return 'error';
+        return 'entered';
+      } finally {
+        guard.endTap(held);
+      }
+    };
+    try {
+      const first = await send();
+      expect(first).to.equal('error');
+      expect(memory.get('quatrivium.lock.password') === beforePassword).to.equal(true);
+      expect(memory.get(WALLET_SLOT) === beforeWallet).to.equal(true);
+      expect(held.current).to.equal(false);
+      hang = false;
+      const second = await send();
+      expect(second).to.equal('entered');
+    } finally {
+      hang = false;
+      store.getItemAsync = previous;
+    }
+  });
+
+  it('reports a lock fault when restoring the wallet fallback fails and keeps the original error', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    await lock.setPassword(PASSWORD);
+    const created = wallet.generateSecretPhrase();
+    await wallet.importFromPhrase(created.phrase, { markBackedUp: false });
+    const blob = memory.get(WALLET_SLOT);
+    const fallbackKey = `mem:${['quatrivium', 'appWallet', 'v1', 'fallback'].join('.')}`;
+    memory.set(fallbackKey, blob);
+    let faults = 0;
+    race.setLockFaultReporter(() => {
+      faults += 1;
+    });
+    walletWriteFault = 'replace';
+    failFallbackRestore = true;
+    let message = '';
+    try {
+      await wallet.importFromPhrase(created.phrase, { markBackedUp: false });
+    } catch (error) {
+      message = error instanceof Error ? error.message : '';
+    }
+    walletWriteFault = '';
+    failFallbackRestore = false;
+    race.setLockFaultReporter(null);
+    expect(message).to.equal('wallet-persist');
+    expect(faults).to.equal(1);
+    expect(memory.get(fallbackKey) === blob).to.equal(false);
   });
 });

@@ -197,7 +197,11 @@ async function writeStored(record: StoredWallet): Promise<void> {
       if (previousFallback) {
         const backFallback = await AsyncStorage.getItem(WALLET_FALLBACK).catch(() => null);
         if (backFallback !== previousFallback) {
-          await AsyncStorage.setItem(WALLET_FALLBACK, previousFallback).catch(() => {});
+          try {
+            await AsyncStorage.setItem(WALLET_FALLBACK, previousFallback);
+          } catch {
+            reportLockFault();
+          }
         }
       }
     }
@@ -284,7 +288,7 @@ export async function loadAppWallet(): Promise<HDNodeWallet | Wallet | null> {
   return toConnectedWallet(stored.privateKey);
 }
 
-export async function createAppWallet(): Promise<HDNodeWallet> {
+async function createAppWallet(): Promise<HDNodeWallet> {
   const claimed = await lookupBoundWalletOnThisDevice();
   if (claimed.status === 'wallet' || claimed.status === 'unknown') {
     throw new Error(claimed.status === 'unknown' ? 'store-unknown' : 'device-bound');
@@ -453,4 +457,9 @@ function assertAmount(amountWei: string) {
   if (!isAllowedWei(amountWei)) {
     throw new Error('invalid-amount');
   }
+}
+
+if (__DEV__) {
+  const host = globalThis as { __qcDev?: Record<string, Record<string, unknown>> };
+  (host.__qcDev ??= {}).wallet = { createAppWallet };
 }
