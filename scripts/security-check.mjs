@@ -121,7 +121,7 @@ console.log(
 console.log(
   '- Contratos 100% inmutables: ReentrancyGuard, SafeERC20, Solidity 0.8.24, sin Pausable ni llaves maestras'
 );
-console.log('- Red principal: Arbitrum One (chainId: 42161) con LUSD y oráculo Chainlink LUSD/USD');
+console.log('- Red principal: Arbitrum One (chainId: 42161) con LUSD. No hay oráculo de precio');
 console.log('- RPC: quorum de chainId + bytecode del contrato + rotación multi-nodo');
 console.log('- Cero servidores Web2: sin telemetría, sin KYC, sin OTP y sin perfiles remotos');
 console.log('- Billetera HD BIP-39 cifrada con PIN en SecureStore; bloqueo tras intentos fallidos');

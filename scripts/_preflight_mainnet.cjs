@@ -40,13 +40,10 @@ async function codeOk(provider, address, label) {
 async function main() {
   const root = path.join(__dirname, '..');
   const local = loadEnv(path.join(root, '.env'));
-  const worker = loadEnv(path.join(root, '.env.worker'));
   const founderWanted = '0x5023bf46dB7458B9bb9152a7ffE64f195CD1a047';
-  const attesterWanted = '0x140Fb8bD6611aC0c64cF254Dea1Ef4Caf15A821E';
   const staleMainnet = '0xa6aac9ce4923789a4095fbc0504db9a697f8a46d';
 
   const deployer = addrFromKey(local.PRIVATE_KEY);
-  const attester = addrFromKey(worker.ATTESTER_PRIVATE_KEY);
   const admins = String(local.ADMINS || '')
     .split(',')
     .map((item) => item.trim())
@@ -62,18 +59,12 @@ async function main() {
   );
   console.log('APP chainId local', chainId || '(vacío)');
   console.log('Deployer', deployer || '(PRIVATE_KEY inválida)');
-  console.log('Attester', attester || '(ATTESTER inválida)');
   console.log('ADMINS', admins.join(',') || '(vacío)');
   console.log('FEE_COLLECTOR', collector || '(vacío)');
   console.log('MAINNET_CONTRACT', mainnetAddr || '(vacío, correcto hasta el deploy)');
 
   const checks = [];
   checks.push(['deployer=fundadora', deployer.toLowerCase() === founderWanted.toLowerCase()]);
-  checks.push(['attester=esperado', attester.toLowerCase() === attesterWanted.toLowerCase()]);
-  checks.push([
-    'attester≠deployer',
-    Boolean(attester) && attester.toLowerCase() !== deployer.toLowerCase(),
-  ]);
   checks.push([
     'ADMINS incluye fundadora',
     admins.some((a) => a.toLowerCase() === founderWanted.toLowerCase()),
@@ -98,7 +89,6 @@ async function main() {
     const net = await provider.getNetwork();
     checks.push(['RPC mainnet chain 42161', Number(net.chainId) === 42161]);
     await codeOk(provider, ARBITRUM_MAINNET.lusd, 'LUSD');
-    await codeOk(provider, ARBITRUM_MAINNET.lusdUsdFeed, 'feed LUSD/USD');
     if (deployer) {
       bnb = await provider.getBalance(deployer);
       const usdt = new ethers.Contract(

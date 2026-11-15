@@ -118,40 +118,6 @@ async function seedPool(token, contract, owner, amount = '500') {
   await contract.connect(owner).depositarLiquidez(tokenAddr, ethers.parseUnits(amount, 18));
 }
 
-async function encodeAttestPacked(contract, wallet, phoneHash, deviceHash, deadline) {
-  const nonce = await contract.attestNonce(wallet);
-  const network = await ethers.provider.getNetwork();
-  return ethers.keccak256(
-    ethers.AbiCoder.defaultAbiCoder().encode(
-      ['address', 'bytes32', 'bytes32', 'uint256', 'uint256', 'uint256', 'address'],
-      [wallet, phoneHash, deviceHash, deadline, nonce, network.chainId, await contract.getAddress()]
-    )
-  );
-}
-
-async function signAttest(contract, attester, wallet, phoneHash, deviceHash, deadline) {
-  const packed = await encodeAttestPacked(contract, wallet, phoneHash, deviceHash, deadline);
-  const sig = await attester.signMessage(ethers.getBytes(packed));
-  return ethers.Signature.from(sig);
-}
-
-async function attestIdentity(contract, user, phoneSalt = 'phone', deviceSalt = 'device') {
-  const [attester] = await ethers.getSigners();
-  const phoneHash = ethers.keccak256(ethers.toUtf8Bytes(`${user.address}:${phoneSalt}`));
-  const deviceHash = ethers.keccak256(ethers.toUtf8Bytes(`${user.address}:${deviceSalt}`));
-  const latest = await ethers.provider.getBlock('latest');
-  const deadline = BigInt((latest?.timestamp || 0) + 3600);
-  const { v, r, s } = await signAttest(
-    contract,
-    attester,
-    user.address,
-    phoneHash,
-    deviceHash,
-    deadline
-  );
-  await contract.connect(user).vincularIdentidad(phoneHash, deviceHash, deadline, v, r, s);
-}
-
 async function qualifyCollector(token, contract, user) {
   const fama = await ethers.getContractAt('QuatriviumFamaCaja', await contract.famaHermano());
   const alta = await ethers.getContractAt('QuatriviumAlta', await fama.alta());
@@ -236,9 +202,6 @@ module.exports = {
   deployFamaAndCredit,
   deployProtocol,
   seedPool,
-  attestIdentity,
-  signAttest,
-  encodeAttestPacked,
   registerAndFund,
   qualifyCollector,
   proposeAndExecute,

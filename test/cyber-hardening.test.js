@@ -249,7 +249,7 @@ describe('cyber hardening — PIN and secret box', function () {
     expect(script).to.not.include('setReserva(');
     expect(script).to.not.include('mint(');
     expect(script).to.not.include('EXPO_PUBLIC_CHAIN_ID');
-    expect(nets).to.include('0x0411D28c94d85A36bC72Cb0f875dfA8371D8fFfF');
+    expect(nets).to.not.include('0x0411D28c94d85A36bC72Cb0f875dfA8371D8fFfF');
     expect(nets).to.include('0x93b346b6BC2548dA6A1E7d98E9a421B42541425b');
   });
 

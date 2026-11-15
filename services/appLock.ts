@@ -159,6 +159,10 @@ let passwordReplaceToken: {
 let passwordGeneration = 0;
 let passwordCleanup: Promise<void> = Promise.resolve();
 let committedPassword: string | null = null;
+
+function notePasswordKey(value: string | null): void {
+  committedPassword = value;
+}
 /** Una escritura que no vuelve se suelta a los 15 s. Si llega después, no pisa una clave más nueva. */
 const PASSWORD_CLEANUP_MAX_MS = 15_000;
 const REPLACE_TOKEN_MS = 60_000;
@@ -1617,8 +1621,10 @@ async function restorePasswordSlots(slots: PasswordSlots): Promise<boolean> {
   try {
     if (slots.secure) {
       await SecureStore.setItemAsync(PASSWORD_KEY, slots.secure, OPTIONS);
+      notePasswordKey(slots.secure);
     } else {
       await SecureStore.deleteItemAsync(PASSWORD_KEY);
+      notePasswordKey(null);
     }
   } catch {
     failed = true;
@@ -1771,7 +1777,10 @@ export async function setPassword(
     );
     if (!sessionOpen && !tokenOk) throw new Error('password-locked');
     if (tokenOk && issued) passwordReplaceToken = null;
-  } else if (!options?.undoable) {
+  }
+  const latePrior = await readPasswordSlots();
+  const undoPrior = options?.undoable ? latePrior : null;
+  if (!existing && !options?.undoable) {
     const freshToken = Crypto.randomUUID();
     await capturePasswordBackup(freshToken);
     passwordReplaceToken = {
@@ -1787,7 +1796,6 @@ export async function setPassword(
     }
   }
   if (!options?.undoable && !passwordBackup) await capturePasswordBackup('');
-  const undoPrior = options?.undoable ? await readPasswordSlots() : null;
   const salt = Crypto.randomUUID();
   const material = await derivePinMaterial(password, salt, PIN_PBKDF2_ROUNDS);
   const record: PasswordRecord = {
@@ -1800,7 +1808,6 @@ export async function setPassword(
   };
   const nextWrap = material.wrap;
   const serialized = JSON.stringify(record);
-  const latePrior = await readPasswordSlots();
   const lateGeneration = passwordGeneration;
   const attempt = SecureStore.setItemAsync(PASSWORD_KEY, serialized, OPTIONS).then(
     () => 'ok' as const,
@@ -1830,7 +1837,7 @@ export async function setPassword(
   const written: PasswordSlots = stored
     ? { secure: serialized, fallback: null }
     : { secure: undoPrior?.secure ?? null, fallback: serialized };
-  if (stored) committedPassword = serialized;
+  if (stored) notePasswordKey(serialized);
   const generation = ++passwordGeneration;
   const undo =
     options?.undoable && undoPrior ? openSignupUndo(undoPrior, written, generation) : null;
@@ -1949,7 +1956,9 @@ async function checkPasswordBody(
       split: PIN_SPLIT,
     };
     throwIfAborted(signal);
-    await SecureStore.setItemAsync(PASSWORD_KEY, JSON.stringify(next), OPTIONS);
+    const migrated = JSON.stringify(next);
+    await SecureStore.setItemAsync(PASSWORD_KEY, migrated, OPTIONS);
+    notePasswordKey(migrated);
     throwIfAborted(signal);
     setWalletWrapKey(fresh.wrap);
   } else if (modern) {
@@ -1966,7 +1975,9 @@ async function checkPasswordBody(
       split: PIN_SPLIT,
     };
     throwIfAborted(signal);
-    await SecureStore.setItemAsync(PASSWORD_KEY, JSON.stringify(next), OPTIONS);
+    const migrated = JSON.stringify(next);
+    await SecureStore.setItemAsync(PASSWORD_KEY, migrated, OPTIONS);
+    notePasswordKey(migrated);
     throwIfAborted(signal);
     setWalletWrapKey(fresh.wrap);
   } else {
@@ -1983,7 +1994,9 @@ async function checkPasswordBody(
       split: PIN_SPLIT,
     };
     throwIfAborted(signal);
-    await SecureStore.setItemAsync(PASSWORD_KEY, JSON.stringify(next), OPTIONS);
+    const migrated = JSON.stringify(next);
+    await SecureStore.setItemAsync(PASSWORD_KEY, migrated, OPTIONS);
+    notePasswordKey(migrated);
     throwIfAborted(signal);
     setWalletWrapKey(fresh.wrap);
   }
@@ -2131,11 +2144,22 @@ async function undoLatePasswordWrite(
     } catch {
       if (passwordGeneration === lateGeneration && latePrior.secure) {
         await SecureStore.setItemAsync(PASSWORD_KEY, latePrior.secure, OPTIONS);
+        notePasswordKey(latePrior.secure);
       }
       reportLockFault();
       return;
     }
     if (passwordGeneration !== lateGeneration || now !== serialized) {
+      if (
+        now === serialized &&
+        passwordGeneration !== lateGeneration &&
+        committedPassword == null
+      ) {
+        await SecureStore.deleteItemAsync(PASSWORD_KEY);
+        notePasswordKey(null);
+        reportLockFault();
+        return;
+      }
       if (now === serialized && committedPassword && committedPassword !== serialized) {
         await SecureStore.setItemAsync(PASSWORD_KEY, committedPassword, OPTIONS);
       }
@@ -2144,8 +2168,10 @@ async function undoLatePasswordWrite(
     }
     if (latePrior.secure) {
       await SecureStore.setItemAsync(PASSWORD_KEY, latePrior.secure, OPTIONS);
+      notePasswordKey(latePrior.secure);
     } else {
       await SecureStore.deleteItemAsync(PASSWORD_KEY);
+      notePasswordKey(null);
     }
     if (latePrior.fallback) {
       await AsyncStorage.setItem(PASSWORD_FALLBACK, latePrior.fallback);

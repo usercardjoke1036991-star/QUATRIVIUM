@@ -26,7 +26,7 @@ La escalera de 1000 niveles y los porcentajes de arriba no se tocan sin una orde
 
 | Archivo | Rol |
 | --- | --- |
-| `contracts/QuatriviumCredit.sol` | Préstamos, pool, interés, liquidación, admins, sequencer, fondo. 23330 bytes. Libres: 1246 de 24576. |
+| `contracts/QuatriviumCredit.sol` | Préstamos, pool, interés, liquidación, admins, sequencer, fondo. Forge (runtime): 23132 bytes, 1444 libres de 24576. Hardhat (`deployedBytecode`): 23322 bytes, 1254 libres. |
 | `contracts/QuatriviumAlta.sol` | Alta de 4 LUSD. |
 | `contracts/QuatriviumReserva.sol` | Bloqueos y bote. |
 | `contracts/QuatriviumFamaCaja.sol` | Fama, canje y racha. |
@@ -51,9 +51,9 @@ Despliegue, solo con orden explícita: `CONFIRM_MAINNET=yes npm run deploy:arbit
 
 ## Estado
 
-Rama `cursor/soberania-contratos-8e15`. Tras el arreglo del feed: Hardhat 306, Foundry 51. El mapa de commits está en `HANDOFF.md`.
+Rama `cursor/soberania-contratos-8e15`. Hardhat 471, Foundry 80. El mapa de commits está en `HANDOFF.md`.
 
-Abierto: dos hallazgos bajos del alta (segunda cuenta, y `soltarPadrino` si el padre viniera vacío), tests que leen texto, e `image-size` (pide un SDK de Expo nuevo). `handlebars` ya está resuelto con 4.7.10. NIP-17/44 sigue sin hacerse: `prepareNostrPayload` devuelve null.
+Abierto, sin arreglar: dos hallazgos bajos del alta (segunda cuenta, y `soltarPadrino` si el padre viniera vacío). NIP-17/44 sigue sin hacerse: `prepareNostrPayload` en `utils/sovereignSurface.ts` devuelve null. `tmp` quedó en 0.2.7. `image-size` sigue alto: la 2.0.3 rompe el paquete de Android.
 
 Pendiente antes de dinero real: auditoría externa de los contratos, y que la billetera del fundador sea de varias firmas o física, con `CONFIRM_FOUNDER_WALLET=yes`.
 

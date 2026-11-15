@@ -4,6 +4,28 @@
 
 Esta revisión la hicieron herramientas de IA en el IDE (lectura del código, Hardhat, Foundry, Slither y `npm audit`). No la hizo una firma de auditoría. No sustituye una auditoría externa antes de usar dinero real.
 
+| ID | Severidad | Hallazgo | Commit | Test |
+| --- | --- | --- | --- | --- |
+| R18-1 a R18-6 | reconfirmado | Seis casos del candado que siguen dando el resultado seguro desde `32164f6` | `32164f6` | `test/app-lock-kdf.test.js` |
+| A1 | alta | Crear cuenta nueva ya no borra una billetera que existe y no abre | `9e6525c` | `resolveFreshAccount` en `test/app-lock-kdf.test.js` |
+| A2 | baja | Si la lectura de la contraseña falla, `checkPassword` devuelve store-unknown | `9e6525c` | `returns store-unknown from checkPassword` |
+| A3 | baja | En demo, el respaldo de la contraseña se lee y no se mueve | `9e6525c` | lectura de respaldo en `test/app-lock-kdf.test.js` |
+| A4 | baja | En demo, la foto del alta ve el respaldo de la billetera | `9e6525c` | `readSignupPhoto` |
+| A5 | media | Una escritura tardía restaura la contraseña anterior | `9e6525c` | `still clears a late password write` |
+| A6 | baja | Crear desde la pantalla de fallo guarda usuario e invitación | `9e6525c` | `finishFreshAccount` |
+| NEW-A | alta | La entrada rechaza una cuenta con código | `9e6525c` | `forge-test/QuatriviumEip7702.t.sol` |
+| NEW-B | alta | La entrada rechaza una llamada indirecta | `9e6525c` | `forge-test/QuatriviumEip7702.t.sol` |
+| NEW-E | media | La verificación no usa `tx.origin`; `cargoDe` vuelve a cero | `9e6525c` | `test/alta-registro.test.js` |
+| G1 | media | Una lectura fallida no borra la contraseña legítima | `061bfb2` | `does not wipe the old password` |
+| G2 | baja | Una escritura que no vuelve se suelta a los 15 s | `061bfb2` | `stops blocking the session` |
+| G3 | baja | El alta desde el fallo no fija un invitador vacío | `061bfb2` | `does not freeze an empty inviter` |
+| G4 | baja | Slither compila con `npm run compile` | `061bfb2` | `.github/workflows/ci.yml` |
+| G5 | baja | El recorte del fee no usa retroceso, y se fue el cobro muerto | `061bfb2` | `test/funds-confirm-gate.test.js` |
+| H1 | baja | Una contraseña ya revertida no reaparece con la escritura tardía | este commit | `does not bring back a password` |
+| H2 | baja | Si la lectura previa falla, no queda copia ni token nuevos | este commit | `keeps the previous password copy` |
+
+La verificación nombró NEW-A, NEW-B y NEW-E. El resto de esa ronda de la app está en A1–A6. Los casos R18-1 a R18-6 no tienen otra ficha en este árbol: quedaron reconfirmados.
+
 ## Medición de esta rama
 
 Rama `cursor/soberania-contratos-8e15`. Commits de esta entrega: `8d4e1b2` (candado), `e8ba5f1` (recibos), `358ade7` (los tests nombran el revert), `58fcab8` (Arbitrum), `ffb608d` (espera), `4b38faa` (reintento). Este párrafo va en el commit de la limpieza de la auditoría.
@@ -12,10 +34,11 @@ Rama `cursor/soberania-contratos-8e15`. Commits de esta entrega: `8d4e1b2` (cand
 
 | Pieza | Bytes | Libres |
 | --- | --- | --- |
-| QuatriviumCredit | 23317 | 1259 |
+| QuatriviumCredit (forge, runtime) | 23132 | 1444 |
+| QuatriviumCredit (Hardhat, deployedBytecode) | 23322 | 1254 |
 | QuatriviumCreditHarness | 24528 | 48 |
 
-Un pago de 40 generaciones usó 1246495 de gas (el test lo imprime y exige menos de 3 000 000). Foundry con `FOUNDRY_PROFILE=ci`: 56 pruebas en verde. Los invariantes de Credit y de Reserva corrieron 256 veces, profundidad 800, 204800 llamadas y 0 reverts cada uno. Hardhat: 366 pruebas en verde.
+Un pago de 40 generaciones usó 1246495 de gas (el test lo imprime y exige menos de 3 000 000). Foundry con `FOUNDRY_PROFILE=ci`: 80 pruebas en verde. Los invariantes corrieron 256 veces, 204800 llamadas y 0 reversiones. Hardhat: 471 pruebas en verde.
 
 Slither, compilación nueva, `fail_on: high`: 0 altos, 0 medios, 13 bajos, 10 de optimización. Los medios que no eran un fallo llevan `slither-disable-next-line` con el motivo en la misma línea. No se cambió la lógica de `_soloEOA`, Alta ni Reserva. Los 13 bajos, uno por uno:
 
@@ -35,7 +58,7 @@ Slither, compilación nueva, `fail_on: high`: 0 altos, 0 medios, 13 bajos, 10 de
 
 Ninguno de los 13 se marcó como arreglado: cambiarlos o reordenar el cobro movería Alta, Reserva o el pago. Los 10 de optimización (`constant` / `immutable`) no cambian el comportamiento.
 
-`npm audit` del árbol completo, el mismo recuento que el CI: 39 avisos (15 bajos, 22 moderados, 2 altos, 0 críticos). El alto de producción es `image-size`: hace falta un SDK de Expo nuevo y no se subió Expo. El otro alto es `tmp`, que llega por `solc`; no se forzó. `handlebars` de desarrollo está en 4.7.10, fuera del rango vulnerable.
+`npm audit` del árbol completo: 35 avisos (14 bajos, 20 moderados, 1 alto, 0 críticos). El alto que queda es `image-size` (0.6.3–2.0.2): la 2.0.3 rompe la lectura de PNG al exportar Android, así que no hay override. `tmp` quedó en 0.2.7. Expo, Metro, Hardhat y solc no subieron de versión mayor. `handlebars` de desarrollo está en 4.7.10, fuera del rango vulnerable.
 
 ### Candado
 
@@ -53,13 +76,13 @@ Un recibo cuenta cuando 2 de los N RPC propios coinciden en hash, bloque y estad
 
 - Decisión de Jose: entrada rechaza cuentas con código y llamadas indirectas (`msg.sender == tx.origin` y `code.length == 0`); salida libre en `pagarPrestamo` y `desbloquear`; verificación sin `tx.origin`. Credit mide 23132 bytes, 1444 libres de 24576. Antes de este cambio medía 23127.
 - El enlace de SonarCloud lo cambia el dueño en el panel. El chequeo sigue apuntando al id viejo.
-- `image-size`: hace falta un SDK de Expo nuevo. No se subió Expo.
+- `image-size` sigue alto. La versión parcheada 2.0.3 rompe la lectura de PNG en el paquete de Android, así que no hay override. Solo afecta a desarrollo y al empaquetado, no a los contratos. `tmp` quedó en 0.2.7.
 
 Arbitrum One ya acepta EIP-7702 (ArbOS 40, según el blog de la fundación y la lista de autorizaciones de Arbiscan). Decisión de Jose: entrada rechaza cuentas con código y llamadas indirectas (`msg.sender == tx.origin` y `code.length == 0`); salida libre en `pagarPrestamo` y `desbloquear`; verificación sin `tx.origin`. Fuente: https://blog.arbitrum.foundation/the-smartest-wallet-you-already-own-is-on-arbitrum/ y https://eips.ethereum.org/EIPS/eip-7702.
 
 Un PIN de 6 dígitos solo tiene 1 000 000 de combinaciones. La protección real es el almacén de hardware, cuando el teléfono lo tiene, y el bloqueo creciente tras cada fallo (30 s, 1 min, 5 min, 15 min, 1 h). El PIN puede tener de 6 a 12 dígitos. Si no hay hardware, la clave queda en el almacén del sistema y la app lo avisa.
 
-Fecha de la revisión: 10 de noviembre de 2026 (America/Caracas). Rama `cursor/soberania-contratos-8e15`. Tras quitar el tope de 24 h del feed: Hardhat 306, Foundry 51. Credit: 21882 bytes, 2694 libres de 24576.
+Fecha de la revisión: 10 de noviembre de 2026 (America/Caracas). Rama `cursor/soberania-contratos-8e15`. Medición de ahora: Hardhat 471, Foundry 80. Credit en forge (runtime): 23132 bytes, 1444 libres de 24576. Credit en Hardhat (`deployedBytecode`): 23322 bytes, 1254 libres de 24576.
 
 La clave del historial (commits `10553d4` y `dc40f15`, archivo `.env.worker.example`) ya fue revocada. No está en el árbol. El valor no se copia y la historia no se reescribe.
 
@@ -69,7 +92,7 @@ Antes de dinero real hace falta una auditoría externa y una billetera de fundad
 
 ## Estado de los hallazgos
 
-El quinto punto grave del resumen (feed viejo) era **B-01, Medio**, no Alto. Tras los arreglos quedan **0 altos abiertos en el código**. A-04 sigue pendiente del dueño: hay que borrar la clave en la cuenta de Resend. No está en la app. Credit quedó en 21891 bytes, 2685 libres de 24576.
+El quinto punto grave del resumen (feed viejo) era **B-01, Medio**, no Alto. Tras los arreglos quedan **0 altos abiertos en el código**. A-04 sigue pendiente del dueño: hay que borrar la clave en la cuenta de Resend. No está en la app. Credit en forge (runtime): 23132 bytes, 1444 libres de 24576. En Hardhat (`deployedBytecode`): 23322 bytes, 1254 libres.
 
 | ID | Era | Estado |
 | --- | --- | --- |
@@ -79,7 +102,7 @@ El quinto punto grave del resumen (feed viejo) era **B-01, Medio**, no Alto. Tra
 | A-04 | Alto | Cerrado por el dueño. La clave estaba en el historial, commits `10553d4` y `dc40f15`, archivo `.env.worker.example`. Ya fue revocada. No está en la app. El valor no se copia. El historial no se reescribe. |
 | B-01 | Medio | El tope de 24 h se quitó. Ese feed no late cada día: con `answer == 0` se liquida aunque la ronda tenga meses. La caída se lee de la ronda anterior. |
 | B-02 | Medio | Arreglado en la superficie: `prepareNostrPayload` devuelve null en todos los caminos. No hay pantalla de mensaje privado. Cifrar NIP-17/44 sigue sin hacerse. La mora no se publica. |
-| B-03 | Medio | Abierto en parte. Ya no hay críticos. `npm audit` del CI: 39 avisos (15 bajos, 22 moderados, 2 altos, 0 críticos). `handlebars` quedó en 4.7.10. La alta de producción que queda es `image-size`: hace falta un SDK de Expo nuevo. `tmp` sigue alto porque lo arrastra `solc`. |
+| B-03 | Medio | Abierto en parte. Ya no hay críticos. `npm audit`: 35 avisos (14 bajos, 20 moderados, 1 alto, 0 críticos). `handlebars` quedó en 4.7.10. El alto que queda es `image-size`: 2.0.3 rompe el paquete de Android. `tmp` quedó en 0.2.7. |
 | C-01 | Bajo | Arreglado. El comentario de `pagarVerificacion` ya no dice 0.50 LUSD. El comportamiento no cambió. |
 | C-02 | Bajo | Pendiente. Reescribir cada test que lee fuente sería un refactor. Los arreglos de esta ronda sí ejecutan el contrato. |
 | C-03 | Bajo | Arreglado. `web/invite/index.html` ya no muestra un hash inventado. |
@@ -104,8 +127,8 @@ Revisión de `60a9654` y `960f446`, más el comportamiento real del alta. No se 
 - APK: solo el fundador publica. La huella del certificado queda fija en la primera versión. No hay borrado ni llamada externa.
 - Feed: no hay tope por antigüedad. `answer == 0` permite liquidar si ya pasó más de 1 h desde `startedAt` y la gracia del préstamo. Una ronda vacía (`startedAt == 0`) o un feed que revierte pospone solo la liquidación.
 - Nostr: `prepareNostrPayload` devuelve null siempre (`utils/sovereignSurface.ts`, línea 123). Ningún componente ni idioma ofrece mensaje privado. `nostrMayPublish` también es falso, incluida la mora.
-- Residuos: `scripts/check-external-services.mjs` pasa. Los nombres prohibidos viven en esa lista y en `scripts/run-full-cyber-audit.sh`, que sigue citando `Groth16Verifier` y `zk-contracts` como carpetas a excluir. Esas carpetas ya no existen. No se tocó el script porque los tests leen el resto del archivo.
-- Credit: 21891 bytes, 2685 libres de 24576.
+- Residuos: `scripts/check-external-services.mjs` pasa. `scripts/run-full-cyber-audit.sh` ya no excluye `Groth16Verifier` ni `zk-contracts`: esas carpetas no existen.
+- Credit en forge (runtime): 23132 bytes, 1444 libres de 24576. En Hardhat (`deployedBytecode`): 23322 bytes, 1254 libres.
 
 ### Tests que aún leen texto y tocan dinero
 
@@ -135,11 +158,11 @@ Nada de lo leído permite que un extraño vacíe el pool, el bote de Reserva o e
 
 ## Cómo se midió
 
-- Hardhat: 294 pruebas, todas en verde, una sola corrida.
-- Foundry: 51 pruebas, todas en verde, con `--fuzz-runs 32`. Los invariantes corrieron 256 veces, sin reverts.
+- Hardhat: 471 pruebas, todas en verde, una sola corrida.
+- Foundry: 80 pruebas, todas en verde, con `FOUNDRY_PROFILE=ci` y `--fuzz-runs 256`. Los 3 invariantes, 0 reversiones.
 - `node scripts/check-external-services.mjs`: sin nombres prohibidos en el árbol actual.
-- `node scripts/check-i18n.mjs`: 17 idiomas, 1298 claves cada uno, sin copias largas del inglés.
-- `npm audit` del CI: 39 avisos (15 bajos, 22 moderados, 2 altos, 0 críticos). Ya no hay críticos. `handlebars` está en 4.7.10. La alta de producción es `image-size`, que pide un SDK de Expo nuevo.
+- `node scripts/check-i18n.mjs`: 17 idiomas, 1294 claves cada uno, sin copias largas del inglés.
+- `npm audit` antes: 37 avisos (15 bajos, 20 moderados, 2 altos, 0 críticos). Después de fijar `tmp` en 0.2.7: 35 avisos (14 bajos, 20 moderados, 1 alto, 0 críticos). El alto que queda es `image-size`, porque 2.0.3 rompe el paquete. Expo, Metro, Hardhat y solc no subieron de versión mayor.
 - Slither de esta rama está en «Medición de esta rama»: 0 altos y 0 medios. La frase vieja de que Slither no estaba instalado ya no vale.
 
 Tamaños de bytecode desplegado (artifact de Hardhat, límite EIP-170 = 24576):
@@ -226,7 +249,7 @@ Nostr no cifra y no se conecta. La mora sí está bloqueada.
 
 ### B-03 · Medio · dependencia
 
-Ya no hay críticos. `npm audit` del CI: 39 avisos (15 bajos, 22 moderados, 2 altos, 0 críticos). `handlebars` de desarrollo está en 4.7.10, fuera del rango vulnerable. La alta de producción que queda es `image-size` (`expo` → `@expo/metro` → `metro`): hace falta un SDK de Expo nuevo y no se subió. `tmp` sigue alto porque lo arrastra `solc`. Se fijaron dentro de Expo 54: `decode-uri-component` 0.5.1, `node-forge` 1.4.3, `undici` 6.29.1, `source-map-js` 1.2.2, `axios` 1.21.1 y `fast-uri` 3.1.9.
+Ya no hay críticos. `npm audit`: 35 avisos (14 bajos, 20 moderados, 1 alto, 0 críticos). `handlebars` de desarrollo está en 4.7.10, fuera del rango vulnerable. El alto que queda es `image-size` (`expo` → `@expo/metro` → `metro`): la 2.0.3 rompe la lectura de PNG y no se subió Expo. `tmp` quedó en 0.2.7, sin subir solc. Se fijaron dentro de Expo 54: `decode-uri-component` 0.5.1, `node-forge` 1.4.3, `undici` 6.29.1, `source-map-js` 1.2.2, `axios` 1.21.1 y `fast-uri` 3.1.9.
 
 ### C-01 · Bajo · texto
 

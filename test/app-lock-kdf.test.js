@@ -230,7 +230,7 @@ kdf.resetPbkdf2ForTests = kdf.resetPbkdf2;
 let mono = 1_000_000;
 
 describe('app lock PBKDF2', function () {
-  this.timeout(200000);
+  this.timeout(320000);
 
   beforeEach(function () {
     acceptPasswordWrites = true;
@@ -3322,5 +3322,93 @@ describe('app lock PBKDF2', function () {
     const saved = await sponsors.loadLockedSponsor(imported.address);
     expect(saved && saved.chosen, 'fija').to.equal(true);
     expect(Boolean(saved && saved.padre), 'padre').to.equal(true);
+  });
+
+  async function startLateUndoable(password) {
+    const slot = 'quatrivium.lock.password';
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    writeDelayKey = slot;
+    writeDelayMs = 25000;
+    let code = '';
+    try {
+      await lock.setPassword(password, undefined, { undoable: true });
+    } catch (error) {
+      code = error instanceof Error ? error.message : 'throw';
+    }
+    await new Promise((resolve) => setTimeout(resolve, 16000));
+    writeDelayMs = 0;
+    writeDelayKey = '';
+    return code;
+  }
+
+  it('does not bring back a password after the later signup was reverted', async function () {
+    this.timeout(45000);
+    const slot = 'quatrivium.lock.password';
+    const first = await startLateUndoable('Nueva-9zz');
+    const undo = await lock.setPassword('OtraClave-9z', undefined, { undoable: true });
+    await undo.revert();
+    let faults = 0;
+    race.setLockFaultReporter(() => {
+      faults += 1;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 9000));
+    race.setLockFaultReporter(null);
+    expect(first, 'primero').to.equal('password-persist');
+    expect(Boolean(memory.get(slot)), 'existe').to.equal(false);
+    expect((await lock.checkPassword('Nueva-9zz')).ok, 'abreA').to.equal(false);
+    expect((await lock.checkPassword('OtraClave-9z')).ok, 'abreB').to.equal(false);
+    expect(faults > 0, 'fallo').to.equal(true);
+  });
+
+  it('keeps the later password when its signup is not reverted', async function () {
+    this.timeout(45000);
+    const first = await startLateUndoable('Nueva-9zz');
+    await lock.setPassword('OtraClave-9z', undefined, { undoable: true });
+    await new Promise((resolve) => setTimeout(resolve, 9000));
+    expect(first, 'primero').to.equal('password-persist');
+    expect((await lock.checkPassword('OtraClave-9z')).ok, 'abreB').to.equal(true);
+    expect((await lock.checkPassword('Nueva-9zz')).ok, 'abreA').to.equal(false);
+  });
+
+  it('keeps a password saved after the revert when the late write lands', async function () {
+    this.timeout(45000);
+    const first = await startLateUndoable('Nueva-9zz');
+    const undo = await lock.setPassword('OtraClave-9z', undefined, { undoable: true });
+    await undo.revert();
+    await lock.setPassword('Tercera-9z');
+    await new Promise((resolve) => setTimeout(resolve, 9000));
+    expect(first, 'primero').to.equal('password-persist');
+    expect((await lock.checkPassword('Tercera-9z')).ok, 'abreC').to.equal(true);
+    expect((await lock.checkPassword('Nueva-9zz')).ok, 'abreA').to.equal(false);
+    expect((await lock.checkPassword('OtraClave-9z')).ok, 'abreB').to.equal(false);
+  });
+
+  it('keeps the previous password copy when the prior read fails', async function () {
+    const slot = 'quatrivium.lock.password';
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    const tokenBefore = lock.takeRestoreTokenForAbort();
+    const slotBefore = memory.get(slot);
+    let issued = false;
+    lock.setReplaceTokenObserverForTests(() => {
+      issued = true;
+    });
+    passwordReads = 0;
+    passwordReadBudget = 3;
+    let code = '';
+    try {
+      await lock.setPassword('Nueva-9zz');
+    } catch (error) {
+      code = error instanceof Error ? error.message : 'throw';
+    }
+    lock.setReplaceTokenObserverForTests(null);
+    passwordReadBudget = 0;
+    expect(code, 'codigo').to.equal('store-unknown');
+    expect(lock.takeRestoreTokenForAbort() === tokenBefore, 'token').to.equal(true);
+    expect(memory.get(slot) === slotBefore, 'bytes').to.equal(true);
+    expect(issued, 'copia').to.equal(false);
+    await lock.setPassword('Nueva-9zz');
+    expect((await lock.checkPassword('Nueva-9zz')).ok, 'luego').to.equal(true);
   });
 });

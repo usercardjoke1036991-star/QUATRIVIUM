@@ -74,11 +74,11 @@ Todas en `cursor/soberania-contratos-8e15`. PR: https://github.com/usercardjoke1
 
 ## 5. Números
 
-Medidos en `cursor/soberania-contratos-8e15` con `allowUnlimitedContractSize: false`. `QuatriviumCredit`: 23317 bytes, 1259 libres de 24576. El harness de prueba: 24528 bytes, 48 libres. Un pago de 40 generaciones: 1246495 de gas, por debajo de 3 000 000.
+Medidos en `cursor/soberania-contratos-8e15` con `allowUnlimitedContractSize: false`. `QuatriviumCredit` en forge (runtime): 23132 bytes, 1444 libres de 24576. En Hardhat (`deployedBytecode`): 23322 bytes, 1254 libres. El harness de prueba: 24528 bytes, 48 libres. Un pago de 40 generaciones: 1246495 de gas, por debajo de 3 000 000.
 
-Hardhat: 362 pruebas en verde. Foundry con `FOUNDRY_PROFILE=ci`: 56 pruebas en verde. Invariantes de Credit y de Reserva: 256 corridas, profundidad 800, 204800 llamadas, 0 reverts cada uno.
+Hardhat: 471 pruebas en verde. Foundry con `FOUNDRY_PROFILE=ci`: 80 pruebas en verde. Tres invariantes: 256 corridas, 204800 llamadas, 0 reversiones.
 
-Slither: 0 altos, 0 medios, 13 bajos, 10 optimizaciones. `npm audit` del árbol: 37 (15 bajos, 20 moderados, 2 altos, 0 críticos) tras subir `handlebars` a 4.7.10. Producción (`--omit=dev`): 21 (9 bajos, 11 moderados, 1 alto, `image-size`).
+Slither: 0 altos, 0 medios, 13 bajos, 10 optimizaciones. `tmp` está en 0.2.7 por `overrides`. `image-size` sigue alto: 2.0.3 rompe el paquete de Android. Expo, Metro, Hardhat y solc no subieron de versión mayor.
 
 El candado no borra la billetera. Esperas: 30 s, 1 min, 5 min, 15 min, 1 h y luego 24 h. El reloj hacia atrás o un salto mayor que la espera no la acortan. El PIN queda bloqueado a los 10 fallos. El aviso no lee el secreto del teléfono: usa las marcas guardadas, y en demo no se muestra. Un reintento con éxito genera un secreto nuevo y vuelve a sellar el PIN. 9000 vueltas de PBKDF2-SHA256 salen de la medida de sjcl en un Android API 27: 10001 vueltas tardaron 5431,5 ms, así que 9000 quedan cerca de 4,9 s en ese JavaScript. No está medido en un teléfono. Un recibo vale cuando 2 de N RPC coinciden. Si no, el envío sigue pendiente.
 
@@ -99,15 +99,15 @@ Orden de prioridad:
    - Bajo: una segunda cuenta puede nombrar a la primera y cobrar el 1 apartado si esa ya pagó alta y nivel 1. El costo son los otros 3 LUSD más el interés del nivel 1. No es ganancia. `test/alta-invitacion.test.js`.
    - Bajo: `soltarPadrino` no suelta el 1 si el padre viene vacío o es el mismo deudor (`QuatriviumAlta.sol`). El registro normal no produce ese padre.
    - Bajo: siguen tests que leen texto y hablan de dinero. La lista está en `AUDITORIA.md`, sección «Segunda auditoría». No reescribirlos todavía.
-   - Medio, abierto: `image-size` (alto de producción). El parche pide un SDK de Expo nuevo. No se subió Expo. `handlebars` pasó a 4.7.10 y el crítico de desarrollo salió. `solidity-coverage` 0.8.17 sigue compilando y escribiendo el informe; el contrato instrumentado no cabe en el gas de despliegue. `tmp` sigue alto vía `solc` y no se forzó.
+   - Medio, aceptado: `image-size` sigue alto. La 2.0.3 rompe la lectura de PNG al exportar Android. Solo afecta a desarrollo y al empaquetado. `tmp` quedó en 0.2.7. No se subió Expo, Metro, Hardhat ni solc. `handlebars` sigue en 4.7.10. `solidity-coverage` 0.8.17 sigue compilando; el contrato instrumentado no cabe en el gas de despliegue.
    - Medio: el cifrado NIP-17/44 no está implementado. `prepareNostrPayload` devuelve null. No hay pantalla de mensaje privado.
 3. **Pendiente antes de dinero real.**
    - Auditoría externa de los contratos. `AUDITORIA.md` la escribieron herramientas de IA, no una firma de auditoría, y no la sustituye.
    - La dirección de fundador debe ser una billetera de varias firmas (Safe) o una billetera física con respaldo. El despliegue exige `CONFIRM_FOUNDER_WALLET=yes`.
 4. **Pendiente de Jose, sin tocar el código por nuestra cuenta.**
-   - Decisión de Jose: entrada rechaza cuentas con código y llamadas indirectas (`msg.sender == tx.origin` y `code.length == 0`); salida libre en `pagarPrestamo` y `desbloquear`; verificación sin `tx.origin`. Credit mide 23132 bytes, 1444 libres de 24576. Antes de este cambio medía 23127.
+   - Decisión de Jose: entrada rechaza cuentas con código y llamadas indirectas (`msg.sender == tx.origin` y `code.length == 0`); salida libre en `pagarPrestamo` y `desbloquear`; verificación sin `tx.origin`. Credit en forge (runtime): 23132 bytes, 1444 libres de 24576. Antes de este cambio medía 23127.
    - El enlace de SonarCloud lo cambia el dueño en el panel.
-   - `image-size` espera un SDK de Expo nuevo.
+   - `image-size` se queda en la versión que trae Metro. La 2.0.3 no entra.
 5. **Pendiente cuando Jose lo ordene,** en este orden. Nada de esto se ha hecho.
    1. Compilar el APK firmado y calcular su SHA-256.
    2. Desplegar en Arbitrum One y escribir las direcciones reales en `constants/deployedAddresses.ts` (`contract`, `reserva`, `fama`, `alta`). No inventarlas.

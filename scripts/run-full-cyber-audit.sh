@@ -39,7 +39,7 @@ if want aderyn; then
 echo "===== 1 ADERYN $(date -Is) =====" | tee -a "$OUT/progress.txt"
 aderyn "$MAGNO" \
   -s contracts \
-  -x mocks,Groth16Verifier,QuatriviumCreditHarness,lib/,node_modules/,forge-out/,forge-cache/,zk-contracts/,test/,forge-test/,artifacts/,cache/ \
+  -x mocks,QuatriviumCreditHarness,lib/,node_modules/,forge-out/,forge-cache/,test/,forge-test/,artifacts/,cache/ \
   -o "$OUT/aderyn-report.md"
 echo ADERYN_EXIT:$? | tee -a "$OUT/progress.txt"
 sed -n '1,160p' "$OUT/aderyn-report.md" 2>/dev/null | tee "$OUT/aderyn-head.txt"
