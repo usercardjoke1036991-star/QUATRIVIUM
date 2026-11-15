@@ -1292,5 +1292,8 @@
   "fundsConfirmAck": "Konfirmasi",
   "fundsConfirmAckLead": "Periksa jumlah, tujuan, dan biaya. PIN tidak perlu karena perlindungan dana dimatikan.",
   "fundsConfirmBiometricFail": "Sidik jari tidak membuka dompet.",
-  "walletWrapSoftwareNote": "Ponsel ini tidak punya brankas perangkat keras. Kunci dompet tetap di brankas sistem dan tidak meminta sidik jari saat dibaca."
+  "walletWrapSoftwareNote": "Ponsel ini tidak punya brankas perangkat keras. Kunci dompet tetap di brankas sistem dan tidak meminta sidik jari saat dibaca.",
+  "lockKeychainSlow": "Gantungan kunci tidak menjawab. Coba lagi.",
+  "lockCreateFresh": "Buat akun baru",
+  "lockUndoFailed": "Pendaftaran tidak bisa dibatalkan. Coba lagi."
 }

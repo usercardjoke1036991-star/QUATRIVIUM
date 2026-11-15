@@ -1292,5 +1292,8 @@
   "fundsConfirmAck": "Confirmar",
   "fundsConfirmAckLead": "Confira valor, destino e comissão. Sem PIN porque a proteção de fundos está desligada.",
   "fundsConfirmBiometricFail": "A impressão digital não abriu a carteira.",
-  "walletWrapSoftwareNote": "Este telefone não tem armazenamento de hardware. A chave da carteira fica no cofre do sistema, sem impressão digital na leitura."
+  "walletWrapSoftwareNote": "Este telefone não tem armazenamento de hardware. A chave da carteira fica no cofre do sistema, sem impressão digital na leitura.",
+  "lockKeychainSlow": "O porta-chaves não responde. Tente de novo.",
+  "lockCreateFresh": "Criar uma conta nova",
+  "lockUndoFailed": "Não foi possível desfazer o cadastro. Tente de novo."
 }

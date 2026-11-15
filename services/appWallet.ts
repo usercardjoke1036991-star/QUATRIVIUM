@@ -51,10 +51,16 @@ function parseStored(raw: string): StoredWallet | null {
   }
 }
 
-export async function readRawWallet(): Promise<string | null> {
+export async function readRawWallet(options?: { quiet?: boolean }): Promise<string | null> {
   const live = !allowWalletAsyncFallback(getProductMode());
-  if (live) {
-    const secure = await SecureStore.getItemAsync(WALLET_KEY).catch(() => null);
+  if (live || options?.quiet) {
+    let secure: string | null;
+    try {
+      secure = await SecureStore.getItemAsync(WALLET_KEY);
+    } catch {
+      throw new Error('store-unknown');
+    }
+    if (options?.quiet) return secure;
     await AsyncStorage.removeItem(WALLET_FALLBACK).catch(() => {});
     return secure;
   }

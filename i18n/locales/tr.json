@@ -1292,5 +1292,8 @@
   "fundsConfirmAck": "Onayla",
   "fundsConfirmAckLead": "Tutarı, hedefi ve ücreti kontrol edin. Fon koruması kapalı olduğu için PIN gerekmez.",
   "fundsConfirmBiometricFail": "Parmak izi cüzdanı açmadı.",
-  "walletWrapSoftwareNote": "Bu telefonda donanım kasası yok. Cüzdan anahtarı sistem kasasında kalır ve okunurken parmak izi istemez."
+  "walletWrapSoftwareNote": "Bu telefonda donanım kasası yok. Cüzdan anahtarı sistem kasasında kalır ve okunurken parmak izi istemez.",
+  "lockKeychainSlow": "Anahtarlık yanıt vermiyor. Yeniden deneyin.",
+  "lockCreateFresh": "Yeni bir hesap oluştur",
+  "lockUndoFailed": "Kayıt geri alınamadı. Yeniden deneyin."
 }

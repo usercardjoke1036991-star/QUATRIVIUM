@@ -1292,5 +1292,8 @@
   "fundsConfirmAck": "Confirmar",
   "fundsConfirmAckLead": "Revise monto, destino y comisión. No hace falta PIN porque la protección de fondos está apagada.",
   "fundsConfirmBiometricFail": "La huella no abrió la billetera.",
-  "walletWrapSoftwareNote": "Este teléfono no tiene almacén de hardware. La clave de la billetera queda en el almacén seguro del sistema, sin pedir huella al leerla."
+  "walletWrapSoftwareNote": "Este teléfono no tiene almacén de hardware. La clave de la billetera queda en el almacén seguro del sistema, sin pedir huella al leerla.",
+  "lockKeychainSlow": "El llavero no responde. Intente de nuevo.",
+  "lockCreateFresh": "Crear una cuenta nueva",
+  "lockUndoFailed": "No se pudo deshacer el alta. Intente de nuevo."
 }

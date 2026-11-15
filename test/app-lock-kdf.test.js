@@ -21,6 +21,11 @@ let failPasswordWrite = false;
 let walletWriteFault = '';
 let walletReplacedOnce = false;
 let failFallbackRestore = false;
+let secureReadThrow = '';
+let deleteThrowKey = '';
+let readDelayMs = 0;
+let readDelayKey = '';
+let secureReadHang = '';
 let hideBoundConfirm = false;
 let crashOnSecretPromote = false;
 let rejectDeviceAuth = false;
@@ -41,6 +46,17 @@ installMock('expo-secure-store', {
       if (rejectDeviceAuth) throw new Error(authError);
     } else if (secretMeta.get(key) && secretMeta.get(key).requireAuthentication) {
       throw new Error('auth-required');
+    }
+    if (secureReadThrow && key === secureReadThrow) throw new Error('io');
+    if (secureReadHang && key === secureReadHang) return new Promise(() => {});
+    if (readDelayMs > 0) {
+      const slow = readDelayKey
+        ? key === readDelayKey
+        : key === 'quatrivium.lock.password' ||
+          key === 'quatrivium.lock.pin' ||
+          key === WALLET_SLOT ||
+          key === 'quatrivium.device.boundWallet';
+      if (slow) await new Promise((resolve) => setTimeout(resolve, readDelayMs));
     }
     if (hideBoundConfirm && key === 'quatrivium.device.boundWallet' && memory.has(key)) {
       return null;
@@ -94,6 +110,7 @@ installMock('expo-secure-store', {
     memory.set(key, value);
   },
   async deleteItemAsync(key) {
+    if (deleteThrowKey && key === deleteThrowKey) throw new Error('io');
     secretMeta.delete(key);
     memory.delete(key);
   },
@@ -208,6 +225,11 @@ describe('app lock PBKDF2', function () {
     walletWriteFault = '';
     walletReplacedOnce = false;
     failFallbackRestore = false;
+    secureReadThrow = '';
+    secureReadHang = '';
+    deleteThrowKey = '';
+    readDelayMs = 0;
+    readDelayKey = '';
     hideBoundConfirm = false;
     lock.setVerifyBudgetForTests(null);
     lock.setLockPhaseForTests(null);
@@ -2505,6 +2527,10 @@ describe('app lock PBKDF2', function () {
         const photo = await lock.readSignupPhoto();
         if (!photo) return 'error';
         return 'entered';
+      } catch (error) {
+        const code = error instanceof Error ? error.message : '';
+        if (code === 'keychain-timeout' || code === 'store-unknown') return 'error';
+        throw error;
       } finally {
         guard.endTap(held);
       }
@@ -2551,5 +2577,277 @@ describe('app lock PBKDF2', function () {
     expect(message).to.equal('wallet-persist');
     expect(faults).to.equal(1);
     expect(memory.get(fallbackKey) === blob).to.equal(false);
+  });
+
+  const PASSWORD_SLOT = 'quatrivium.lock.password';
+  const PIN_SLOT = 'quatrivium.lock.pin';
+  const BOUND_SLOT = 'quatrivium.device.boundWallet';
+  const PASSWORD_FALLBACK_SLOT = `mem:${['quatrivium', 'lock', 'password', 'fallback'].join('.')}`;
+  const WALLET_FALLBACK_SLOT = `mem:${['quatrivium', 'appWallet', 'v1', 'fallback'].join('.')}`;
+  const BOUND_FALLBACK_SLOT = `mem:${['quatrivium', 'device', 'boundWallet', 'fallback'].join('.')}`;
+
+  async function foreignRestore() {
+    const { Mnemonic, HDNodeWallet, randomBytes } = require('ethers');
+    const foreign = HDNodeWallet.fromMnemonic(Mnemonic.fromEntropy(randomBytes(32)));
+    return restore.restoreAccountOnDevice({
+      phrase: foreign.mnemonic.phrase,
+      password: 'Ataque-9z',
+    });
+  }
+
+  function accountBytes() {
+    return [
+      memory.get(PASSWORD_SLOT),
+      memory.get(PASSWORD_FALLBACK_SLOT),
+      memory.get(PIN_SLOT),
+      memory.get(WALLET_SLOT),
+      memory.get(WALLET_FALLBACK_SLOT),
+      memory.get(BOUND_SLOT),
+      memory.get(BOUND_FALLBACK_SLOT),
+    ];
+  }
+
+  it('rejects a foreign restore when the password read fails and keeps every byte', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    await lock.setPassword(PASSWORD);
+    memory.set(PASSWORD_FALLBACK_SLOT, 'respaldo-clave');
+    memory.delete(WALLET_SLOT);
+    memory.delete(PIN_SLOT);
+    memory.delete(BOUND_SLOT);
+    lock.lockNow();
+    const before = accountBytes();
+    secureReadThrow = PASSWORD_SLOT;
+    const result = await foreignRestore();
+    secureReadThrow = '';
+    expect(accountBytes(), 'bytes').to.deep.equal(before);
+    expect(result.ok).to.equal(false);
+    expect(result.reason).to.equal('store-unknown');
+  });
+
+  it('rejects a foreign restore when the pin read fails and keeps every byte', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    memory.set(PIN_SLOT, JSON.stringify({ v: 3, salt: 'sal', hash: 'huella' }));
+    memory.delete(PASSWORD_SLOT);
+    memory.delete(WALLET_SLOT);
+    memory.delete(BOUND_SLOT);
+    lock.lockNow();
+    const before = accountBytes();
+    secureReadThrow = PIN_SLOT;
+    const result = await foreignRestore();
+    secureReadThrow = '';
+    expect(accountBytes(), 'bytes').to.deep.equal(before);
+    expect(result.ok).to.equal(false);
+    expect(result.reason).to.equal('store-unknown');
+  });
+
+  it('rejects a foreign restore when the wallet read fails and keeps every byte', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    memory.set(WALLET_SLOT, 'sobre-dueno-intact');
+    memory.set(WALLET_FALLBACK_SLOT, 'respaldo-cofre');
+    memory.delete(PASSWORD_SLOT);
+    memory.delete(PIN_SLOT);
+    memory.delete(BOUND_SLOT);
+    lock.lockNow();
+    const before = accountBytes();
+    secureReadThrow = WALLET_SLOT;
+    const result = await foreignRestore();
+    secureReadThrow = '';
+    expect(accountBytes(), 'bytes').to.deep.equal(before);
+    expect(result.ok).to.equal(false);
+    expect(result.reason).to.equal('store-unknown');
+  });
+
+  it('refuses an undoable password change when the password read fails', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    await lock.setPassword(PASSWORD);
+    lock.lockNow();
+    const before = memory.get(PASSWORD_SLOT);
+    secureReadThrow = PASSWORD_SLOT;
+    let code = '';
+    try {
+      await lock.setPassword('Nueva-9z', undefined, { undoable: true });
+    } catch (error) {
+      code = error instanceof Error ? error.message : 'throw';
+    }
+    secureReadThrow = '';
+    expect(memory.get(PASSWORD_SLOT) === before, 'registro').to.equal(true);
+    expect(code).to.equal('store-unknown');
+    expect((await lock.checkPassword(PASSWORD)).ok).to.equal(true);
+  });
+
+  it('refuses the signup photo when the keychain reads fail', async function () {
+    memory.set(WALLET_SLOT, 'sobre-dueno-intact');
+    memory.set(WALLET_FALLBACK_SLOT, 'respaldo-cofre');
+    memory.set(PASSWORD_FALLBACK_SLOT, 'respaldo-clave');
+    const before = accountBytes();
+    secureReadThrow = PASSWORD_SLOT;
+    let code = '';
+    try {
+      const photo = await lock.readSignupPhoto();
+      code = photo && photo.hadPassword === false ? 'empty-photo' : 'photo';
+    } catch (error) {
+      code = error instanceof Error ? error.message : 'throw';
+    }
+    secureReadThrow = '';
+    expect(accountBytes(), 'bytes').to.deep.equal(before);
+    expect(code).to.equal('store-unknown');
+    expect(memory.get(WALLET_SLOT)).to.equal('sobre-dueno-intact');
+  });
+
+  it('keeps an empty phone able to restore', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    const { Mnemonic, HDNodeWallet, randomBytes } = require('ethers');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    const created = HDNodeWallet.fromMnemonic(Mnemonic.fromEntropy(randomBytes(32)));
+    const result = await restore.restoreAccountOnDevice({
+      phrase: created.mnemonic.phrase,
+      password: 'Nueva-9z',
+    });
+    expect(result.ok).to.equal(true);
+    expect((await lock.checkPassword('Nueva-9z')).ok).to.equal(true);
+  });
+
+  it('reports one fault and throws when signup undo cannot delete', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    const undo = await lock.setPassword(PASSWORD, undefined, { undoable: true });
+    deleteThrowKey = PASSWORD_SLOT;
+    let faults = 0;
+    race.setLockFaultReporter(() => {
+      faults += 1;
+    });
+    let code = '';
+    try {
+      await undo.revert();
+    } catch (error) {
+      code = error instanceof Error ? error.message : 'throw';
+    }
+    deleteThrowKey = '';
+    race.setLockFaultReporter(null);
+    expect(code).to.equal('undo-failed');
+    expect(faults).to.equal(1);
+    expect(entry.signupErrorShown(code)).to.equal('undo');
+    expect(entry.signupFailureStage()).to.equal('credentials');
+  });
+
+  it('offers a fresh account when the wallet is confirmed empty and then binds it', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    await lock.setPassword(PASSWORD);
+    const before = memory.get(PASSWORD_SLOT);
+    lock.lockNow();
+    expect((await lock.checkPassword(PASSWORD)).ok).to.equal(true);
+    memory.delete(WALLET_SLOT);
+    memory.delete(BOUND_SLOT);
+    const offers = entry.walletFailEscapes(true, { walletRead: 'empty', bound: '' });
+    expect(offers).to.include('create');
+    const created = wallet.generateSecretPhrase();
+    const imported = await wallet.importFromPhrase(created.phrase, { markBackedUp: false });
+    expect(imported.address.toLowerCase()).to.equal(created.address);
+    expect(memory.get(PASSWORD_SLOT) === before).to.equal(true);
+    expect(await binding.getBoundWallet()).to.equal(created.address);
+  });
+
+  it('does not offer a fresh account when the wallet read is unknown', async function () {
+    secureReadThrow = WALLET_SLOT;
+    let code = '';
+    try {
+      const raw = await wallet.readRawWallet();
+      code = raw == null ? 'empty' : 'present';
+    } catch (error) {
+      code = error instanceof Error ? error.message : 'throw';
+    }
+    secureReadThrow = '';
+    const offers = entry.walletFailEscapes(true, { walletRead: 'unknown', bound: '' });
+    expect(code === 'store-unknown' || code === 'keychain-timeout', 'lectura').to.equal(true);
+    expect(offers).to.not.include('create');
+  });
+
+  it('does not offer a fresh account when the phone is already bound', async function () {
+    const other = `0x${'ab'.repeat(20)}`;
+    const offers = entry.walletFailEscapes(true, { walletRead: 'empty', bound: other });
+    expect(offers).to.not.include('create');
+  });
+
+  it('drops the unread recovery wrap after the password unlocks', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    await lock.setPassword(PASSWORD);
+    lock.lockNow();
+    expect((await lock.checkPassword(PASSWORD)).ok).to.equal(true);
+    expect(memory.has('quatrivium.lock.recoveryWrap')).to.equal(false);
+    expect(memory.has('quatrivium.lock.recoveryWrap.gate')).to.equal(false);
+  });
+
+  it('drops a leftover recovery wrap on the next unlock', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    await lock.setPassword(PASSWORD);
+    memory.set('quatrivium.lock.recoveryWrap', 'viejo');
+    memory.set('quatrivium.lock.recoveryWrap.gate', 'viejo-gate');
+    lock.lockNow();
+    expect((await lock.checkPassword(PASSWORD)).ok).to.equal(true);
+    expect(memory.has('quatrivium.lock.recoveryWrap')).to.equal(false);
+    expect(memory.has('quatrivium.lock.recoveryWrap.gate')).to.equal(false);
+  });
+
+  it('unlocks when deleting the leftover recovery wrap fails', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    await lock.setPassword(PASSWORD);
+    memory.set('quatrivium.lock.recoveryWrap', 'viejo');
+    lock.lockNow();
+    deleteThrowKey = 'quatrivium.lock.recoveryWrap';
+    const opened = await lock.checkPassword(PASSWORD);
+    deleteThrowKey = '';
+    expect(opened.ok).to.equal(true);
+    expect(memory.get('quatrivium.lock.recoveryWrap')).to.equal('viejo');
+    expect((await lock.checkPassword(PASSWORD)).ok).to.equal(true);
+    expect(memory.has('quatrivium.lock.recoveryWrap')).to.equal(false);
+  });
+
+  it('reads the signup photo in parallel inside the real create guard', async function () {
+    const tap = loadTs(path.join(__dirname, '..', 'utils', 'tapGuard.ts'));
+    const held = { current: false };
+    readDelayMs = 900;
+    const started = Date.now();
+    const photo = await tap.runGuardedTap(held, () => lock.readSignupPhoto());
+    const elapsed = Date.now() - started;
+    readDelayMs = 0;
+    expect(photo && photo.hadPassword).to.equal(false);
+    expect(photo.hadRaw).to.equal(null);
+    expect(elapsed < 3000, 'paralelo').to.equal(true);
+    expect(held.current).to.equal(false);
+  });
+
+  it('shows a keychain timeout from the real create guard and ignores a late read', async function () {
+    const tap = loadTs(path.join(__dirname, '..', 'utils', 'tapGuard.ts'));
+    const held = { current: false };
+    memory.set(WALLET_FALLBACK_SLOT, 'respaldo-cofre');
+    memory.set(PASSWORD_FALLBACK_SLOT, 'respaldo-clave');
+    const before = accountBytes();
+    readDelayKey = WALLET_SLOT;
+    readDelayMs = 4500;
+    let code = '';
+    const started = Date.now();
+    try {
+      await tap.runGuardedTap(held, () => lock.readSignupPhoto());
+    } catch (error) {
+      code = error instanceof Error ? error.message : 'throw';
+    }
+    const elapsed = Date.now() - started;
+    expect(code).to.equal('keychain-timeout');
+    expect(elapsed >= 4000 && elapsed < 4800, 'plazo').to.equal(true);
+    expect(held.current).to.equal(false);
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    readDelayMs = 0;
+    readDelayKey = '';
+    expect(accountBytes(), 'bytes').to.deep.equal(before);
+    const again = await tap.runGuardedTap(held, () => lock.readSignupPhoto());
+    expect(again && again.hadRaw).to.equal(null);
   });
 });

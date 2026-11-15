@@ -45,7 +45,7 @@ import {
 } from '../services/appLock';
 import { describeLockFailure, lockWaitCopy } from '../utils/lockFailureCopy';
 import { raceMs, reportLockFault, setLockFaultReporter } from '../utils/lockRace';
-import { beginTap, endTap } from '../utils/tapGuard';
+import { runGuardedTap } from '../utils/tapGuard';
 import { isValidMasterPassword } from '../utils/passwordPolicy';
 import {
   ensureAppWallet,
@@ -64,7 +64,7 @@ import {
   saveClaimedUsername,
 } from '../services/accountUsername';
 import { lookupBoundWalletOnThisDevice } from '../services/deviceClaim';
-import { BOUND_UNKNOWN } from '../services/deviceBinding';
+import { BOUND_UNKNOWN, getBoundWallet } from '../services/deviceBinding';
 import { restoreAccountOnDevice } from '../services/restoreAccount';
 import { isAuthenticatorEnabled, unlockWithAuthenticator } from '../services/authenticator';
 import {
@@ -96,6 +96,9 @@ import {
   nextUnlockAfterBiometricFail,
   phraseRestoreAfterPasswordUnlock,
   restoreFromLockScreen,
+  signupErrorShown,
+  signupFailureStage,
+  walletFailEscapes,
   welcomeActions,
   welcomeShowsCreate,
   wrapReadyForApp,
@@ -205,6 +208,8 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
   const [restorePhrase, setRestorePhrase] = useState('');
   const [deviceClaimed, setDeviceClaimed] = useState(false);
   const [walletMiss, setWalletMiss] = useState(false);
+  const [walletRead, setWalletRead] = useState<'empty' | 'unknown' | 'present'>('present');
+  const [missBound, setMissBound] = useState('');
   const [pendingPhrase, setPendingPhrase] = useState('');
   const [phraseAcked, setPhraseAcked] = useState(false);
   const [accountUsername, setAccountUsername] = useState('');
@@ -326,14 +331,26 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
         setSessionTaken(false);
       } else {
         let wallet: { address?: string } | null = null;
+        let readKind: 'empty' | 'unknown' = 'empty';
         try {
           wallet = await ensureAppWallet();
-        } catch {
+        } catch (error) {
           wallet = null;
+          const code = error instanceof Error ? error.message : '';
+          if (signupErrorShown(code) === 'keychain') readKind = 'unknown';
         }
         if (!wallet?.address) {
+          let bound = '';
+          try {
+            bound = await getBoundWallet();
+          } catch {
+            bound = BOUND_UNKNOWN;
+          }
+          if (bound === BOUND_UNKNOWN) readKind = 'unknown';
+          setWalletRead(readKind);
+          setMissBound(bound === BOUND_UNKNOWN ? '' : bound);
           setWalletMiss(true);
-          setError(t('appWalletFailed'));
+          setError(readKind === 'unknown' ? t('lockKeychainSlow') : t('appWalletFailed'));
           setLocked(true);
           return;
         }
@@ -808,12 +825,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
   };
 
   const submitDeviceCredentials = async () => {
-    if (!beginTap(createGuard)) return;
-    try {
-      await submitDeviceCredentialsBody();
-    } finally {
-      endTap(createGuard);
-    }
+    await runGuardedTap(createGuard, () => submitDeviceCredentialsBody());
   };
 
   const submitDeviceCredentialsBody = async () => {
@@ -861,35 +873,74 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
       undo?.finish();
       clearRestorePasswordBackup();
     } catch (err) {
+      let code = err instanceof Error ? err.message : '';
+      let undoFailed = false;
       if (!hadPassword && undo) {
-        await undo.revert().catch(() => {});
+        try {
+          await undo.revert();
+        } catch (undoError) {
+          undoFailed = true;
+          code = undoError instanceof Error ? undoError.message : 'undo-failed';
+        }
       }
       if (!hadPin) {
         await discardCreatedPin().catch(() => {});
       }
-      if (!hadPassword && !hadPin && hadBound === '' && hadRaw == null) {
+      if (!undoFailed && !hadPassword && !hadPin && hadBound === '' && hadRaw == null) {
         await wipeAppWallet().catch(() => {});
       }
       passwordCommittedRef.current = false;
-      const code = err instanceof Error ? err.message : '';
+      setSetupStage(signupFailureStage());
+      const shown = signupErrorShown(code);
       setError(
-        code === 'pbkdf2-missing'
-          ? t('lockKdfMissing')
-          : code === 'password-key'
-            ? t('lockPasswordPrivateKey')
-            : code === 'device-bound'
-              ? t('errDeviceBound')
-              : code === 'wallet-persist' || code === 'password-persist'
-                ? t('errWalletPersist')
-                : code === 'wallet-other-app' || code.includes('wallet-other-app')
-                  ? t('errWalletOtherApp')
-                  : code === 'username'
-                    ? t('usernameInvalid')
-                    : t('appWalletFailed')
+        shown === 'undo'
+          ? t('lockUndoFailed')
+          : shown === 'keychain'
+            ? t('lockKeychainSlow')
+            : shown === 'persist'
+              ? t('errWalletPersist')
+              : code === 'pbkdf2-missing'
+                ? t('lockKdfMissing')
+                : code === 'password-key'
+                  ? t('lockPasswordPrivateKey')
+                  : code === 'device-bound'
+                    ? t('errDeviceBound')
+                    : code === 'wallet-other-app' || code.includes('wallet-other-app')
+                      ? t('errWalletOtherApp')
+                      : code === 'username'
+                        ? t('usernameInvalid')
+                        : t('appWalletFailed')
       );
     } finally {
       setBusy(false);
     }
+  };
+
+  const openFreshAccount = async () => {
+    await runGuardedTap(createGuard, async () => {
+      setBusy(true);
+      setError('');
+      try {
+        const created = generateSecretPhrase();
+        const imported = await importFromPhrase(created.phrase, { markBackedUp: false });
+        if (!imported) throw new Error('appWallet');
+        setSetupWallet(imported.address);
+        setPendingPhrase(created.phrase);
+        setPhraseAcked(false);
+        setNeedsSetup(true);
+        setSetupStage('phraseReveal');
+        setWalletMiss(false);
+        setLocked(false);
+      } catch (error) {
+        const code = error instanceof Error ? error.message : '';
+        setSetupStage(signupFailureStage());
+        setError(
+          signupErrorShown(code) === 'keychain' ? t('lockKeychainSlow') : t('appWalletFailed')
+        );
+      } finally {
+        setBusy(false);
+      }
+    });
   };
 
   const confirmCreatedPhrase = async () => {
@@ -1959,6 +2010,22 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
             >
               <AppText style={[styles.switchText, { color: colors.primary }]}>
                 {t('lockRestoreWithPhrase')}
+              </AppText>
+            </TouchableOpacity>
+          ) : null}
+
+          {walletMiss &&
+          walletFailEscapes(hasPassword, { walletRead, bound: missBound }).includes('create') ? (
+            <TouchableOpacity
+              onPress={() => {
+                void openFreshAccount();
+              }}
+              style={styles.switchMode}
+              accessibilityRole="button"
+              accessibilityLabel={t('lockCreateFresh')}
+            >
+              <AppText style={[styles.switchText, { color: colors.primary }]}>
+                {t('lockCreateFresh')}
               </AppText>
             </TouchableOpacity>
           ) : null}

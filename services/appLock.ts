@@ -79,7 +79,6 @@ const LOCK_OPEN_KEY = storeSlot(['quatrivium', 'lock', 'onOpen']);
 const GATE_KEY = storeSlot(['quatrivium', 'lock', 'gate']);
 const ATTEMPT_KEY = storeSlot(['quatrivium', 'lock', 'attempts']);
 const WRAP_STORE = storeSlot(['quatrivium', 'wallet', 'wrap', 'v1']);
-const RECOVERY_WRAP = storeSlot(['quatrivium', 'lock', 'recoveryWrap']);
 const OPTIONS = { keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY };
 const BIO_WRAP_OPTIONS = {
   ...OPTIONS,
@@ -845,36 +844,37 @@ function timedRead<T>(promise: Promise<T>, ms: number): Promise<T | typeof STORE
 
 async function readPasswordRecord(): Promise<PasswordRecord | null> {
   const probed = await probePasswordRecord(1500);
-  return probed === STORE_UNKNOWN ? null : probed;
+  if (probed === STORE_UNKNOWN) throw new Error('store-unknown');
+  return probed;
 }
 
 async function probePasswordRecord(
-  timeoutMs: number
+  timeoutMs: number,
+  quiet = false
 ): Promise<PasswordRecord | null | typeof STORE_UNKNOWN> {
-  const secureRaw = await timedRead(
-    SecureStore.getItemAsync(PASSWORD_KEY).catch(() => {
-      throw new Error('secure-store');
-    }),
-    timeoutMs
-  );
-  if (secureRaw !== STORE_UNKNOWN) {
-    const parsed = parsePasswordRecord(secureRaw);
-    if (parsed) {
-      void AsyncStorage.removeItem(PASSWORD_FALLBACK).catch(() => {});
-      return parsed;
-    }
+  const read = SecureStore.getItemAsync(PASSWORD_KEY).catch(() => {
+    throw new Error('secure-store');
+  });
+  const secureRaw = quiet
+    ? await read.catch(() => STORE_UNKNOWN)
+    : await timedRead(read, timeoutMs);
+  if (typeof secureRaw !== 'string' && secureRaw !== null) return STORE_UNKNOWN;
+  const parsed = parsePasswordRecord(secureRaw);
+  if (parsed) {
+    if (!quiet) void AsyncStorage.removeItem(PASSWORD_FALLBACK).catch(() => {});
+    return parsed;
   }
   if (!allowWalletAsyncFallback(getProductMode())) {
-    void AsyncStorage.removeItem(PASSWORD_FALLBACK).catch(() => {});
-    return secureRaw === STORE_UNKNOWN ? STORE_UNKNOWN : null;
+    if (!quiet) void AsyncStorage.removeItem(PASSWORD_FALLBACK).catch(() => {});
+    return null;
   }
   try {
     const fallback = parsePasswordRecord(await AsyncStorage.getItem(PASSWORD_FALLBACK));
     if (fallback) return fallback;
   } catch {
-    /* ignore */
+    return STORE_UNKNOWN;
   }
-  return secureRaw === STORE_UNKNOWN ? STORE_UNKNOWN : null;
+  return null;
 }
 
 /** true = hay clave, false = vacío, null = el almacén no respondió. */
@@ -888,27 +888,62 @@ export async function isPasswordSet(): Promise<boolean> {
   return (await probePasswordSet()) === true;
 }
 
-/** La foto del alta. Si el llavero no responde, el mismo plazo de la carga devuelve null. */
+const PHOTO_BUDGET_MS = 4000;
+
+async function readBoundForPhoto(): Promise<string> {
+  let secure: string | null;
+  try {
+    secure = await SecureStore.getItemAsync(storeSlot(['quatrivium', 'device', 'boundWallet']));
+  } catch {
+    throw new Error('store-unknown');
+  }
+  if (secure) return secure.toLowerCase();
+  try {
+    const fallback = await AsyncStorage.getItem(
+      storeSlot(['quatrivium', 'device', 'boundWallet', 'fallback'])
+    );
+    return String(fallback || '').toLowerCase();
+  } catch {
+    throw new Error('store-unknown');
+  }
+}
+
+/** La foto del alta. Error o silencio no es vacío, y no mueve respaldos. */
 export async function readSignupPhoto(): Promise<{
   hadPassword: boolean;
   hadPin: boolean;
   hadBound: string;
-  hadRaw: string | null | 'unreadable';
-} | null> {
-  const { BOUND_UNKNOWN, getBoundWallet } = await import('./deviceBinding');
+  hadRaw: string | null;
+}> {
   const { readRawWallet } = await import('./appWallet');
-  const { raceMs } = await import('../utils/lockRace');
-  return raceMs(
-    (async () => {
-      const hadPassword = await isPasswordSet().catch(() => true);
-      const hadPin = await isPinSet().catch(() => true);
-      const hadBound = await getBoundWallet().catch(() => BOUND_UNKNOWN);
-      const hadRaw = await readRawWallet().catch(() => 'unreadable' as const);
-      return { hadPassword, hadPin, hadBound, hadRaw };
-    })(),
-    1500,
-    null
-  );
+  const work = (async () => {
+    const [password, pin, hadBound, hadRaw] = await Promise.all([
+      probePasswordRecord(PHOTO_BUDGET_MS, true),
+      probePinSet(PHOTO_BUDGET_MS),
+      readBoundForPhoto(),
+      readRawWallet({ quiet: true }),
+    ]);
+    if (password === STORE_UNKNOWN || pin === null) throw new Error('store-unknown');
+    return {
+      hadPassword: Boolean(password),
+      hadPin: pin === true,
+      hadBound,
+      hadRaw,
+    };
+  })();
+  return await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('keychain-timeout')), PHOTO_BUDGET_MS);
+    work.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
 }
 
 function passwordRounds(record: PasswordRecord): number {
@@ -1093,29 +1128,19 @@ export async function clearBiometricWrap(): Promise<void> {
   }
 }
 
-export async function persistLocalRecoveryWrap(wrap = getWalletWrapKey()): Promise<void> {
-  if (!wrap) return;
+async function forgetLegacyRecoveryWrap(): Promise<void> {
+  const slot = storeSlot(['quatrivium', 'lock', 'recoveryWrap']);
+  const gate = storeSlot(['quatrivium', 'lock', 'recoveryWrap', 'gate']);
   try {
-    await SecureStore.setItemAsync(RECOVERY_WRAP, wrap, BIO_WRAP_OPTIONS);
+    await SecureStore.deleteItemAsync(slot);
+    await SecureStore.deleteItemAsync(gate);
   } catch {
-    // El correo no debe depender de un wrap en el worker.
-  }
-}
-
-async function loadLocalRecoveryWrap(): Promise<string | null> {
-  try {
-    const raw = String(
-      (await SecureStore.getItemAsync(RECOVERY_WRAP, BIO_WRAP_OPTIONS)) || ''
-    ).toLowerCase();
-    return /^0x[0-9a-f]{64}$/.test(raw) ? raw : null;
-  } catch {
-    return null;
+    // El siguiente desbloqueo lo reintenta. No se bloquea la entrada.
   }
 }
 
 async function persistCompanionWraps(wrap = getWalletWrapKey()): Promise<void> {
   if (!wrap) return;
-  await persistLocalRecoveryWrap(wrap);
   await withTimeout(
     (async () => {
       try {
@@ -1376,6 +1401,7 @@ async function checkPinBody(
   }
   throwIfAborted(signal);
   await clearLockAfterSuccess();
+  await forgetLegacyRecoveryWrap();
   await persistCompanionWraps();
   await runDeviceRetry(pin);
   return { ok: true };
@@ -1572,7 +1598,8 @@ function samePasswordSlots(left: PasswordSlots, right: PasswordSlots): boolean {
   );
 }
 
-async function restorePasswordSlots(slots: PasswordSlots): Promise<void> {
+async function restorePasswordSlots(slots: PasswordSlots): Promise<boolean> {
+  let failed = false;
   try {
     if (slots.secure) {
       await SecureStore.setItemAsync(PASSWORD_KEY, slots.secure, OPTIONS);
@@ -1580,7 +1607,7 @@ async function restorePasswordSlots(slots: PasswordSlots): Promise<void> {
       await SecureStore.deleteItemAsync(PASSWORD_KEY);
     }
   } catch {
-    /* ignore */
+    failed = true;
   }
   try {
     if (slots.fallback) {
@@ -1589,8 +1616,10 @@ async function restorePasswordSlots(slots: PasswordSlots): Promise<void> {
       await AsyncStorage.removeItem(PASSWORD_FALLBACK);
     }
   } catch {
-    /* ignore */
+    failed = true;
   }
+  if (failed) reportLockFault();
+  return !failed;
 }
 
 function openSignupUndo(
@@ -1611,7 +1640,12 @@ function openSignupUndo(
         reportLockFault();
         return;
       }
-      await restorePasswordSlots(prior);
+      const restored = await restorePasswordSlots(prior);
+      const after = await readPasswordSlots();
+      if (!restored || !samePasswordSlots(after, prior)) {
+        throw new Error('undo-failed');
+      }
+      await forgetLegacyRecoveryWrap();
       clearPasswordBackup();
       clearWalletSession();
     },
@@ -1641,9 +1675,11 @@ export async function restorePasswordForPhrase(input: {
   const { readRawWallet } = await import('./appWallet');
   const bound = await getBoundWallet();
   if (bound === BOUND_UNKNOWN) throw new Error('store-unknown');
+  const passwordSet = await probePasswordSet();
+  if (passwordSet === null) throw new Error('store-unknown');
+  const pinSet = await probePinSet();
+  if (pinSet === null) throw new Error('store-unknown');
   const raw = await readRawWallet();
-  const passwordSet = await isPasswordSet();
-  const pinSet = await isPinSet();
   const sessionOpen = Boolean(getWalletWrapKey());
   if (!bound && (raw || passwordSet || pinSet) && !sessionOpen) {
     throw new Error('store-unknown');
@@ -1911,6 +1947,7 @@ async function checkPasswordBody(
   throwIfAborted(signal);
   await clearLockAfterSuccess();
   await ackDeviceRepair();
+  await forgetLegacyRecoveryWrap();
   void persistCompanionWraps();
   await runDeviceRetry(null);
   return { ok: true };
@@ -2109,6 +2146,5 @@ if (__DEV__) {
     probeDeviceProtection,
     currentUndoToken,
     abortPasswordSetup,
-    loadLocalRecoveryWrap,
   };
 }

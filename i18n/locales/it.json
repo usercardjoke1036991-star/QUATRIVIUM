@@ -1292,5 +1292,8 @@
   "fundsConfirmAck": "Conferma",
   "fundsConfirmAckLead": "Controlli importo, destinazione e commissione. Nessun PIN: la protezione fondi è spenta.",
   "fundsConfirmBiometricFail": "L’impronta non ha aperto il portafoglio.",
-  "walletWrapSoftwareNote": "Questo telefono non ha un deposito hardware. La chiave del portafoglio resta nel deposito di sistema, senza impronta in lettura."
+  "walletWrapSoftwareNote": "Questo telefono non ha un deposito hardware. La chiave del portafoglio resta nel deposito di sistema, senza impronta in lettura.",
+  "lockKeychainSlow": "Il portachiavi non risponde. Riprova.",
+  "lockCreateFresh": "Crea un conto nuovo",
+  "lockUndoFailed": "Non è stato possibile annullare l'iscrizione. Riprova."
 }

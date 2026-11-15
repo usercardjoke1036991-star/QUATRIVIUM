@@ -1292,5 +1292,8 @@
   "fundsConfirmAck": "Confirmer",
   "fundsConfirmAckLead": "Vérifiez le montant, la destination et les frais. Pas de PIN : la protection des fonds est désactivée.",
   "fundsConfirmBiometricFail": "L’empreinte n’a pas ouvert le portefeuille.",
-  "walletWrapSoftwareNote": "Ce téléphone n’a pas de coffre matériel. La clé du portefeuille reste dans le coffre du système, sans empreinte à la lecture."
+  "walletWrapSoftwareNote": "Ce téléphone n’a pas de coffre matériel. La clé du portefeuille reste dans le coffre du système, sans empreinte à la lecture.",
+  "lockKeychainSlow": "Le trousseau ne répond pas. Réessayez.",
+  "lockCreateFresh": "Créer un nouveau compte",
+  "lockUndoFailed": "L'inscription n'a pas pu être annulée. Réessayez."
 }

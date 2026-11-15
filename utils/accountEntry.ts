@@ -207,11 +207,32 @@ export function canSubmitRestorePhrase(phrase: string): boolean {
   return words.length === 12 || words.length === 24;
 }
 
-export type WalletFailEscape = 'unlock' | 'restore';
+export type WalletFailEscape = 'unlock' | 'restore' | 'create';
+export type WalletReadKind = 'empty' | 'unknown' | 'present';
 
 /** Reintentar solo no basta: si el sobre no abre hay que pedir clave o las 24 palabras. */
-export function walletFailEscapes(passwordSet: boolean): WalletFailEscape[] {
-  return passwordSet ? ['unlock', 'restore'] : ['restore'];
+export function walletFailEscapes(
+  passwordSet: boolean,
+  detail?: { walletRead?: WalletReadKind; bound?: string }
+): WalletFailEscape[] {
+  if (!passwordSet) return ['restore'];
+  const bound = String(detail?.bound || '')
+    .trim()
+    .toLowerCase();
+  if (detail?.walletRead === 'empty' && !bound) return ['unlock', 'restore', 'create'];
+  return ['unlock', 'restore'];
+}
+
+/** El alta que no se pudo deshacer no se da por buena. */
+export function signupErrorShown(code: string): 'undo' | 'keychain' | 'persist' | 'other' {
+  if (code === 'undo-failed') return 'undo';
+  if (code === 'keychain-timeout' || code === 'store-unknown') return 'keychain';
+  if (code === 'wallet-persist' || code === 'password-persist') return 'persist';
+  return 'other';
+}
+
+export function signupFailureStage(): 'credentials' {
+  return 'credentials';
 }
 
 /** Tras desbloquear, no entrar a la app si el cofre sigue cerrado o faltan las 24 palabras. */
