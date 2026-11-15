@@ -50,7 +50,6 @@ export function lockFailureCopy(
   return { key: method === 'pin' ? 'lockPinWrong' : 'lockPasswordWrong' };
 }
 
-/** Lo que muestran FundsConfirmHost y el candado. */
 /** null abre. El resto es el texto que muestran el candado, el pago y los ajustes. */
 export function passwordUnlockMessage(
   checked: { ok: true } | LockMiss,
@@ -59,6 +58,27 @@ export function passwordUnlockMessage(
 ): string | null {
   if (checked.ok) return null;
   return describeLockFailure('password', checked, t, passwordMissing);
+}
+
+export function unlockPasswordError(
+  checked: { ok: true } | LockMiss,
+  t: (key: TranslationKey, vars?: Vars) => string
+): string {
+  return passwordUnlockMessage(checked, t) || '';
+}
+
+export function confirmPasswordError(
+  checked: { ok: true } | LockMiss,
+  t: (key: TranslationKey, vars?: Vars) => string
+): string {
+  return passwordUnlockMessage(checked, t) || '';
+}
+
+export function settingsPasswordError(
+  checked: { ok: true } | LockMiss,
+  t: (key: TranslationKey, vars?: Vars) => string
+): string {
+  return passwordUnlockMessage(checked, t) || t('lockPasswordWrong');
 }
 
 export function describeLockFailure(

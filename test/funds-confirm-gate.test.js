@@ -9,6 +9,7 @@ const {
   fundsTx,
   quoteNetworkFee,
   reservaConfirmAmount,
+  trimFeeFraction,
 } = require('../utils/fundsConfirmGate.ts');
 
 const DEST = '0x93b346b6BC2548dA6A1E7d98E9a421B42541425b';
@@ -99,5 +100,18 @@ describe('Pantalla de confirmación de fondos', function () {
         throw new Error('rpc');
       }, 1n)
     ).to.equal(true);
+  });
+
+  it('trims a fee fraction without a slow expression', () => {
+    expect(trimFeeFraction('1.2300'), 'a').to.equal('1.23');
+    expect(trimFeeFraction('2.0'), 'b').to.equal('2');
+    expect(trimFeeFraction('10.100'), 'c').to.equal('10.1');
+    expect(trimFeeFraction('1.23'), 'd').to.equal('1.23');
+    expect(trimFeeFraction('100'), 'e').to.equal('100');
+    expect(trimFeeFraction(''), 'f').to.equal('');
+    const long = `1.${'0'.repeat(9998)}`;
+    const started = Date.now();
+    expect(trimFeeFraction(long), 'larga').to.equal('1');
+    expect(Date.now() - started, 'tiempo').to.be.below(50);
   });
 });

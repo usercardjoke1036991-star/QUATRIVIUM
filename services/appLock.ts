@@ -158,6 +158,9 @@ let passwordReplaceToken: {
 } | null = null;
 let passwordGeneration = 0;
 let passwordCleanup: Promise<void> = Promise.resolve();
+let committedPassword: string | null = null;
+/** Una escritura que no vuelve se suelta a los 15 s. Si llega después, no pisa una clave más nueva. */
+const PASSWORD_CLEANUP_MAX_MS = 15_000;
 const REPLACE_TOKEN_MS = 60_000;
 const STORE_UNKNOWN = Symbol('store-unknown');
 
@@ -1587,19 +1590,19 @@ export type SignupUndo = {
 };
 
 async function readPasswordSlots(): Promise<PasswordSlots> {
-  let secure: string | null = null;
-  let fallback: string | null = null;
+  let secureRaw: string | null;
+  let fallbackRaw: string | null;
   try {
-    secure = (await SecureStore.getItemAsync(PASSWORD_KEY)) || null;
+    secureRaw = await SecureStore.getItemAsync(PASSWORD_KEY);
   } catch {
-    secure = null;
+    throw new Error('store-unknown');
   }
   try {
-    fallback = (await AsyncStorage.getItem(PASSWORD_FALLBACK)) || null;
+    fallbackRaw = await AsyncStorage.getItem(PASSWORD_FALLBACK);
   } catch {
-    fallback = null;
+    throw new Error('store-unknown');
   }
-  return { secure, fallback };
+  return { secure: secureRaw || null, fallback: fallbackRaw || null };
 }
 
 function samePasswordSlots(left: PasswordSlots, right: PasswordSlots): boolean {
@@ -1646,13 +1649,25 @@ function openSignupUndo(
     async revert() {
       if (used) return;
       used = true;
-      const current = await readPasswordSlots();
+      let current: PasswordSlots;
+      try {
+        current = await readPasswordSlots();
+      } catch {
+        reportLockFault();
+        throw new Error('undo-failed');
+      }
       if (passwordGeneration !== generation || !samePasswordSlots(current, written)) {
         reportLockFault();
         return;
       }
       const restored = await restorePasswordSlots(prior);
-      const after = await readPasswordSlots();
+      let after: PasswordSlots;
+      try {
+        after = await readPasswordSlots();
+      } catch {
+        reportLockFault();
+        throw new Error('undo-failed');
+      }
       if (!restored || !samePasswordSlots(after, prior)) {
         throw new Error('undo-failed');
       }
@@ -1793,32 +1808,11 @@ export async function setPassword(
   );
   const fate = await settlePasswordWrite(attempt, 2500);
   if (fate === 'timeout') {
-    passwordCleanup = attempt.then(async (outcome) => {
-      try {
-        if (outcome !== 'ok' || passwordGeneration !== lateGeneration) {
-          reportLockFault();
-          return;
-        }
-        const now = await SecureStore.getItemAsync(PASSWORD_KEY);
-        if (now !== serialized) {
-          reportLockFault();
-          return;
-        }
-        if (latePrior.secure) {
-          await SecureStore.setItemAsync(PASSWORD_KEY, latePrior.secure, OPTIONS);
-        } else {
-          await SecureStore.deleteItemAsync(PASSWORD_KEY);
-        }
-        if (latePrior.fallback) {
-          await AsyncStorage.setItem(PASSWORD_FALLBACK, latePrior.fallback);
-        } else {
-          await AsyncStorage.removeItem(PASSWORD_FALLBACK);
-        }
-        reportLockFault();
-      } catch {
-        reportLockFault();
-      }
-    });
+    armPasswordCleanup(
+      attempt.then(async (outcome) => {
+        await undoLatePasswordWrite(outcome, serialized, latePrior, lateGeneration);
+      })
+    );
     throw new Error('password-persist');
   }
   const stored = fate === 'ok';
@@ -1836,6 +1830,7 @@ export async function setPassword(
   const written: PasswordSlots = stored
     ? { secure: serialized, fallback: null }
     : { secure: undoPrior?.secure ?? null, fallback: serialized };
+  if (stored) committedPassword = serialized;
   const generation = ++passwordGeneration;
   const undo =
     options?.undoable && undoPrior ? openSignupUndo(undoPrior, written, generation) : null;
@@ -2091,6 +2086,76 @@ export async function isLockOnOpenEnabled(): Promise<boolean> {
 
 export async function setLockOnOpenEnabled(enabled: boolean): Promise<void> {
   await SecureStore.setItemAsync(LOCK_OPEN_KEY, enabled ? '1' : '0', OPTIONS);
+}
+
+function armPasswordCleanup(job: Promise<void>): void {
+  let release = () => {};
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let released = false;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const finish = () => {
+    if (released) return;
+    released = true;
+    if (timer) clearTimeout(timer);
+    release();
+  };
+  timer = setTimeout(() => {
+    if (released) return;
+    reportLockFault();
+    released = true;
+    release();
+  }, PASSWORD_CLEANUP_MAX_MS);
+  passwordCleanup = gate;
+  job.then(finish, () => {
+    reportLockFault();
+    finish();
+  });
+}
+
+async function undoLatePasswordWrite(
+  outcome: 'ok' | 'reject',
+  serialized: string,
+  latePrior: PasswordSlots,
+  lateGeneration: number
+): Promise<void> {
+  try {
+    if (outcome !== 'ok') {
+      reportLockFault();
+      return;
+    }
+    let now: string | null = null;
+    try {
+      now = await SecureStore.getItemAsync(PASSWORD_KEY);
+    } catch {
+      if (passwordGeneration === lateGeneration && latePrior.secure) {
+        await SecureStore.setItemAsync(PASSWORD_KEY, latePrior.secure, OPTIONS);
+      }
+      reportLockFault();
+      return;
+    }
+    if (passwordGeneration !== lateGeneration || now !== serialized) {
+      if (now === serialized && committedPassword && committedPassword !== serialized) {
+        await SecureStore.setItemAsync(PASSWORD_KEY, committedPassword, OPTIONS);
+      }
+      reportLockFault();
+      return;
+    }
+    if (latePrior.secure) {
+      await SecureStore.setItemAsync(PASSWORD_KEY, latePrior.secure, OPTIONS);
+    } else {
+      await SecureStore.deleteItemAsync(PASSWORD_KEY);
+    }
+    if (latePrior.fallback) {
+      await AsyncStorage.setItem(PASSWORD_FALLBACK, latePrior.fallback);
+    } else {
+      await AsyncStorage.removeItem(PASSWORD_FALLBACK);
+    }
+    reportLockFault();
+  } catch {
+    reportLockFault();
+  }
 }
 
 async function waitPasswordCleanup(): Promise<void> {

@@ -19,11 +19,21 @@ export async function quoteNetworkFee(source: FeeQuote, tx: FeeTx): Promise<stri
     const price = fee.maxFeePerGas ?? fee.gasPrice;
     if (price == null || price <= 0n || gas <= 0n) return NETWORK_FEE_UNAVAILABLE;
     const eth = formatEther(gas * price);
-    const trimmed = eth.includes('.') ? eth.replace(/0+$/, '').replace(/\.$/, '') : eth;
-    return `${trimmed} ETH`;
+    return `${trimFeeFraction(eth)} ETH`;
   } catch {
     return NETWORK_FEE_UNAVAILABLE;
   }
+}
+
+/** Quita ceros finales de la fracción. Sin expresión regular. */
+export function trimFeeFraction(value: string): string {
+  const text = String(value || '');
+  const dot = text.indexOf('.');
+  if (dot < 0) return text;
+  let end = text.length;
+  while (end > dot + 1 && text.charCodeAt(end - 1) === 48) end -= 1;
+  if (text.charCodeAt(end - 1) === 46) end -= 1;
+  return text.slice(0, end);
 }
 
 function positiveAmount(raw: string): boolean {

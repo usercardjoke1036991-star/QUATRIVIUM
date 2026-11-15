@@ -27,6 +27,11 @@ let readDelayMs = 0;
 let readDelayKey = '';
 let writeDelayMs = 0;
 let writeDelayKey = '';
+let writeHang = false;
+let releaseHungWrite = () => {};
+let acceptPasswordWrites = true;
+let passwordReadBudget = 0;
+let passwordReads = 0;
 let secureReadHang = '';
 let hideBoundConfirm = false;
 let crashOnSecretPromote = false;
@@ -50,6 +55,10 @@ installMock('expo-secure-store', {
       throw new Error('auth-required');
     }
     if (secureReadThrow && key === secureReadThrow) throw new Error('io');
+    if (passwordReadBudget > 0 && key === 'quatrivium.lock.password') {
+      passwordReads += 1;
+      if (passwordReads === passwordReadBudget) throw new Error('io');
+    }
     if (secureReadHang && key === secureReadHang) return new Promise(() => {});
     if (readDelayMs > 0) {
       const slow = readDelayKey
@@ -91,6 +100,13 @@ installMock('expo-secure-store', {
     return memory.has(key) ? memory.get(key) : null;
   },
   async setItemAsync(key, value, options) {
+    if (!acceptPasswordWrites && key === 'quatrivium.lock.password') return;
+    if (writeHang && key === 'quatrivium.lock.password') {
+      await new Promise((resolve) => {
+        releaseHungWrite = resolve;
+      });
+      if (!acceptPasswordWrites) return;
+    }
     if (writeDelayMs > 0 && (!writeDelayKey || key === writeDelayKey)) {
       await new Promise((resolve) => setTimeout(resolve, writeDelayMs));
     }
@@ -214,9 +230,10 @@ kdf.resetPbkdf2ForTests = kdf.resetPbkdf2;
 let mono = 1_000_000;
 
 describe('app lock PBKDF2', function () {
-  this.timeout(120000);
+  this.timeout(200000);
 
   beforeEach(function () {
+    acceptPasswordWrites = true;
     mono = 1_000_000;
     lock.setMonoClockForTests(() => mono);
     lock.setChainStampsForTests(() => []);
@@ -237,6 +254,13 @@ describe('app lock PBKDF2', function () {
     readDelayKey = '';
     writeDelayMs = 0;
     writeDelayKey = '';
+    acceptPasswordWrites = false;
+    const release = releaseHungWrite;
+    writeHang = false;
+    releaseHungWrite = () => {};
+    release();
+    passwordReadBudget = 0;
+    passwordReads = 0;
     hideBoundConfirm = false;
     lock.setVerifyBudgetForTests(null);
     lock.setLockPhaseForTests(null);
@@ -2990,19 +3014,24 @@ describe('app lock PBKDF2', function () {
     const before = accountBytes();
     secureReadThrow = PASSWORD_SLOT;
     let rejected = false;
-    let text = '';
+    let gate = '';
+    let confirm = '';
+    let settings = '';
     try {
       const result = await lock.checkPassword(PASSWORD);
-      text = copy.passwordUnlockMessage(result, (key) => key);
+      const say = (key) => key;
+      gate = copy.unlockPasswordError(result, say);
+      confirm = copy.confirmPasswordError(result, say);
+      settings = copy.settingsPasswordError(result, say);
       expect(result.ok, 'acceso').to.equal(false);
     } catch {
       rejected = true;
     }
     secureReadThrow = '';
-    expect(rejected, 'candado').to.equal(false);
-    expect(rejected, 'confirmar').to.equal(false);
-    expect(rejected, 'ajustes').to.equal(false);
-    expect(text, 'mensaje').to.equal('lockStoreUnknown');
+    expect(rejected, 'rechazo').to.equal(false);
+    expect(gate, 'candado').to.equal('lockStoreUnknown');
+    expect(confirm, 'confirmar').to.equal('lockStoreUnknown');
+    expect(settings, 'ajustes').to.equal('lockStoreUnknown');
     expect(accountBytes(), 'bytes').to.deep.equal(before);
   });
 
@@ -3107,5 +3136,191 @@ describe('app lock PBKDF2', function () {
     expect(await names.loadClaimedUsername(), 'usuario').to.equal('ana');
     const saved = await sponsors.loadLockedSponsor(imported.address);
     expect(Boolean(saved), 'padrino').to.equal(true);
+  });
+
+  it('does not wipe the old password when the prior read fails and the write lands late', async function () {
+    this.timeout(20000);
+    await openSession();
+    const before = memory.get(PASSWORD_SLOT);
+    passwordReads = 0;
+    passwordReadBudget = 3;
+    writeDelayKey = PASSWORD_SLOT;
+    writeDelayMs = 3000;
+    let code = '';
+    try {
+      await lock.setPassword('Nueva-9zz');
+    } catch (error) {
+      code = error instanceof Error ? error.message : 'throw';
+    }
+    await new Promise((resolve) => setTimeout(resolve, 3500));
+    passwordReadBudget = 0;
+    writeDelayMs = 0;
+    writeDelayKey = '';
+    expect(code, 'codigo').to.equal('store-unknown');
+    expect(memory.get(PASSWORD_SLOT) === before, 'bytes').to.equal(true);
+    expect((await lock.checkPassword(PASSWORD)).ok, 'vieja').to.equal(true);
+  });
+
+  it('does not delete the password when the cleanup re-read fails', async function () {
+    this.timeout(20000);
+    await openSession();
+    const before = memory.get(PASSWORD_SLOT);
+    passwordReads = 0;
+    passwordReadBudget = 4;
+    writeDelayKey = PASSWORD_SLOT;
+    writeDelayMs = 3000;
+    let faults = 0;
+    race.setLockFaultReporter(() => {
+      faults += 1;
+    });
+    try {
+      await lock.setPassword('Nueva-9zz');
+    } catch {
+      // El plazo corto rechaza. La escritura sigue en curso.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 4200));
+    passwordReadBudget = 0;
+    writeDelayMs = 0;
+    writeDelayKey = '';
+    race.setLockFaultReporter(null);
+    expect(memory.get(PASSWORD_SLOT) === before, 'queda').to.equal(true);
+    expect(faults, 'fallo').to.equal(1);
+  });
+
+  it('still clears a late password write when every read succeeds', async function () {
+    this.timeout(20000);
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    const before = memory.get(PASSWORD_SLOT);
+    writeDelayKey = PASSWORD_SLOT;
+    writeDelayMs = 3000;
+    let faults = 0;
+    race.setLockFaultReporter(() => {
+      faults += 1;
+    });
+    let code = '';
+    try {
+      await lock.setPassword('Nueva-9z');
+    } catch (error) {
+      code = error instanceof Error ? error.message : 'throw';
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    writeDelayMs = 0;
+    writeDelayKey = '';
+    await lock.setPassword('OtraClave-9z');
+    race.setLockFaultReporter(null);
+    expect(code, 'codigo').to.equal('password-persist');
+    expect(
+      memory.get(PASSWORD_SLOT) === before || (await lock.checkPassword('OtraClave-9z')).ok,
+      'sigue'
+    ).to.equal(true);
+    expect(faults, 'fallo').to.equal(1);
+  });
+
+  it('stops blocking the session after a hung password write outlives its cap', async function () {
+    this.timeout(30000);
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    writeHang = true;
+    let first = '';
+    try {
+      await lock.setPassword('Nueva-9zz');
+    } catch (error) {
+      first = error instanceof Error ? error.message : 'throw';
+    }
+    let blocked = '';
+    try {
+      await lock.setPassword('OtraClave-9z');
+    } catch (error) {
+      blocked = error instanceof Error ? error.message : 'throw';
+    }
+    expect(first, 'primero').to.equal('password-persist');
+    expect(blocked, 'antes').to.equal('keychain-timeout');
+    await new Promise((resolve) => setTimeout(resolve, 16000));
+    writeHang = false;
+    let after = '';
+    try {
+      await lock.setPassword('OtraClave-9z');
+    } catch (error) {
+      after = error instanceof Error ? error.message : 'throw';
+    }
+    expect(after, 'despues').to.equal('');
+    expect((await lock.checkPassword('OtraClave-9z')).ok, 'abre').to.equal(true);
+  });
+
+  it('keeps the new password when a hung write lands after it', async function () {
+    this.timeout(30000);
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    writeHang = true;
+    let faults = 0;
+    race.setLockFaultReporter(() => {
+      faults += 1;
+    });
+    try {
+      await lock.setPassword('Nueva-9zz');
+    } catch {
+      // La escritura no vuelve.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 16000));
+    writeHang = false;
+    let after = '';
+    try {
+      await lock.setPassword('OtraClave-9z');
+    } catch (error) {
+      after = error instanceof Error ? error.message : 'throw';
+    }
+    expect(after, 'sigue').to.equal('');
+    releaseHungWrite();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    race.setLockFaultReporter(null);
+    expect((await lock.checkPassword('OtraClave-9z')).ok, 'nueva').to.equal(true);
+    expect(faults > 0, 'fallo').to.equal(true);
+  });
+
+  it('does not freeze an empty inviter when creating from the wallet miss', async function () {
+    await openSession();
+    memory.delete(WALLET_SLOT);
+    memory.delete(BOUND_SLOT);
+    const sponsors = loadTs(path.join(__dirname, '..', 'services', 'sponsorLock.ts'));
+    const created = wallet.generateSecretPhrase();
+    const imported = await wallet.importFromPhrase(created.phrase, {
+      markBackedUp: false,
+      mustBeEmpty: true,
+    });
+    await entry.finishFreshAccount({
+      address: imported.address,
+      username: 'ana',
+      invite: '',
+    });
+    const saved = await sponsors.loadLockedSponsor(imported.address);
+    expect(Boolean(saved && saved.chosen && !saved.padre), 'vacio').to.equal(false);
+    await sponsors.lockSponsorOnce(
+      imported.address,
+      '0x0000000000000000000000000000000000000001',
+      true
+    );
+    const later = await sponsors.loadLockedSponsor(imported.address);
+    expect(Boolean(later && later.padre), 'luego').to.equal(true);
+  });
+
+  it('keeps a real inviter when creating from the wallet miss', async function () {
+    await openSession();
+    memory.delete(WALLET_SLOT);
+    memory.delete(BOUND_SLOT);
+    const sponsors = loadTs(path.join(__dirname, '..', 'services', 'sponsorLock.ts'));
+    const created = wallet.generateSecretPhrase();
+    const imported = await wallet.importFromPhrase(created.phrase, {
+      markBackedUp: false,
+      mustBeEmpty: true,
+    });
+    await entry.finishFreshAccount({
+      address: imported.address,
+      username: 'ana',
+      invite: '0x0000000000000000000000000000000000000001',
+    });
+    const saved = await sponsors.loadLockedSponsor(imported.address);
+    expect(saved && saved.chosen, 'fija').to.equal(true);
+    expect(Boolean(saved && saved.padre), 'padre').to.equal(true);
   });
 });

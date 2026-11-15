@@ -258,7 +258,7 @@ El alta on-chain no manda «el resto» al pool de préstamos en el mismo momento
 - Entrar a un préstamo exige `msg.sender == tx.origin` y `code.length == 0`. `pagarPrestamo` solo cobra la deuda de `msg.sender` y acepta una cuenta delegada, para que nadie quede atrapado.
 - `allowBackup` es false y `usesCleartextTraffic` es false (`app.json`, líneas 32-33).
 - La frase de la billetera vive en el almacenamiento seguro del teléfono (`services/appWallet.ts`). Hay guarda de captura (`components/ScreenGuard.tsx`).
-- Los botones de pago usan un candado de reentrada (`hooks/useWeb3Transactions.ts`, líneas 24-28, y `useVerificationFee.ts`).
+- Los botones de pago usan un candado de reentrada (`hooks/useWeb3Transactions.ts`, líneas 24-28).
 - La mora no pasa el filtro de Nostr.
 - CI pide solo `contents: read` y fija el SHA de las acciones (`ci.yml`).
 - Los 17 idiomas tienen las mismas 1298 claves. El árbol actual no nombra los servicios prohibidos.
@@ -284,7 +284,7 @@ La app entra por `app/index.tsx`. Cada sala es un panel. No se dibujó en un dis
 | --- | --- | --- |
 | Inicio | Billetera, modo demo o real, acceso a las salas | Si no hay frase, pide crearla o importarla |
 | wallet | Crear, importar, ver la frase | Candado local |
-| alta | Approve y `pagarRegistro` de 4 LUSD | `useVerificationFee` no deja doble toque |
+| alta | Approve y `pagarRegistro` de 4 LUSD | El cobro directo a `pagarVerificacion` ya no tiene pantalla. El alta entra por `pagarRegistro`. |
 | credit | Estado del alta | Vacío si el contrato no está desplegado |
 | loans | Pedir y pagar | Pausa on-chain y falta de saldo revierten |
 | ranks, fame, bonuses, canje | Fama y canje | Leen la cadena; si el nodo calla, las pruebas de lectura dicen que no se borra el último dato |
@@ -546,7 +546,7 @@ Cada archivo seguido de git en esta rama se revisó al menos por nombre, tipo y,
 - `hooks/useReferralNetwork.ts` — revisado: sí
 - `hooks/useScreenScroll.ts` — revisado: sí
 - `hooks/useSendCooldown.ts` — revisado: sí
-- `hooks/useVerificationFee.ts` — revisado: sí
+- `hooks/useVerificationFee.ts` — borrado: nadie lo importaba y `pagarVerificacion` solo acepta a Alta.
 - `hooks/useWalletLevel.ts` — revisado: sí
 - `hooks/useWeb3Balances.ts` — revisado: sí
 - `hooks/useWeb3Transactions.ts` — revisado: sí
@@ -639,7 +639,7 @@ Cada archivo seguido de git en esta rama se revisó al menos por nombre, tipo y,
 - `services/savedSession.ts` — revisado: sí
 - `services/sponsorLock.ts` — revisado: sí
 - `services/userProfile.ts` — revisado: sí
-- `services/verificationFeeReceipt.ts` — revisado: sí
+- `services/verificationFeeReceipt.ts` — borrado: solo lo usaba ese hook.
 - `services/walletAuth.ts` — revisado: sí
 - `services/walletHandoff.ts` — revisado: sí
 - `services/walletOpenEscape.ts` — revisado: sí

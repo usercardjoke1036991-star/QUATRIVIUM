@@ -22,7 +22,7 @@ import {
 import { SecretInput } from './SecretInput';
 import { AppText } from './AppText';
 import type { TranslationKey } from '../i18n/translations';
-import { describeLockFailure, passwordUnlockMessage } from '../utils/lockFailureCopy';
+import { confirmPasswordError, describeLockFailure } from '../utils/lockFailureCopy';
 
 interface FundsConfirmValue {
   confirmFunds: (purpose?: FundsConfirmPurpose, details?: FundsTxDetails) => Promise<boolean>;
@@ -191,7 +191,7 @@ export const FundsConfirmHost: React.FC<{ children: React.ReactNode }> = ({ chil
       setBusy(true);
       const checked = await checkPassword(password);
       if (!checked.ok) {
-        setError(passwordUnlockMessage(checked, t) || '');
+        setError(confirmPasswordError(checked, t));
         setPassword('');
         setBusy(false);
         return;

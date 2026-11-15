@@ -43,7 +43,7 @@ import {
   shouldRelockAfterBackground,
   type SignupUndo,
 } from '../services/appLock';
-import { describeLockFailure, lockWaitCopy, passwordUnlockMessage } from '../utils/lockFailureCopy';
+import { describeLockFailure, lockWaitCopy, unlockPasswordError } from '../utils/lockFailureCopy';
 import { raceMs, reportLockFault, setLockFaultReporter } from '../utils/lockRace';
 import { runGuardedTap } from '../utils/tapGuard';
 import { isValidMasterPassword } from '../utils/passwordPolicy';
@@ -797,7 +797,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
         return;
       }
       setLockMs(result.remainingMs);
-      setError(passwordUnlockMessage(result, t) || '');
+      setError(unlockPasswordError(result, t));
       setPasswordInput('');
     } finally {
       attemptGuard.current = false;
@@ -925,6 +925,17 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
       setBusy(true);
       setError('');
       try {
+        const username = normalizeUsername(accountUsername);
+        if (!isValidUsername(username)) {
+          setError(t('usernameInvalid'));
+          return;
+        }
+        const sponsor = resolveSponsorInput(inviteDraft, '');
+        if (!sponsor.ok) {
+          setInviteError(t('invalidSponsor'));
+          return;
+        }
+        setInviteError('');
         let existing: string | null;
         try {
           existing = await readRawWallet({ quiet: true });
@@ -2031,6 +2042,60 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
                 {t('lockRestoreWithPhrase')}
               </AppText>
             </TouchableOpacity>
+          ) : null}
+
+          {walletMiss &&
+          walletFailEscapes(hasPassword, { walletRead, bound: missBound }).includes('create') ? (
+            <View style={styles.passwordBlock}>
+              <AppText style={[styles.switchText, { color: colors.text }]}>
+                {t('signupInviteLabel')}
+              </AppText>
+              <AppText style={[styles.switchText, { color: colors.textMuted }]}>
+                {t('signupInviteLead')}
+              </AppText>
+              <AppTextInput
+                value={inviteDraft}
+                onChangeText={(value) => {
+                  setInviteDraft(value);
+                  setInviteError('');
+                }}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                autoComplete="off"
+                placeholder={t('invitePlaceholder')}
+                placeholderTextColor={colors.textMuted}
+                style={[
+                  styles.passwordInput,
+                  {
+                    backgroundColor: colors.inputBg,
+                    borderColor: colors.inputBorder,
+                    color: colors.text,
+                  },
+                ]}
+              />
+              {inviteError ? (
+                <AppText style={[styles.error, { color: colors.danger }]}>{inviteError}</AppText>
+              ) : null}
+              <AppTextInput
+                value={accountUsername}
+                onChangeText={(value) => setAccountUsername(normalizeUsername(value))}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="off"
+                importantForAutofill="no"
+                textContentType="none"
+                placeholder={t('usernameField')}
+                placeholderTextColor={colors.textMuted}
+                style={[
+                  styles.passwordInput,
+                  {
+                    backgroundColor: colors.inputBg,
+                    borderColor: colors.inputBorder,
+                    color: colors.text,
+                  },
+                ]}
+              />
+            </View>
           ) : null}
 
           {walletMiss &&

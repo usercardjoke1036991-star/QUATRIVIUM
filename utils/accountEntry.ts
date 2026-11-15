@@ -280,7 +280,8 @@ export async function finishFreshAccount(input: {
   const { lockSponsorOnce } = await import('../services/sponsorLock');
   const { isValidUsername, normalizeUsername } = await import('./usernamePolicy');
   const { loadClaimedUsername, saveClaimedUsername } = await import('../services/accountUsername');
-  await lockSponsorOnce(input.address, input.invite, true);
+  const invite = String(input.invite || '').trim();
+  await lockSponsorOnce(input.address, invite, invite.length > 0);
   if (await loadClaimedUsername()) return;
   if (!isValidUsername(normalizeUsername(input.username))) return;
   await saveClaimedUsername(input.username);

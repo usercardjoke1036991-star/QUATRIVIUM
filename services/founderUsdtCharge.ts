@@ -22,7 +22,7 @@ import { loadRequiredExternalWallet } from './linkedWallet';
 import { beginExternalWalletHandoff } from './walletHandoff';
 import { ensureExternalWalletOnAppChain } from '../utils/walletChain';
 import { ALTA_ABI, getAltaAddress, isAltaConfigured } from '../constants/altaConfig';
-import { cachedProtocolCaps, QuatriviumCreditService } from './quatriviumCreditService';
+import { QuatriviumCreditService } from './quatriviumCreditService';
 import { recordMovement } from './movementHistory';
 import { approveFollows, quoteNetworkFee } from '../utils/fundsConfirmGate';
 import type { TranslationKey } from '../i18n/translations';
@@ -297,70 +297,6 @@ export async function chargeFounderUsdt(
         timestamp: Date.now(),
       });
     }
-    ctx.refetch?.();
-    return 'paid';
-  } catch (error) {
-    alertUser(ctx, ctx.t('error'), humanizeTxError(error));
-    return 'failed';
-  }
-}
-
-/** Cobra USDT al pool con pagarVerificacion(). Sin fama. Nunca va a la fundadora. */
-export async function chargePoolUsdt(
-  ctx: FounderChargeContext,
-  amountUsdt: number
-): Promise<FounderChargeResult> {
-  const amount = Number(amountUsdt);
-  if (!Number.isFinite(amount) || amount <= 0) return 'paid';
-  if (!ctx.walletAddress) {
-    alertUser(ctx, ctx.t('connect'), ctx.t('appWalletNotReady'));
-    return 'failed';
-  }
-  if (!isAccessPaymentEnabled() || !isCreditReady() || !cachedProtocolCaps().canPagarVerificacion) {
-    alertUser(
-      ctx,
-      ctx.t('creditAccessTitle'),
-      ctx.t(isDemoAccount() || isAltaConfigured() ? 'creditAccessPending' : 'liveCreditNotReady')
-    );
-    return 'failed';
-  }
-  if (!ctx.isTokenSupported && !isOfficialWorldToken(ctx.token.address)) {
-    alertUser(ctx, ctx.t('token'), ctx.t('tokenNotEnabledAlert'));
-    return 'failed';
-  }
-  const human = amount.toFixed(2);
-  let amountWei: string;
-  try {
-    amountWei = parseUnits(human, ctx.token.decimals).toString();
-  } catch {
-    alertUser(ctx, ctx.t('amount'), ctx.t('invalidAmount'));
-    return 'failed';
-  }
-  const verifyApprove = await approveFollows(async () => {
-    const token = new Contract(ctx.token.address, ERC20_ABI, getProviderWithFallback());
-    return BigInt(await token.allowance(ctx.walletAddress, getContractAddress()));
-  }, BigInt(amountWei));
-  if (
-    !ctx.silent &&
-    !(await ctx.confirmFunds('movement', {
-      amount: human,
-      symbol: 'LUSD',
-      destination: ctx.token.address,
-      twoSignatures: verifyApprove,
-      fee: await movementFee(
-        'pagarVerificacion',
-        [ctx.token.address, amountWei],
-        undefined,
-        undefined,
-        ctx.walletAddress
-      ),
-    }))
-  )
-    return 'cancelled';
-  if (!(await fundInternalFromExternal(ctx, amountWei, ctx.token.address))) return 'failed';
-  if (!(await ensureGasForTx(ctx))) return 'failed';
-  try {
-    await QuatriviumCreditService.pagarVerificacion(amountWei, ctx.token.address);
     ctx.refetch?.();
     return 'paid';
   } catch (error) {
