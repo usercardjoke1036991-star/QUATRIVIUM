@@ -160,6 +160,7 @@ let passwordGeneration = 0;
 let passwordCleanup: Promise<void> = Promise.resolve();
 let committedPassword: string | null = null;
 let passwordNoteSeq = 0;
+let passwordWriteGate: Promise<void> = Promise.resolve();
 
 function notePasswordKey(value: string | null): void {
   committedPassword = value;
@@ -1812,36 +1813,47 @@ export async function setPassword(
   const serialized = JSON.stringify(record);
   const lateGeneration = passwordGeneration;
   const lateSeq = passwordNoteSeq;
-  const attempt = SecureStore.setItemAsync(PASSWORD_KEY, serialized, OPTIONS).then(
-    () => 'ok' as const,
-    () => 'reject' as const
-  );
-  const fate = await settlePasswordWrite(attempt, 2500);
-  if (fate === 'timeout') {
-    armPasswordCleanup(
-      attempt.then(async (outcome) => {
-        await undoLatePasswordWrite(outcome, serialized, latePrior, lateGeneration, lateSeq);
-      })
+  let openGate = () => {};
+  passwordWriteGate = new Promise<void>((resolve) => {
+    openGate = resolve;
+  });
+  let stored = false;
+  let written: PasswordSlots = { secure: null, fallback: null };
+  let generation = passwordGeneration;
+  try {
+    const attempt = SecureStore.setItemAsync(PASSWORD_KEY, serialized, OPTIONS).then(
+      () => 'ok' as const,
+      () => 'reject' as const
     );
-    throw new Error('password-persist');
-  }
-  const stored = fate === 'ok';
-  if (stored) {
-    await AsyncStorage.removeItem(PASSWORD_FALLBACK).catch(() => {});
-  } else if (allowWalletAsyncFallback(getProductMode())) {
-    try {
-      await AsyncStorage.setItem(PASSWORD_FALLBACK, serialized);
-    } catch {
+    const fate = await settlePasswordWrite(attempt, 2500);
+    if (fate === 'timeout') {
+      armPasswordCleanup(
+        attempt.then(async (outcome) => {
+          await undoLatePasswordWrite(outcome, serialized, latePrior, lateGeneration, lateSeq);
+        })
+      );
       throw new Error('password-persist');
     }
-  } else {
-    throw new Error('password-persist');
+    stored = fate === 'ok';
+    if (stored) {
+      await AsyncStorage.removeItem(PASSWORD_FALLBACK).catch(() => {});
+    } else if (allowWalletAsyncFallback(getProductMode())) {
+      try {
+        await AsyncStorage.setItem(PASSWORD_FALLBACK, serialized);
+      } catch {
+        throw new Error('password-persist');
+      }
+    } else {
+      throw new Error('password-persist');
+    }
+    written = stored
+      ? { secure: serialized, fallback: null }
+      : { secure: undoPrior?.secure ?? null, fallback: serialized };
+    if (stored) notePasswordKey(serialized);
+    generation = ++passwordGeneration;
+  } finally {
+    openGate();
   }
-  const written: PasswordSlots = stored
-    ? { secure: serialized, fallback: null }
-    : { secure: undoPrior?.secure ?? null, fallback: serialized };
-  if (stored) notePasswordKey(serialized);
-  const generation = ++passwordGeneration;
   const undo =
     options?.undoable && undoPrior ? openSignupUndo(undoPrior, written, generation) : null;
   try {
@@ -2142,6 +2154,7 @@ async function undoLatePasswordWrite(
       reportLockFault();
       return;
     }
+    await passwordWriteGate;
     let now: string | null = null;
     try {
       now = await SecureStore.getItemAsync(PASSWORD_KEY);

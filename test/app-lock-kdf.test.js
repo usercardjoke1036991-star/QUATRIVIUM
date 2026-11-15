@@ -27,6 +27,7 @@ let readDelayMs = 0;
 let readDelayKey = '';
 let writeDelayMs = 0;
 let writeDelayKey = '';
+let fallbackRemoveDelayMs = 0;
 let writeHang = false;
 let releaseHungWrite = () => {};
 let acceptPasswordWrites = true;
@@ -156,6 +157,12 @@ installMock('@react-native-async-storage/async-storage', {
     memory.set(`mem:${key}`, value);
   },
   async removeItem(key) {
+    if (
+      fallbackRemoveDelayMs > 0 &&
+      key === ['quatrivium', 'lock', 'password', 'fallback'].join('.')
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, fallbackRemoveDelayMs));
+    }
     memory.delete(`mem:${key}`);
   },
 });
@@ -254,6 +261,7 @@ describe('app lock PBKDF2', function () {
     readDelayKey = '';
     writeDelayMs = 0;
     writeDelayKey = '';
+    fallbackRemoveDelayMs = 0;
     acceptPasswordWrites = false;
     const release = releaseHungWrite;
     writeHang = false;
@@ -3509,8 +3517,8 @@ describe('app lock PBKDF2', function () {
     expect(first, 'primero').to.equal('password-persist');
     expect(Boolean(memory.get(slot)), 'existe').to.equal(false);
     lock.lockNow();
-    expect((await lock.checkPassword(late)).ok, 'abreA').to.equal(false);
     expect((await lock.checkPassword(later)).ok, 'abreB').to.equal(false);
+    expect((await lock.checkPassword(late)).ok, 'abreA').to.equal(false);
     expect(faults > 0, 'fallo').to.equal(true);
   });
 
@@ -3539,5 +3547,102 @@ describe('app lock PBKDF2', function () {
     expect((await lock.checkPassword(late)).ok, 'abreA').to.equal(false);
     await lock.setPassword(later);
     expect((await lock.checkPassword(later)).ok, 'abreB').to.equal(true);
+  });
+
+  async function raceLateCleanup(startB) {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    const started = Date.now();
+    writeDelayKey = PASSWORD_SLOT;
+    writeDelayMs = 25000;
+    let first = '';
+    try {
+      await lock.setPassword('ClaveA-9zz');
+    } catch (error) {
+      first = error instanceof Error ? error.message : 'throw';
+    }
+    const wait = 22000 - (Date.now() - started);
+    if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+    writeDelayMs = 2100;
+    fallbackRemoveDelayMs = 2000;
+    const second = startB();
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    secureReadThrow = PASSWORD_SLOT;
+    const settled = await second;
+    secureReadThrow = '';
+    writeDelayMs = 0;
+    writeDelayKey = '';
+    fallbackRemoveDelayMs = 0;
+    await new Promise((resolve) => setTimeout(resolve, 4000));
+    return { first, settled };
+  }
+
+  it('keeps a fresh password saved while a late cleanup cannot re-read', async function () {
+    this.timeout(45000);
+    const later = 'ClaveB-9zz';
+    const { first, settled } = await raceLateCleanup(() =>
+      lock.setPassword(later).then(
+        () => 'ok',
+        (error) => (error instanceof Error ? error.message : 'throw')
+      )
+    );
+    expect(first, 'primero').to.equal('password-persist');
+    expect(settled, 'b').to.equal('ok');
+    expect(Boolean(memory.get(PASSWORD_SLOT)), 'existe').to.equal(true);
+    lock.lockNow();
+    expect((await lock.checkPassword(later)).ok, 'abreB').to.equal(true);
+    expect((await lock.checkPassword('ClaveA-9zz')).ok, 'abreA').to.equal(false);
+  });
+
+  it('keeps the newer password and wallet seal while a late cleanup cannot re-read', async function () {
+    this.timeout(45000);
+    const kept = 'ClaveP-9zz';
+    const later = 'ClaveB-9zz';
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    await lock.setPassword(kept);
+    const created = wallet.generateSecretPhrase();
+    await wallet.importFromPhrase(created.phrase, { markBackedUp: false });
+    const { first, settled } = await raceLateCleanup(() =>
+      lock.setPassword(later).then(
+        () => 'ok',
+        (error) => (error instanceof Error ? error.message : 'throw')
+      )
+    );
+    expect(first, 'primero').to.equal('password-persist');
+    expect(settled, 'b').to.equal('ok');
+    lock.lockNow();
+    expect((await lock.checkPassword(later)).ok, 'abreB').to.equal(true);
+    const opened = await wallet.ensureAppWallet();
+    expect(Boolean(opened.address), 'address').to.equal(true);
+    expect((await lock.checkPassword(kept)).ok, 'abreP').to.equal(false);
+  });
+
+  it('does not hang when the late cleanup waits for a write that times out', async function () {
+    this.timeout(45000);
+    const first = await startLateUndoable('ClaveA-9zz');
+    writeHang = true;
+    const began = Date.now();
+    let second = '';
+    try {
+      await lock.setPassword('ClaveB-9zz');
+    } catch (error) {
+      second = error instanceof Error ? error.message : 'throw';
+    }
+    const elapsed = Date.now() - began;
+    let faults = 0;
+    race.setLockFaultReporter(() => {
+      faults += 1;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 16000));
+    race.setLockFaultReporter(null);
+    writeHang = false;
+    expect(first, 'primero').to.equal('password-persist');
+    expect(second, 'segundo').to.equal('password-persist');
+    expect(elapsed < 3000, 'plazo').to.equal(true);
+    expect(faults > 0, 'fallo').to.equal(true);
+    await lock.setPassword('ClaveC-9zz');
+    lock.lockNow();
+    expect((await lock.checkPassword('ClaveC-9zz')).ok, 'abreC').to.equal(true);
   });
 });
