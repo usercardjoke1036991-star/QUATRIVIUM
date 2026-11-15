@@ -123,7 +123,7 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Install Slither
-        run: pip install --only-binary=:all: "slither-analyzer==0.11.6" "solc-select==1.2.0" && solc-select install 0.8.24 && solc-select use 0.8.24
+        run: 'pip install --only-binary=:all: "slither-analyzer==0.11.6" "solc-select==1.2.0" && solc-select install 0.8.24 && solc-select use 0.8.24'
 
       - name: Compile
         run: npx hardhat --config hardhat.config.cjs compile
