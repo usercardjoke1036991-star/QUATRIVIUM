@@ -3489,4 +3489,55 @@ describe('app lock PBKDF2', function () {
     expect(Boolean(opened.address), 'address').to.equal(true);
     expect((await lock.checkPassword(late)).ok, 'tardia').to.equal(false);
   });
+
+  it('does not keep a reverted late password when the cleanup cannot re-read', async function () {
+    this.timeout(45000);
+    const slot = PASSWORD_SLOT;
+    const late = 'ClaveA-9zz';
+    const later = 'ClaveB-9zz';
+    const first = await startLateUndoable(late);
+    const undo = await lock.setPassword(later, undefined, { undoable: true });
+    await undo.revert();
+    let faults = 0;
+    race.setLockFaultReporter(() => {
+      faults += 1;
+    });
+    secureReadThrow = slot;
+    await new Promise((resolve) => setTimeout(resolve, 9000));
+    secureReadThrow = '';
+    race.setLockFaultReporter(null);
+    expect(first, 'primero').to.equal('password-persist');
+    expect(Boolean(memory.get(slot)), 'existe').to.equal(false);
+    lock.lockNow();
+    expect((await lock.checkPassword(late)).ok, 'abreA').to.equal(false);
+    expect((await lock.checkPassword(later)).ok, 'abreB').to.equal(false);
+    expect(faults > 0, 'fallo').to.equal(true);
+  });
+
+  it('does not keep a fresh late signup password when the cleanup cannot re-read', async function () {
+    this.timeout(45000);
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    const late = 'ClaveA-9zz';
+    const later = 'ClaveB-9zz';
+    writeDelayKey = PASSWORD_SLOT;
+    writeDelayMs = 25000;
+    let code = '';
+    try {
+      await lock.setPassword(late);
+    } catch (error) {
+      code = error instanceof Error ? error.message : 'throw';
+    }
+    writeDelayMs = 0;
+    writeDelayKey = '';
+    secureReadThrow = PASSWORD_SLOT;
+    await new Promise((resolve) => setTimeout(resolve, 24000));
+    secureReadThrow = '';
+    expect(code, 'codigo').to.equal('password-persist');
+    expect(Boolean(memory.get(PASSWORD_SLOT)), 'existe').to.equal(false);
+    lock.lockNow();
+    expect((await lock.checkPassword(late)).ok, 'abreA').to.equal(false);
+    await lock.setPassword(later);
+    expect((await lock.checkPassword(later)).ok, 'abreB').to.equal(true);
+  });
 });

@@ -28,7 +28,8 @@ Esta revisión la hicieron herramientas de IA en el IDE (lectura del código, Ha
 | G5 | baja | El recorte del fee no usa retroceso, y se fue el cobro muerto | `061bfb2` | `test/funds-confirm-gate.test.js` |
 | H1 | baja | Una contraseña ya revertida no reaparece con la escritura tardía | `019236b` | `does not bring back a password` |
 | H2 | baja | Si la lectura previa falla, no queda copia ni token nuevos | `019236b` | `keeps the previous password copy` |
-| I1 | baja | Una nota intermedia impide que la escritura tardía devuelva el registro viejo | este commit | `keeps a migrated password when a late write lands after the migration` |
+| I1 | baja | Una nota intermedia impide que la escritura tardía devuelva el registro viejo | `375d24b` | `keeps a migrated password when a late write lands after the migration` |
+| J1 | baja | Si la relectura falla, la escritura tardía no deja una contraseña ya revertida ni un alta vacía | este commit | `does not keep a reverted late password when the cleanup cannot re-read` |
 
 NEW-A, NEW-B y NEW-E son los de la ronda de la app. B1 a B5 son la entrada y la salida EIP-7702. Los casos R18-1 a R18-6 no tienen otra ficha en este árbol: quedaron reconfirmados.
 
@@ -44,7 +45,7 @@ Rama `cursor/soberania-contratos-8e15`. La medición de este apartado es la de e
 | QuatriviumCredit (Hardhat, deployedBytecode) | 23322 | 1254 |
 | QuatriviumCreditHarness | 24528 | 48 |
 
-Un pago de 40 generaciones usó 1246495 de gas (el test lo imprime y exige menos de 3 000 000). Foundry con `FOUNDRY_PROFILE=ci`: 80 pruebas en verde. Los invariantes corrieron 256 veces, 204800 llamadas y 0 reversiones. Hardhat: 473 pruebas en verde.
+Un pago de 40 generaciones usó 1246495 de gas (el test lo imprime y exige menos de 3 000 000). Foundry con `FOUNDRY_PROFILE=ci`: 80 pruebas en verde. Los invariantes corrieron 256 veces, 204800 llamadas y 0 reversiones. Hardhat: 475 pruebas en verde.
 
 Slither, compilación nueva, `fail_on: high`: 25 resultados, 0 altos, 0 medios, 15 bajos, 10 de optimización. Los medios que no eran un fallo llevan `slither-disable-next-line` con el motivo en la misma línea. No se cambió la lógica de `_soloEOA`, Alta ni Reserva. Los 15 bajos, uno por uno:
 
@@ -90,7 +91,7 @@ Arbitrum One ya acepta EIP-7702 (ArbOS 40, según el blog de la fundación y la 
 
 Un PIN de 6 dígitos solo tiene 1 000 000 de combinaciones. La protección real es el almacén de hardware, cuando el teléfono lo tiene, y el bloqueo creciente tras cada fallo (30 s, 1 min, 5 min, 15 min, 1 h). El PIN puede tener de 6 a 12 dígitos. Si no hay hardware, la clave queda en el almacén del sistema y la app lo avisa.
 
-Fecha de la revisión: 10 de noviembre de 2026 (America/Caracas). Rama `cursor/soberania-contratos-8e15`. Medición de ahora: Hardhat 473, Foundry 80. Credit en forge (runtime): 23132 bytes, 1444 libres de 24576. Credit en Hardhat (`deployedBytecode`): 23322 bytes, 1254 libres de 24576.
+Fecha de la revisión: 10 de noviembre de 2026 (America/Caracas). Rama `cursor/soberania-contratos-8e15`. Medición de ahora: Hardhat 475, Foundry 80. Credit en forge (runtime): 23132 bytes, 1444 libres de 24576. Credit en Hardhat (`deployedBytecode`): 23322 bytes, 1254 libres de 24576.
 
 La clave del historial (commits `10553d4` y `dc40f15`, archivo `.env.worker.example`) ya fue revocada. No está en el árbol. El valor no se copia y la historia no se reescribe.
 
@@ -166,7 +167,7 @@ Nada de lo leído permite que un extraño vacíe el pool, el bote de Reserva o e
 
 ## Cómo se midió
 
-- Hardhat: 473 pruebas, todas en verde, una sola corrida.
+- Hardhat: 475 pruebas, todas en verde, una sola corrida.
 - Foundry: 80 pruebas, todas en verde, con `FOUNDRY_PROFILE=ci` y `--fuzz-runs 256`. Los 3 invariantes, 0 reversiones.
 - `node scripts/check-external-services.mjs`: sin nombres prohibidos en el árbol actual.
 - `node scripts/check-i18n.mjs`: 17 idiomas, 1288 claves cada uno, sin copias largas del inglés.
@@ -352,7 +353,7 @@ Si LUSD se detiene o un RPC miente, la app rota RPC públicos (`constants/rpcCon
 
 ## Qué no se pudo revisar
 
-- Slither sí corrió en esta rama. Los 13 bajos están en «Medición de esta rama», cada uno aceptado con su motivo. Los 10 de optimización no se tocan.
+- Slither sí corrió en esta rama. Los 15 bajos están en «Medición de esta rama», cada uno aceptado con su motivo. Los 10 de optimización no se tocan.
 - No hay cobertura instrumentada de Credit. `solidity-coverage` 0.8.17 compila y escribe el informe, pero el Credit instrumentado no cabe en el gas de despliegue. No es un fallo de `handlebars`.
 - Ninguna pantalla en un teléfono, ni modo oscuro, ni contraste, ni un dedo sobre un botón. El usuario prohibió compilar la app.
 - Los 17 idiomas, frase por frase.

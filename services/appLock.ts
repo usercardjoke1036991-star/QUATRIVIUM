@@ -2146,15 +2146,24 @@ async function undoLatePasswordWrite(
     try {
       now = await SecureStore.getItemAsync(PASSWORD_KEY);
     } catch {
-      if (
-        passwordNoteSeq === lateSeq &&
-        passwordGeneration === lateGeneration &&
-        latePrior.secure
-      ) {
-        await SecureStore.setItemAsync(PASSWORD_KEY, latePrior.secure, OPTIONS);
-        notePasswordKey(latePrior.secure);
-      } else if (passwordNoteSeq !== lateSeq && committedPassword != null) {
+      if (passwordGeneration === lateGeneration && passwordNoteSeq === lateSeq) {
+        if (latePrior.secure) {
+          await SecureStore.setItemAsync(PASSWORD_KEY, latePrior.secure, OPTIONS);
+          notePasswordKey(latePrior.secure);
+        } else {
+          await SecureStore.deleteItemAsync(PASSWORD_KEY);
+          notePasswordKey(null);
+        }
+        if (latePrior.fallback) {
+          await AsyncStorage.setItem(PASSWORD_FALLBACK, latePrior.fallback);
+        } else {
+          await AsyncStorage.removeItem(PASSWORD_FALLBACK);
+        }
+      } else if (committedPassword != null) {
         await SecureStore.setItemAsync(PASSWORD_KEY, committedPassword, OPTIONS);
+      } else {
+        await SecureStore.deleteItemAsync(PASSWORD_KEY);
+        notePasswordKey(null);
       }
       reportLockFault();
       return;
