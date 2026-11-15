@@ -159,9 +159,11 @@ let passwordReplaceToken: {
 let passwordGeneration = 0;
 let passwordCleanup: Promise<void> = Promise.resolve();
 let committedPassword: string | null = null;
+let passwordNoteSeq = 0;
 
 function notePasswordKey(value: string | null): void {
   committedPassword = value;
+  passwordNoteSeq += 1;
 }
 /** Una escritura que no vuelve se suelta a los 15 s. Si llega después, no pisa una clave más nueva. */
 const PASSWORD_CLEANUP_MAX_MS = 15_000;
@@ -1809,6 +1811,7 @@ export async function setPassword(
   const nextWrap = material.wrap;
   const serialized = JSON.stringify(record);
   const lateGeneration = passwordGeneration;
+  const lateSeq = passwordNoteSeq;
   const attempt = SecureStore.setItemAsync(PASSWORD_KEY, serialized, OPTIONS).then(
     () => 'ok' as const,
     () => 'reject' as const
@@ -1817,7 +1820,7 @@ export async function setPassword(
   if (fate === 'timeout') {
     armPasswordCleanup(
       attempt.then(async (outcome) => {
-        await undoLatePasswordWrite(outcome, serialized, latePrior, lateGeneration);
+        await undoLatePasswordWrite(outcome, serialized, latePrior, lateGeneration, lateSeq);
       })
     );
     throw new Error('password-persist');
@@ -2131,7 +2134,8 @@ async function undoLatePasswordWrite(
   outcome: 'ok' | 'reject',
   serialized: string,
   latePrior: PasswordSlots,
-  lateGeneration: number
+  lateGeneration: number,
+  lateSeq: number
 ): Promise<void> {
   try {
     if (outcome !== 'ok') {
@@ -2142,9 +2146,15 @@ async function undoLatePasswordWrite(
     try {
       now = await SecureStore.getItemAsync(PASSWORD_KEY);
     } catch {
-      if (passwordGeneration === lateGeneration && latePrior.secure) {
+      if (
+        passwordNoteSeq === lateSeq &&
+        passwordGeneration === lateGeneration &&
+        latePrior.secure
+      ) {
         await SecureStore.setItemAsync(PASSWORD_KEY, latePrior.secure, OPTIONS);
         notePasswordKey(latePrior.secure);
+      } else if (passwordNoteSeq !== lateSeq && committedPassword != null) {
+        await SecureStore.setItemAsync(PASSWORD_KEY, committedPassword, OPTIONS);
       }
       reportLockFault();
       return;
@@ -2162,6 +2172,16 @@ async function undoLatePasswordWrite(
       }
       if (now === serialized && committedPassword && committedPassword !== serialized) {
         await SecureStore.setItemAsync(PASSWORD_KEY, committedPassword, OPTIONS);
+      }
+      reportLockFault();
+      return;
+    }
+    if (passwordNoteSeq !== lateSeq) {
+      if (committedPassword != null) {
+        await SecureStore.setItemAsync(PASSWORD_KEY, committedPassword, OPTIONS);
+      } else {
+        await SecureStore.deleteItemAsync(PASSWORD_KEY);
+        notePasswordKey(null);
       }
       reportLockFault();
       return;

@@ -230,7 +230,7 @@ kdf.resetPbkdf2ForTests = kdf.resetPbkdf2;
 let mono = 1_000_000;
 
 describe('app lock PBKDF2', function () {
-  this.timeout(320000);
+  this.timeout(10000);
 
   beforeEach(function () {
     acceptPasswordWrites = true;
@@ -3410,5 +3410,83 @@ describe('app lock PBKDF2', function () {
     expect(issued, 'copia').to.equal(false);
     await lock.setPassword('Nueva-9zz');
     expect((await lock.checkPassword('Nueva-9zz')).ok, 'luego').to.equal(true);
+  });
+
+  async function downgradeOpenPassword(password) {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret, _salt, iterations) => {
+      const base = sha256(secret);
+      const mixed = new Uint8Array(base.length);
+      mixed.set(base);
+      mixed[0] ^= iterations & 255;
+      mixed[1] ^= (iterations >> 8) & 255;
+      return mixed;
+    });
+    await lock.setPassword(password);
+    const created = wallet.generateSecretPhrase();
+    await wallet.importFromPhrase(created.phrase, { markBackedUp: false });
+    const record = JSON.parse(memory.get(PASSWORD_SLOT));
+    const one = await kdf.derivePinMaterial(password, record.salt, 1);
+    record.rounds = 1;
+    record.hash = one.verifier;
+    memory.set(PASSWORD_SLOT, JSON.stringify(record));
+    const plain = box.openSecret(memory.get(WALLET_SLOT), session.getWalletWrapKey());
+    memory.set(WALLET_SLOT, box.sealSecret(plain, one.wrap));
+    lock.lockNow();
+    session.setWalletWrapKey(one.wrap);
+  }
+
+  async function expirePasswordWrite(next) {
+    writeDelayKey = PASSWORD_SLOT;
+    writeDelayMs = 25000;
+    let code = '';
+    try {
+      await lock.setPassword(next);
+    } catch (error) {
+      code = error instanceof Error ? error.message : 'throw';
+    }
+    writeDelayMs = 0;
+    writeDelayKey = '';
+    return code;
+  }
+
+  it('keeps a migrated password when a late write lands after the migration', async function () {
+    this.timeout(45000);
+    const kept = 'ClaveP-9zz';
+    const late = 'ClaveA-9zz';
+    await downgradeOpenPassword(kept);
+    const code = await expirePasswordWrite(late);
+    lock.lockNow();
+    expect(code, 'codigo').to.equal('password-persist');
+    expect((await lock.checkPassword(kept)).ok, 'antes').to.equal(true);
+    expect(JSON.parse(memory.get(PASSWORD_SLOT)).rounds, 'antesRounds').to.equal(9000);
+    await new Promise((resolve) => setTimeout(resolve, 24000));
+    expect(JSON.parse(memory.get(PASSWORD_SLOT)).rounds, 'rounds').to.equal(9000);
+    lock.lockNow();
+    expect((await lock.checkPassword(kept)).ok, 'abre').to.equal(true);
+    const opened = await wallet.ensureAppWallet();
+    expect(Boolean(opened.address), 'address').to.equal(true);
+    expect((await lock.checkPassword(late)).ok, 'tardia').to.equal(false);
+  });
+
+  it('keeps a migrated password when the late cleanup cannot re-read', async function () {
+    this.timeout(45000);
+    const kept = 'ClaveP-9zz';
+    const late = 'ClaveA-9zz';
+    await downgradeOpenPassword(kept);
+    const code = await expirePasswordWrite(late);
+    lock.lockNow();
+    expect(code, 'codigo').to.equal('password-persist');
+    expect((await lock.checkPassword(kept)).ok, 'antes').to.equal(true);
+    expect(JSON.parse(memory.get(PASSWORD_SLOT)).rounds, 'antesRounds').to.equal(9000);
+    secureReadThrow = PASSWORD_SLOT;
+    await new Promise((resolve) => setTimeout(resolve, 24000));
+    secureReadThrow = '';
+    expect(JSON.parse(memory.get(PASSWORD_SLOT)).rounds, 'rounds').to.equal(9000);
+    lock.lockNow();
+    expect((await lock.checkPassword(kept)).ok, 'abre').to.equal(true);
+    const opened = await wallet.ensureAppWallet();
+    expect(Boolean(opened.address), 'address').to.equal(true);
+    expect((await lock.checkPassword(late)).ok, 'tardia').to.equal(false);
   });
 });

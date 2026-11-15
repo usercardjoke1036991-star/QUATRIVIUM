@@ -396,14 +396,6 @@ export const TokenLogo: React.FC<TokenLogoProps> = ({ symbol, size = 20 }) => {
       </Svg>
     );
   }
-  if (symbol === 'BNB') {
-    return (
-      <Svg width={size} height={size} viewBox="0 0 24 24">
-        <Polygon points="12,3 21,12 12,21 3,12" fill="#F0B90B" />
-        <Polygon points="12,7.2 16.8,12 12,16.8 7.2,12" fill="#fff" />
-      </Svg>
-    );
-  }
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
       <Circle cx="12" cy="12" r="11" fill="#146C2E" />

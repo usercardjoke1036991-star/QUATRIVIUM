@@ -405,7 +405,7 @@ export const useWeb3Balances = (walletAddress: string, selectedToken: Token) => 
             setBalances((prev) => ({ ...prev, ...poolRead, moneyUnconfirmed }));
           }
         } catch (e) {
-          logErr('Error fetching BNB balance:', e);
+          logErr('Error fetching ETH balance:', e);
           if (poolRead) setBalances((prev) => ({ ...prev, ...poolRead, moneyUnconfirmed }));
         }
 

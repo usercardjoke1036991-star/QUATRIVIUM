@@ -13,22 +13,28 @@ Esta revisión la hicieron herramientas de IA en el IDE (lectura del código, Ha
 | A4 | baja | En demo, la foto del alta ve el respaldo de la billetera | `9e6525c` | `readSignupPhoto` |
 | A5 | media | Una escritura tardía restaura la contraseña anterior | `9e6525c` | `still clears a late password write` |
 | A6 | baja | Crear desde la pantalla de fallo guarda usuario e invitación | `9e6525c` | `finishFreshAccount` |
-| NEW-A | alta | La entrada rechaza una cuenta con código | `9e6525c` | `forge-test/QuatriviumEip7702.t.sol` |
-| NEW-B | alta | La entrada rechaza una llamada indirecta | `9e6525c` | `forge-test/QuatriviumEip7702.t.sol` |
-| NEW-E | media | La verificación no usa `tx.origin`; `cargoDe` vuelve a cero | `9e6525c` | `test/alta-registro.test.js` |
+| NEW-A | alta | «Crear nueva» sobre una billetera que no abre | `9e6525c` | `does not offer a new account when a sealed wallet will not open` |
+| NEW-B | baja | `checkPassword` lanzaba sin captura | `9e6525c` | `returns store-unknown from checkPassword when the password read throws` |
+| NEW-E | baja | Reintento tras una escritura tardía | `9e6525c` | `lets the same session retry after a late password write is cleared` |
+| B1 | alta | La entrada rechaza una cuenta con código | `9e6525c` | `forge-test/QuatriviumEip7702.t.sol` |
+| B2 | alta | La entrada rechaza una llamada indirecta | `9e6525c` | `test_contrato_distinto_origen_revierte_en_registro` |
+| B3 | media | La salida de `pagarPrestamo` acepta una cuenta delegada | `9e6525c` | `test_salida_pagar_prestamo_delegada` |
+| B4 | media | La salida de `desbloquear` acepta una cuenta delegada | `9e6525c` | `test_salida_desbloquear_delegada_devuelve_capital` |
+| B5 | media | La verificación no usa `tx.origin`; `cargoDe` vuelve a cero | `9e6525c` | `test/alta-registro.test.js` |
 | G1 | media | Una lectura fallida no borra la contraseña legítima | `061bfb2` | `does not wipe the old password` |
 | G2 | baja | Una escritura que no vuelve se suelta a los 15 s | `061bfb2` | `stops blocking the session` |
 | G3 | baja | El alta desde el fallo no fija un invitador vacío | `061bfb2` | `does not freeze an empty inviter` |
 | G4 | baja | Slither compila con `npm run compile` | `061bfb2` | `.github/workflows/ci.yml` |
 | G5 | baja | El recorte del fee no usa retroceso, y se fue el cobro muerto | `061bfb2` | `test/funds-confirm-gate.test.js` |
-| H1 | baja | Una contraseña ya revertida no reaparece con la escritura tardía | este commit | `does not bring back a password` |
-| H2 | baja | Si la lectura previa falla, no queda copia ni token nuevos | este commit | `keeps the previous password copy` |
+| H1 | baja | Una contraseña ya revertida no reaparece con la escritura tardía | `019236b` | `does not bring back a password` |
+| H2 | baja | Si la lectura previa falla, no queda copia ni token nuevos | `019236b` | `keeps the previous password copy` |
+| I1 | baja | Una nota intermedia impide que la escritura tardía devuelva el registro viejo | este commit | `keeps a migrated password when a late write lands after the migration` |
 
-La verificación nombró NEW-A, NEW-B y NEW-E. El resto de esa ronda de la app está en A1–A6. Los casos R18-1 a R18-6 no tienen otra ficha en este árbol: quedaron reconfirmados.
+NEW-A, NEW-B y NEW-E son los de la ronda de la app. B1 a B5 son la entrada y la salida EIP-7702. Los casos R18-1 a R18-6 no tienen otra ficha en este árbol: quedaron reconfirmados.
 
 ## Medición de esta rama
 
-Rama `cursor/soberania-contratos-8e15`. Commits de esta entrega: `8d4e1b2` (candado), `e8ba5f1` (recibos), `358ade7` (los tests nombran el revert), `58fcab8` (Arbitrum), `ffb608d` (espera), `4b38faa` (reintento). Este párrafo va en el commit de la limpieza de la auditoría.
+Rama `cursor/soberania-contratos-8e15`. La medición de este apartado es la de este commit.
 
 `allowUnlimitedContractSize` está en `false`. El tamaño es el `deployedBytecode` del artifact de Hardhat, sin el hash de metadata (`bytecodeHash: none`, `appendCBOR: false`). Límite EIP-170: 24576.
 
@@ -38,9 +44,9 @@ Rama `cursor/soberania-contratos-8e15`. Commits de esta entrega: `8d4e1b2` (cand
 | QuatriviumCredit (Hardhat, deployedBytecode) | 23322 | 1254 |
 | QuatriviumCreditHarness | 24528 | 48 |
 
-Un pago de 40 generaciones usó 1246495 de gas (el test lo imprime y exige menos de 3 000 000). Foundry con `FOUNDRY_PROFILE=ci`: 80 pruebas en verde. Los invariantes corrieron 256 veces, 204800 llamadas y 0 reversiones. Hardhat: 471 pruebas en verde.
+Un pago de 40 generaciones usó 1246495 de gas (el test lo imprime y exige menos de 3 000 000). Foundry con `FOUNDRY_PROFILE=ci`: 80 pruebas en verde. Los invariantes corrieron 256 veces, 204800 llamadas y 0 reversiones. Hardhat: 473 pruebas en verde.
 
-Slither, compilación nueva, `fail_on: high`: 0 altos, 0 medios, 13 bajos, 10 de optimización. Los medios que no eran un fallo llevan `slither-disable-next-line` con el motivo en la misma línea. No se cambió la lógica de `_soloEOA`, Alta ni Reserva. Los 13 bajos, uno por uno:
+Slither, compilación nueva, `fail_on: high`: 25 resultados, 0 altos, 0 medios, 15 bajos, 10 de optimización. Los medios que no eran un fallo llevan `slither-disable-next-line` con el motivo en la misma línea. No se cambió la lógica de `_soloEOA`, Alta ni Reserva. Los 15 bajos, uno por uno:
 
 1. `missing-zero-check` en `QuatriviumReserva.constructor`, `famaCaja`. Aceptado. Token, fundador, credit y alta ya revierten si son cero. La caja de fama puede ir vacía en el deploy. No se toca Reserva.
 2. `missing-zero-check` en `QuatriviumFamaLib.altaRegistrada`, el usuario. Aceptado. Es una lectura: si el usuario es cero, `registroHecho` no está y la función devuelve false. No escribe.
@@ -55,8 +61,10 @@ Slither, compilación nueva, `fail_on: high`: 0 altos, 0 medios, 13 bajos, 10 de
 11. `reentrancy-events` en `dispersarInteres`, la comisión generacional y lo retenido al pool. Aceptado. El evento sigue al pago ya hecho.
 12. `reentrancy-events` en `QuatriviumAlta.soltarPadrino`. Aceptado. El apartado ya está en cero antes de `ingresarAlPool`. El evento no mueve el LUSD. No se toca Alta.
 13. `return-bomb` en `QuatriviumFamaLib._avisarReserva`. Aceptado. La llamada lleva tope de gas (180000) y no decodifica el retorno. Una bomba solo puede gastar ese estipendio.
+14. `reentrancy-benign` en `QuatriviumAlta.pagarRegistro`, la escritura de `cargoDe` antes de `pagarVerificacion` (línea 65). Aceptado. `cargoDe` se fija y se limpia alrededor de esa llamada. No hay fondos en juego por esa reentrada. No se toca Alta.
+15. `reentrancy-benign` en `QuatriviumAlta.pagarRegistro`, la limpieza de `cargoDe` al volver (línea 68). Aceptado. El mismo motivo: el cargo vuelve a cero y la reentrada no mueve un saldo distinto. No se toca Alta.
 
-Ninguno de los 13 se marcó como arreglado: cambiarlos o reordenar el cobro movería Alta, Reserva o el pago. Los 10 de optimización (`constant` / `immutable`) no cambian el comportamiento.
+Ninguno de los 15 se marcó como arreglado: cambiarlos o reordenar el cobro movería Alta, Reserva o el pago. Los 10 de optimización (`constant` / `immutable`) no cambian el comportamiento.
 
 `npm audit` del árbol completo: 35 avisos (14 bajos, 20 moderados, 1 alto, 0 críticos). El alto que queda es `image-size` (0.6.3–2.0.2): la 2.0.3 rompe la lectura de PNG al exportar Android, así que no hay override. `tmp` quedó en 0.2.7. Expo, Metro, Hardhat y solc no subieron de versión mayor. `handlebars` de desarrollo está en 4.7.10, fuera del rango vulnerable.
 
@@ -82,7 +90,7 @@ Arbitrum One ya acepta EIP-7702 (ArbOS 40, según el blog de la fundación y la 
 
 Un PIN de 6 dígitos solo tiene 1 000 000 de combinaciones. La protección real es el almacén de hardware, cuando el teléfono lo tiene, y el bloqueo creciente tras cada fallo (30 s, 1 min, 5 min, 15 min, 1 h). El PIN puede tener de 6 a 12 dígitos. Si no hay hardware, la clave queda en el almacén del sistema y la app lo avisa.
 
-Fecha de la revisión: 10 de noviembre de 2026 (America/Caracas). Rama `cursor/soberania-contratos-8e15`. Medición de ahora: Hardhat 471, Foundry 80. Credit en forge (runtime): 23132 bytes, 1444 libres de 24576. Credit en Hardhat (`deployedBytecode`): 23322 bytes, 1254 libres de 24576.
+Fecha de la revisión: 10 de noviembre de 2026 (America/Caracas). Rama `cursor/soberania-contratos-8e15`. Medición de ahora: Hardhat 473, Foundry 80. Credit en forge (runtime): 23132 bytes, 1444 libres de 24576. Credit en Hardhat (`deployedBytecode`): 23322 bytes, 1254 libres de 24576.
 
 La clave del historial (commits `10553d4` y `dc40f15`, archivo `.env.worker.example`) ya fue revocada. No está en el árbol. El valor no se copia y la historia no se reescribe.
 
@@ -158,10 +166,10 @@ Nada de lo leído permite que un extraño vacíe el pool, el bote de Reserva o e
 
 ## Cómo se midió
 
-- Hardhat: 471 pruebas, todas en verde, una sola corrida.
+- Hardhat: 473 pruebas, todas en verde, una sola corrida.
 - Foundry: 80 pruebas, todas en verde, con `FOUNDRY_PROFILE=ci` y `--fuzz-runs 256`. Los 3 invariantes, 0 reversiones.
 - `node scripts/check-external-services.mjs`: sin nombres prohibidos en el árbol actual.
-- `node scripts/check-i18n.mjs`: 17 idiomas, 1294 claves cada uno, sin copias largas del inglés.
+- `node scripts/check-i18n.mjs`: 17 idiomas, 1288 claves cada uno, sin copias largas del inglés.
 - `npm audit` antes: 37 avisos (15 bajos, 20 moderados, 2 altos, 0 críticos). Después de fijar `tmp` en 0.2.7: 35 avisos (14 bajos, 20 moderados, 1 alto, 0 críticos). El alto que queda es `image-size`, porque 2.0.3 rompe el paquete. Expo, Metro, Hardhat y solc no subieron de versión mayor.
 - Slither de esta rama está en «Medición de esta rama»: 0 altos y 0 medios. La frase vieja de que Slither no estaba instalado ya no vale.
 
@@ -607,8 +615,6 @@ Cada archivo seguido de git en esta rama se revisó al menos por nombre, tipo y,
 - `scripts/_preflight_mainnet.cjs` — revisado: sí
 - `scripts/adminTotp.mjs` — revisado: sí
 - `scripts/apply-i18n-leftovers.mjs` — revisado: sí
-- `scripts/apply-i18n-professional.mjs` — revisado: sí
-- `scripts/attest2of2.mjs` — revisado: sí
 - `scripts/arbitrumNetworks.cjs` — revisado: sí
 - `scripts/check-external-services.mjs` — revisado: sí
 - `scripts/check-i18n.mjs` — revisado: sí
@@ -677,7 +683,6 @@ Cada archivo seguido de git en esta rama se revisó al menos por nombre, tipo y,
 - `test/accountWorld.test.js` — revisado: sí
 - `test/accounting.test.js` — revisado: sí
 - `test/alta-registro.test.js` — revisado: sí
-- `test/attest2of2.test.js` — revisado: sí
 - `test/audit-fixes.test.js` — revisado: sí
 - `test/audit-reads.test.js` — revisado: sí
 - `test/brand-splash.test.js` — revisado: sí

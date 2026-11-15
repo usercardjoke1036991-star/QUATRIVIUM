@@ -8,7 +8,7 @@ Reserva: nivel 10 o más, bloqueo de 30 días, tope del 12 % anual pagado del bo
 
 Sin Rust y sin pruebas de conocimiento cero. Sin servidor y sin tienda de aplicaciones. El mensaje privado por Nostr está oculto: no hay cifrado NIP-17/44.
 
-El detalle cerrado, el mapa y lo que falta están en `HANDOFF.md`. Hardhat 471, Foundry 80. Credit en forge (runtime): 23132 bytes, 1444 libres de 24576. Credit en Hardhat (`deployedBytecode`): 23322 bytes, 1254 libres de 24576.
+El detalle cerrado, el mapa y lo que falta están en `HANDOFF.md`. Hardhat 473, Foundry 80. Credit en forge (runtime): 23132 bytes, 1444 libres de 24576. Credit en Hardhat (`deployedBytecode`): 23322 bytes, 1254 libres de 24576.
 
 ## Probar
 
@@ -30,7 +30,7 @@ npm run format:check
 - Bajo: una segunda cuenta puede cobrar el LUSD apartado de la primera. Cuesta los otros 3 LUSD más el interés del nivel 1.
 - Bajo: `soltarPadrino` no suelta ese LUSD si el padre viniera vacío. El registro normal no hace eso.
 - Bajo: algunos tests de dinero todavía leen texto. La lista está en `AUDITORIA.md`.
-- Medio: `npm audit` marca `handlebars` en las herramientas, no en la app.
+- Alto, aceptado: `npm audit` deja 35 avisos (14 bajos, 20 moderados, 1 alto, 0 críticos). El alto es `image-size@1.2.1` (`expo` → `@expo/metro` → `metro@0.83.3`). La 2.0.3 rompe `metro/src/Assets.js:173` porque recibe una ruta.
 - Medio: el cifrado NIP-17/44 no está implementado.
 
 ## Pendiente antes de dinero real

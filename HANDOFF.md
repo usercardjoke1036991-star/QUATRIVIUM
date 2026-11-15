@@ -76,11 +76,11 @@ Todas en `cursor/soberania-contratos-8e15`. PR: https://github.com/usercardjoke1
 
 Medidos en `cursor/soberania-contratos-8e15` con `allowUnlimitedContractSize: false`. `QuatriviumCredit` en forge (runtime): 23132 bytes, 1444 libres de 24576. En Hardhat (`deployedBytecode`): 23322 bytes, 1254 libres. El harness de prueba: 24528 bytes, 48 libres. Un pago de 40 generaciones: 1246495 de gas, por debajo de 3 000 000.
 
-Hardhat: 471 pruebas en verde. Foundry con `FOUNDRY_PROFILE=ci`: 80 pruebas en verde. Tres invariantes: 256 corridas, 204800 llamadas, 0 reversiones.
+Hardhat: 473 pruebas en verde. Foundry con `FOUNDRY_PROFILE=ci`: 80 pruebas en verde. Tres invariantes: 256 corridas, 204800 llamadas, 0 reversiones.
 
-Slither: 0 altos, 0 medios, 13 bajos, 10 optimizaciones. `tmp` está en 0.2.7 por `overrides`. `image-size` sigue alto: 2.0.3 rompe el paquete de Android. Expo, Metro, Hardhat y solc no subieron de versión mayor.
+Slither: 25 resultados, 0 altos, 0 medios, 15 bajos, 10 optimizaciones. `tmp` está en 0.2.7 por `overrides`. `image-size` sigue alto: 2.0.3 rompe el paquete de Android. Expo, Metro, Hardhat y solc no subieron de versión mayor.
 
-El candado no borra la billetera. Esperas: 30 s, 1 min, 5 min, 15 min, 1 h y luego 24 h. El reloj hacia atrás o un salto mayor que la espera no la acortan. El PIN queda bloqueado a los 10 fallos. El aviso no lee el secreto del teléfono: usa las marcas guardadas, y en demo no se muestra. Un reintento con éxito genera un secreto nuevo y vuelve a sellar el PIN. 9000 vueltas de PBKDF2-SHA256 salen de la medida de sjcl en un Android API 27: 10001 vueltas tardaron 5431,5 ms, así que 9000 quedan cerca de 4,9 s en ese JavaScript. No está medido en un teléfono. Un recibo vale cuando 2 de N RPC coinciden. Si no, el envío sigue pendiente.
+I1: si entre una contraseña que no llega a tiempo y su escritura tardía hay otra nota del mismo registro, se queda el último valor anotado. El candado no borra la billetera. Esperas: 30 s, 1 min, 5 min, 15 min, 1 h y luego 24 h. El reloj hacia atrás o un salto mayor que la espera no la acortan. El PIN queda bloqueado a los 10 fallos. El aviso no lee el secreto del teléfono: usa las marcas guardadas, y en demo no se muestra. Un reintento con éxito genera un secreto nuevo y vuelve a sellar el PIN. 9000 vueltas de PBKDF2-SHA256 salen de la medida de sjcl en un Android API 27: 10001 vueltas tardaron 5431,5 ms, así que 9000 quedan cerca de 4,9 s en ese JavaScript. No está medido en un teléfono. Un recibo vale cuando 2 de N RPC coinciden. Si no, el envío sigue pendiente.
 
 ## 6. Simulación de impago
 

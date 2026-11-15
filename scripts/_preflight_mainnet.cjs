@@ -83,14 +83,14 @@ async function main() {
 
   const rpc = local.ARBITRUM_ONE_RPC_URL || ARBITRUM_MAINNET.rpc[0];
   const provider = new ethers.JsonRpcProvider(rpc, 42161);
-  let bnb = 0n;
+  let eth = 0n;
   let usdtBal = 0n;
   try {
     const net = await provider.getNetwork();
     checks.push(['RPC mainnet chain 42161', Number(net.chainId) === 42161]);
     await codeOk(provider, ARBITRUM_MAINNET.lusd, 'LUSD');
     if (deployer) {
-      bnb = await provider.getBalance(deployer);
+      eth = await provider.getBalance(deployer);
       const usdt = new ethers.Contract(
         ARBITRUM_MAINNET.lusd,
         ['function balanceOf(address) view returns (uint256)'],
@@ -103,11 +103,11 @@ async function main() {
     console.log('RPC_ERROR', err instanceof Error ? err.message : String(err));
   }
 
-  const bnbFmt = ethers.formatEther(bnb);
+  const ethFmt = ethers.formatEther(eth);
   const usdtFmt = ethers.formatUnits(usdtBal, 18);
-  console.log('ETH fundadora', bnbFmt);
+  console.log('ETH fundadora', ethFmt);
   console.log('LUSD fundadora', usdtFmt);
-  const enoughGas = bnb >= ethers.parseEther('0.03');
+  const enoughGas = eth >= ethers.parseEther('0.03');
   checks.push(['ETH >= 0.03 para gas (recomendado 0.05+)', enoughGas]);
 
   let fail = 0;
