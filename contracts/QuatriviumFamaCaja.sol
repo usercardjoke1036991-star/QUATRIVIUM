@@ -264,7 +264,7 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
 
     /// @notice El referido o el padrino anotan el cierre. Credit no cabe un gancho (EIP-170).
     function notificarRacha(address hijo) external {
-        if (tx.origin != msg.sender) revert SoloEOA();
+        if (msg.sender != tx.origin || msg.sender.code.length != 0) revert SoloEOA();
         if (hijo == address(0)) revert DestinoCero();
         ICreditCaja nucleo = ICreditCaja(credit);
         // slither-disable-next-line unused-return // solo hace falta la direccion del padre
@@ -275,7 +275,7 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
     }
 
     function cobrarBonoRacha() external nonReentrant {
-        if (tx.origin != msg.sender) revert SoloEOA();
+        if (msg.sender != tx.origin || msg.sender.code.length != 0) revert SoloEOA();
         ICreditCaja nucleo = ICreditCaja(credit);
         // slither-disable-next-line unused-return // de usuarios solo importan el monto, el vencimiento y la mora
         (, uint256 montoActivo, uint256 vencimiento, bool enMora,,) = nucleo.usuarios(msg.sender);
@@ -298,7 +298,7 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
     }
 
     function canjearFamaRed(uint256 fama) external nonReentrant {
-        if (tx.origin != msg.sender) revert SoloEOA();
+        if (msg.sender != tx.origin || msg.sender.code.length != 0) revert SoloEOA();
         ICreditCaja nucleo = ICreditCaja(credit);
         // slither-disable-next-line unused-return // de usuarios solo importan el monto, el vencimiento y la mora
         (, uint256 montoActivo, uint256 vencimiento, bool enMora,,) = nucleo.usuarios(msg.sender);
@@ -319,7 +319,7 @@ contract QuatriviumFamaCaja is ReentrancyGuard {
     }
 
     function canjearFama(uint256 fama) external nonReentrant {
-        if (tx.origin != msg.sender) revert SoloEOA();
+        if (msg.sender != tx.origin || msg.sender.code.length != 0) revert SoloEOA();
         ICreditCaja nucleo = ICreditCaja(credit);
         // slither-disable-next-line unused-return // de usuarios solo importan el monto, el vencimiento y la mora
         (, uint256 montoActivo, uint256 vencimiento, bool enMora,,) = nucleo.usuarios(msg.sender);

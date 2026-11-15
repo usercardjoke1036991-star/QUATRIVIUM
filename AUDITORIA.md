@@ -51,11 +51,11 @@ Un recibo cuenta cuando 2 de los N RPC propios coinciden en hash, bloque y estad
 
 ### Pendiente
 
-- EIP-7702: lo decide Jose. `_soloEOA`, Alta y Reserva no se reescribieron.
+- Decisión de Jose: entrada rechaza cuentas con código y llamadas indirectas (`msg.sender == tx.origin` y `code.length == 0`); salida libre en `pagarPrestamo` y `desbloquear`; verificación sin `tx.origin`. Credit mide 23132 bytes, 1444 libres de 24576. Antes de este cambio medía 23127.
 - El enlace de SonarCloud lo cambia el dueño en el panel. El chequeo sigue apuntando al id viejo.
 - `image-size`: hace falta un SDK de Expo nuevo. No se subió Expo.
 
-Arbitrum One ya acepta EIP-7702 (ArbOS 40, según el blog de la fundación y la lista de autorizaciones de Arbiscan). El chequeo `tx.origin == msg.sender` deja pasar a una cuenta normal con código delegado. Ahora entra solo quien no tiene código (`NoEsEOA`). Fuente: https://blog.arbitrum.foundation/the-smartest-wallet-you-already-own-is-on-arbitrum/ y https://eips.ethereum.org/EIPS/eip-7702.
+Arbitrum One ya acepta EIP-7702 (ArbOS 40, según el blog de la fundación y la lista de autorizaciones de Arbiscan). Decisión de Jose: entrada rechaza cuentas con código y llamadas indirectas (`msg.sender == tx.origin` y `code.length == 0`); salida libre en `pagarPrestamo` y `desbloquear`; verificación sin `tx.origin`. Fuente: https://blog.arbitrum.foundation/the-smartest-wallet-you-already-own-is-on-arbitrum/ y https://eips.ethereum.org/EIPS/eip-7702.
 
 Un PIN de 6 dígitos solo tiene 1 000 000 de combinaciones. La protección real es el almacén de hardware, cuando el teléfono lo tiene, y el bloqueo creciente tras cada fallo (30 s, 1 min, 5 min, 15 min, 1 h). El PIN puede tener de 6 a 12 dígitos. Si no hay hardware, la clave queda en el almacén del sistema y la app lo avisa.
 
@@ -138,7 +138,7 @@ Nada de lo leído permite que un extraño vacíe el pool, el bote de Reserva o e
 - Hardhat: 294 pruebas, todas en verde, una sola corrida.
 - Foundry: 51 pruebas, todas en verde, con `--fuzz-runs 32`. Los invariantes corrieron 256 veces, sin reverts.
 - `node scripts/check-external-services.mjs`: sin nombres prohibidos en el árbol actual.
-- `node scripts/check-i18n.mjs`: 17 idiomas, 1256 claves cada uno, sin copias largas del inglés.
+- `node scripts/check-i18n.mjs`: 17 idiomas, 1298 claves cada uno, sin copias largas del inglés.
 - `npm audit` del CI: 39 avisos (15 bajos, 22 moderados, 2 altos, 0 críticos). Ya no hay críticos. `handlebars` está en 4.7.10. La alta de producción es `image-size`, que pide un SDK de Expo nuevo.
 - Slither de esta rama está en «Medición de esta rama»: 0 altos y 0 medios. La frase vieja de que Slither no estaba instalado ya no vale.
 
@@ -250,18 +250,18 @@ El alta on-chain no manda «el resto» al pool de préstamos en el mismo momento
 - El fondo de seguro es el 5 % (`SEGURO_BP = 500`) y `cubrirImpago` solo mueve contabilidad hacia el pool. No hay función para sacarlo.
 - El fundador cobra el 15 % del interés en el mismo pago (`FUNDADOR_BP = 1500`, `dispersarInteres`, líneas 354-356). La generación 0 no exige alta ni L1. El resto de la línea sí (`_pagarCapped`, líneas 425-427).
 - El premio del liquidador es el menor entre el 5 % del principal restante y el interés que queda tras el fee (`liquidate`, líneas 921-925). El fee se queda en el pool.
-- La liquidación espera 48 horas más el tiempo caído más 1 hora. Un contrato no puede liquidar (`tx.origin`). Nadie se liquida a sí mismo.
+- La liquidación espera 48 horas más el tiempo caído más 1 hora. Entrar a liquidar exige `msg.sender == tx.origin` y `code.length == 0`. Nadie se liquida a sí mismo.
 - Reserva: nivel 10, 30 días, tope 12 % (`MAX_APY_BP = 1200`), el principal se transfiere al desbloquear (`_cerrar`, líneas 345-365). Si el bote no alcanza, el rendimiento se recorta y no revierte. No hay función para sacar el bote. Los admins solo votan su entrada o salida, 2 de 3 y 72 horas, y no pueden bajar de 2.
 - El quórum de Credit está fijo en 2 (`_requiredConfirms`). Un voto no se repite (`already confirmed`). La propuesta no caduca. No se puede proponer otra función que `addAdmin` o `removeAdmin`.
 - LUSD está fijado en el código a `0x93b346b6BC2548dA6A1E7d98E9a421B42541425b`. No hay oráculo de precio. Solo hay un token soportado, el del constructor.
 - La aprobación de la app es por el monto exacto, no infinita (`services/quatriviumCreditService.ts`, líneas 204-206).
-- Los préstamos y los pagos rechazan contratos (`tx.origin`). Eso corta el préstamo relámpago desde un contrato.
+- Entrar a un préstamo exige `msg.sender == tx.origin` y `code.length == 0`. `pagarPrestamo` solo cobra la deuda de `msg.sender` y acepta una cuenta delegada, para que nadie quede atrapado.
 - `allowBackup` es false y `usesCleartextTraffic` es false (`app.json`, líneas 32-33).
 - La frase de la billetera vive en el almacenamiento seguro del teléfono (`services/appWallet.ts`). Hay guarda de captura (`components/ScreenGuard.tsx`).
 - Los botones de pago usan un candado de reentrada (`hooks/useWeb3Transactions.ts`, líneas 24-28, y `useVerificationFee.ts`).
 - La mora no pasa el filtro de Nostr.
 - CI pide solo `contents: read` y fija el SHA de las acciones (`ci.yml`).
-- Los 17 idiomas tienen las mismas 1256 claves. El árbol actual no nombra los servicios prohibidos.
+- Los 17 idiomas tienen las mismas 1298 claves. El árbol actual no nombra los servicios prohibidos.
 
 ## Ataques económicos
 
@@ -270,7 +270,7 @@ El alta on-chain no manda «el resto» al pool de préstamos en el mismo momento
 | Muchas cuentas para cobrar el 1 del padrino | El 1 LUSD sale del alta que la misma persona pagó | Alta de 4 LUSD por cuenta. El neto no es ganancia. |
 | Inflar la racha con préstamos de nivel 1 | Nada | La racha solo cuenta nivel 2 o más y a tiempo (`QuatriviumFamaCaja.sol`, comentario de línea 321 y `_contarCierre`). |
 | No pagar a propósito | Se queda el principal hasta la liquidación | A las 48 horas más el sequencer, un tercero paga la deuda y cobra como mucho el interés. El principal vuelve al pool. |
-| Préstamo relámpago | — | `tx.origin == msg.sender` en alta, depósito, préstamo, pago y liquidación. |
+| Préstamo relámpago | — | Entrada (alta, depósito, préstamo y liquidación): `msg.sender == tx.origin` y `code.length == 0`. `pagarPrestamo` solo cobra la deuda de `msg.sender`. |
 | Vaciar el fondo de seguro | Como mucho el premio de una liquidación, ya acotado | `cubrirImpago` no transfiere a una billetera arbitraria. |
 | Spam de altas | Cada alta cuesta 4 LUSD al atacante | No quema el gas de otro. |
 | Dos admins echan al tercero | Controlan quién entra | Es el diseño de 2 de 3. No pueden bajar de dos. |
@@ -350,7 +350,7 @@ Si LUSD se detiene o un RPC miente, la app rota RPC públicos (`constants/rpcCon
 
 ## Antes de dinero real
 
-Contratos desplegados en Arbitrum One, direcciones escritas en `constants/deployedAddresses.ts`, APK firmado con hash publicado, IPFS y ENS si se van a usar, y una auditoría externa de los contratos. Este archivo no es esa auditoría: lo escribieron herramientas de IA, no una firma. Siguen pendientes la decisión EIP-7702 de Jose, el enlace de SonarCloud (lo cambia el dueño en el panel) e `image-size` (pide un SDK de Expo nuevo).
+Contratos desplegados en Arbitrum One, direcciones escritas en `constants/deployedAddresses.ts`, APK firmado con hash publicado, IPFS y ENS si se van a usar, y una auditoría externa de los contratos. Este archivo no es esa auditoría: lo escribieron herramientas de IA, no una firma. Siguen pendientes el enlace de SonarCloud (lo cambia el dueño en el panel) e `image-size` (pide un SDK de Expo nuevo). Decisión de Jose: entrada rechaza cuentas con código y llamadas indirectas (`msg.sender == tx.origin` y `code.length == 0`); salida libre en `pagarPrestamo` y `desbloquear`; verificación sin `tx.origin`.
 
 ## Inventario
 

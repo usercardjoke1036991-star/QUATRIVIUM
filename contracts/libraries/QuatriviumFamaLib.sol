@@ -481,21 +481,19 @@ library QuatriviumFamaLib {
         token.safeTransferFrom(msg.sender, address(this), amount);
     }
 
-    /// @notice Solo el contrato Alta puede alimentar el pool. cargoDe() apunta al deudor
-    /// cuando vence el padrino. No hay camino si Alta no está fijada.
-    function usuarioVerificacion(address hermano, address caller, address origin)
+    /// @notice Solo el contrato Alta puede alimentar el pool. cargoDe() apunta a quien paga.
+    /// Cero no vale: no se usa tx.origin.
+    function usuarioVerificacion(address hermano, address caller)
         external
         view
         returns (address user)
     {
         address alta = _leerAlta(hermano);
         require(alta != address(0) && alta == caller);
-        user = origin;
         (bool okU, bytes memory rawU) = alta.staticcall(abi.encodeWithSignature("cargoDe()"));
-        if (okU && rawU.length >= 32) {
-            address cargo = abi.decode(rawU, (address));
-            if (cargo != address(0)) user = cargo;
-        }
+        require(okU && rawU.length >= 32);
+        user = abi.decode(rawU, (address));
+        require(user != address(0));
     }
 
     /// @notice El préstamo exige registroHecho en el Alta fijado. Cero o sin contrato revierte.

@@ -1295,5 +1295,6 @@
   "walletWrapSoftwareNote": "Este teléfono no tiene almacén de hardware. La clave de la billetera queda en el almacén seguro del sistema, sin pedir huella al leerla.",
   "lockKeychainSlow": "El llavero no responde. Intente de nuevo.",
   "lockCreateFresh": "Crear una cuenta nueva",
-  "lockUndoFailed": "No se pudo deshacer el alta. Intente de nuevo."
+  "lockUndoFailed": "No se pudo deshacer el alta. Intente de nuevo.",
+  "lockWalletSealed": "Tu billetera existe, pero no se pudo abrir. Restaura con tu frase."
 }

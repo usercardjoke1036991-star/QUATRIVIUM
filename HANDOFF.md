@@ -105,7 +105,7 @@ Orden de prioridad:
    - Auditoría externa de los contratos. `AUDITORIA.md` la escribieron herramientas de IA, no una firma de auditoría, y no la sustituye.
    - La dirección de fundador debe ser una billetera de varias firmas (Safe) o una billetera física con respaldo. El despliegue exige `CONFIRM_FOUNDER_WALLET=yes`.
 4. **Pendiente de Jose, sin tocar el código por nuestra cuenta.**
-   - EIP-7702: `_soloEOA`, Alta y Reserva quedan como están hasta que él decida.
+   - Decisión de Jose: entrada rechaza cuentas con código y llamadas indirectas (`msg.sender == tx.origin` y `code.length == 0`); salida libre en `pagarPrestamo` y `desbloquear`; verificación sin `tx.origin`. Credit mide 23132 bytes, 1444 libres de 24576. Antes de este cambio medía 23127.
    - El enlace de SonarCloud lo cambia el dueño en el panel.
    - `image-size` espera un SDK de Expo nuevo.
 5. **Pendiente cuando Jose lo ordene,** en este orden. Nada de esto se ha hecho.
@@ -117,17 +117,17 @@ Orden de prioridad:
 6. **Incompleto a propósito en el código actual:**
    - Nostr no abre un websocket ni ofrece mensaje privado: `prepareNostrPayload` devuelve null. La mora sigue bloqueada.
    - El hash del APK instalado no se calcula en el teléfono. Sin registro, la UI dice «versión no verificada».
-   - Credit tiene 1259 bytes libres (23317 de 24576). Cualquier lógica nueva en ese contrato puede no caber. Preferir un contrato hermano, como ya se hizo con Apk, Leveling y LoanLadder.
+   - Credit mide 23132 bytes, 1444 libres de 24576. Cualquier lógica nueva en ese contrato puede no caber. Preferir un contrato hermano, como ya se hizo con Apk, Leveling y LoanLadder.
 7. La clave que estuvo en el historial (commits `10553d4` y `dc40f15`, archivo `.env.worker.example`) ya fue revocada por Jose. No está en el árbol. No se reescribe la historia y no se copia el valor.
 
 ## 8. Riesgos
 
-- 1259 bytes libres en Credit (23317) y 48 en el harness (24528). No añadir funciones ahí sin medir `deployedBytecode`.
-- Hardhat tiene `allowUnlimitedContractSize: false`. El tamaño que cuenta es el `deployedBytecode` del artifact: Credit 23317 bytes, 1259 libres de 24576. El harness de prueba mide 24528, 48 libres.
+- 1444 bytes libres en Credit (23132 de 24576). No añadir funciones ahí sin medir `deployedBytecode`.
+- Hardhat tiene `allowUnlimitedContractSize: false`. El tamaño que cuenta es el `deployedBytecode` del artifact: Credit 23132 bytes, 1444 libres de 24576.
 - Los `require` de texto se borran del bytecode (`revertStrings: strip`). Los tests no pueden usar `revertedWith("mensaje")` para esos revert. Los errores con nombre (`SequencerFeedRequerido`, `SoloFundador`) sí se distinguen.
 - La pausa de préstamos nuevos exige 2 de 3 y 72 h. Se levanta sola a los 7 días y luego hay 7 de descanso. No frena pagos ni liquidaciones.
 - El pool y el fondo de seguro no tienen retiro. Un error en el reparto no se «arregla» sacando el dinero.
-- La liquidación exige EOA (`tx.origin == msg.sender`) y prohíbe autoliquidarse.
+- La liquidación exige `msg.sender == tx.origin` y `code.length == 0`, y prohíbe autoliquidarse. `pagarPrestamo` y `desbloquear` aceptan una cuenta delegada y solo mueven lo de `msg.sender`.
 - Direcciones de contrato vacías: la app no opera en mainnet hasta el despliegue.
 - Esa clave del historial ya fue revocada. El valor no se escribe en documentos nuevos.
 - No usar dinero real sin auditoría externa.

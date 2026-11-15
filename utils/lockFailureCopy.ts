@@ -51,6 +51,16 @@ export function lockFailureCopy(
 }
 
 /** Lo que muestran FundsConfirmHost y el candado. */
+/** null abre. El resto es el texto que muestran el candado, el pago y los ajustes. */
+export function passwordUnlockMessage(
+  checked: { ok: true } | LockMiss,
+  t: (key: TranslationKey, vars?: Vars) => string,
+  passwordMissing = false
+): string | null {
+  if (checked.ok) return null;
+  return describeLockFailure('password', checked, t, passwordMissing);
+}
+
 export function describeLockFailure(
   method: 'pin' | 'password',
   checked: LockMiss,

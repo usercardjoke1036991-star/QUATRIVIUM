@@ -1295,5 +1295,6 @@
   "walletWrapSoftwareNote": "Bu telefonda donanım kasası yok. Cüzdan anahtarı sistem kasasında kalır ve okunurken parmak izi istemez.",
   "lockKeychainSlow": "Anahtarlık yanıt vermiyor. Yeniden deneyin.",
   "lockCreateFresh": "Yeni bir hesap oluştur",
-  "lockUndoFailed": "Kayıt geri alınamadı. Yeniden deneyin."
+  "lockUndoFailed": "Kayıt geri alınamadı. Yeniden deneyin.",
+  "lockWalletSealed": "Cüzdan bu telefonda, ama açılamadı. Deyiminizle geri yükleyin."
 }

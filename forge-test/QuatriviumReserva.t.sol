@@ -103,12 +103,14 @@ contract QuatriviumReservaForgeTest is Test {
         credit.setNivel(locker, 10);
         credit.setPayToken(address(token));
         token.mint(address(credit), 50 ether);
-        token.mint(address(this), 200 ether);
+        address pot = makeAddr("reserva-pot");
+        token.mint(pot, 200 ether);
         token.mint(locker, 200 ether);
+        vm.prank(pot, pot);
         token.approve(address(local), type(uint256).max);
         vm.prank(locker, locker);
         token.approve(address(local), type(uint256).max);
-        vm.prank(address(this), address(this));
+        vm.prank(pot, pot);
         local.aportarBote(20 ether);
         vm.prank(locker, locker);
         local.bloquear(100 ether);

@@ -157,6 +157,7 @@ let passwordReplaceToken: {
   expiresMono: number;
 } | null = null;
 let passwordGeneration = 0;
+let passwordCleanup: Promise<void> = Promise.resolve();
 const REPLACE_TOKEN_MS = 60_000;
 const STORE_UNKNOWN = Symbol('store-unknown');
 
@@ -858,7 +859,17 @@ async function probePasswordRecord(
   const secureRaw = quiet
     ? await read.catch(() => STORE_UNKNOWN)
     : await timedRead(read, timeoutMs);
-  if (typeof secureRaw !== 'string' && secureRaw !== null) return STORE_UNKNOWN;
+  if (typeof secureRaw !== 'string' && secureRaw !== null) {
+    if (allowWalletAsyncFallback(getProductMode())) {
+      try {
+        const fallback = parsePasswordRecord(await AsyncStorage.getItem(PASSWORD_FALLBACK));
+        if (fallback) return fallback;
+      } catch {
+        return STORE_UNKNOWN;
+      }
+    }
+    return STORE_UNKNOWN;
+  }
   const parsed = parsePasswordRecord(secureRaw);
   if (parsed) {
     if (!quiet) void AsyncStorage.removeItem(PASSWORD_FALLBACK).catch(() => {});
@@ -1725,6 +1736,7 @@ export async function setPassword(
   if (!isValidMasterPassword(password)) {
     throw passwordError(password);
   }
+  await waitPasswordCleanup();
   if (conveniencePin && !(await checkPin(conveniencePin)).ok) {
     throw new Error('wrong-pin');
   }
@@ -1773,13 +1785,43 @@ export async function setPassword(
   };
   const nextWrap = material.wrap;
   const serialized = JSON.stringify(record);
-  const stored = await withTimeout(
-    SecureStore.setItemAsync(PASSWORD_KEY, serialized, OPTIONS)
-      .then(() => true)
-      .catch(() => false),
-    2500,
-    false
+  const latePrior = await readPasswordSlots();
+  const lateGeneration = passwordGeneration;
+  const attempt = SecureStore.setItemAsync(PASSWORD_KEY, serialized, OPTIONS).then(
+    () => 'ok' as const,
+    () => 'reject' as const
   );
+  const fate = await settlePasswordWrite(attempt, 2500);
+  if (fate === 'timeout') {
+    passwordCleanup = attempt.then(async (outcome) => {
+      try {
+        if (outcome !== 'ok' || passwordGeneration !== lateGeneration) {
+          reportLockFault();
+          return;
+        }
+        const now = await SecureStore.getItemAsync(PASSWORD_KEY);
+        if (now !== serialized) {
+          reportLockFault();
+          return;
+        }
+        if (latePrior.secure) {
+          await SecureStore.setItemAsync(PASSWORD_KEY, latePrior.secure, OPTIONS);
+        } else {
+          await SecureStore.deleteItemAsync(PASSWORD_KEY);
+        }
+        if (latePrior.fallback) {
+          await AsyncStorage.setItem(PASSWORD_FALLBACK, latePrior.fallback);
+        } else {
+          await AsyncStorage.removeItem(PASSWORD_FALLBACK);
+        }
+        reportLockFault();
+      } catch {
+        reportLockFault();
+      }
+    });
+    throw new Error('password-persist');
+  }
+  const stored = fate === 'ok';
   if (stored) {
     await AsyncStorage.removeItem(PASSWORD_FALLBACK).catch(() => {});
   } else if (allowWalletAsyncFallback(getProductMode())) {
@@ -1853,7 +1895,13 @@ async function checkPasswordBody(
 ): Promise<PinCheck> {
   markSystemPromptDone();
   throwIfAborted(signal);
-  const record = await readPasswordRecord();
+  let record: PasswordRecord | null;
+  try {
+    record = await readPasswordRecord();
+  } catch (error) {
+    if (error instanceof Error && error.message === 'store-unknown') return storeUnknownResult();
+    throw error;
+  }
   if (!record) {
     return { ok: false, remainingMs: 0, locked: false };
   }
@@ -2043,6 +2091,45 @@ export async function isLockOnOpenEnabled(): Promise<boolean> {
 
 export async function setLockOnOpenEnabled(enabled: boolean): Promise<void> {
   await SecureStore.setItemAsync(LOCK_OPEN_KEY, enabled ? '1' : '0', OPTIONS);
+}
+
+async function waitPasswordCleanup(): Promise<void> {
+  let done = false;
+  const pending = passwordCleanup.then(
+    () => {
+      done = true;
+    },
+    () => {
+      done = true;
+    }
+  );
+  await Promise.race([pending, new Promise((resolve) => setTimeout(resolve, 4000))]);
+  if (!done) throw new Error('keychain-timeout');
+}
+
+function settlePasswordWrite<T>(promise: Promise<T>, ms: number): Promise<T | 'timeout'> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      resolve('timeout');
+    }, ms);
+    promise.then(
+      (value) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve(value);
+      },
+      () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve('timeout');
+      }
+    );
+  });
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {

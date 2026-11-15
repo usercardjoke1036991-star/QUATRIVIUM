@@ -235,6 +235,57 @@ export function signupFailureStage(): 'credentials' {
   return 'credentials';
 }
 
+export type FreshAccountChoice = {
+  walletRead: WalletReadKind;
+  bound: string;
+  offers: WalletFailEscape[];
+  message: 'keychain' | 'sealed' | 'missing';
+};
+
+/** La foto del cofre sale de la lectura, no de que ensureAppWallet haya fallado. */
+export async function resolveFreshAccount(input: {
+  passwordSet: boolean;
+  readWallet: () => Promise<string | null>;
+  readBound: () => Promise<string>;
+}): Promise<FreshAccountChoice> {
+  let walletRead: WalletReadKind = 'unknown';
+  try {
+    const raw = await input.readWallet();
+    walletRead = raw == null ? 'empty' : 'present';
+  } catch {
+    walletRead = 'unknown';
+  }
+  let bound = '';
+  try {
+    bound = String((await input.readBound()) || '');
+  } catch {
+    bound = 'desconocido';
+  }
+  if (bound.trim().toLowerCase() === 'desconocido') {
+    walletRead = 'unknown';
+    bound = '';
+  }
+  const offers = walletFailEscapes(input.passwordSet, { walletRead, bound });
+  const message =
+    walletRead === 'unknown' ? 'keychain' : walletRead === 'present' ? 'sealed' : 'missing';
+  return { walletRead, bound, offers, message };
+}
+
+/** Mismo cierre que el alta: padrino una vez, y el usuario solo si aún no hay uno. */
+export async function finishFreshAccount(input: {
+  address: string;
+  username: string;
+  invite: string;
+}): Promise<void> {
+  const { lockSponsorOnce } = await import('../services/sponsorLock');
+  const { isValidUsername, normalizeUsername } = await import('./usernamePolicy');
+  const { loadClaimedUsername, saveClaimedUsername } = await import('../services/accountUsername');
+  await lockSponsorOnce(input.address, input.invite, true);
+  if (await loadClaimedUsername()) return;
+  if (!isValidUsername(normalizeUsername(input.username))) return;
+  await saveClaimedUsername(input.username);
+}
+
 /** Tras desbloquear, no entrar a la app si el cofre sigue cerrado o faltan las 24 palabras. */
 export function afterUnlockNext(input: {
   walletOpened: boolean;

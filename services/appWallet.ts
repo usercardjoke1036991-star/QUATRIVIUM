@@ -60,7 +60,16 @@ export async function readRawWallet(options?: { quiet?: boolean }): Promise<stri
     } catch {
       throw new Error('store-unknown');
     }
-    if (options?.quiet) return secure;
+    if (options?.quiet) {
+      if (!live && secure == null) {
+        try {
+          return await AsyncStorage.getItem(WALLET_FALLBACK);
+        } catch {
+          throw new Error('store-unknown');
+        }
+      }
+      return secure;
+    }
     await AsyncStorage.removeItem(WALLET_FALLBACK).catch(() => {});
     return secure;
   }
@@ -372,7 +381,7 @@ export function addressFromPhrase(phrase: string): string {
 
 export async function importFromPhrase(
   phrase: string,
-  options: { markBackedUp?: boolean } = {}
+  options: { markBackedUp?: boolean; mustBeEmpty?: boolean } = {}
 ): Promise<HDNodeWallet> {
   const normalized = normalizePhrase(phrase);
   if (!isValidSecretPhrase(normalized)) {
@@ -380,6 +389,15 @@ export async function importFromPhrase(
   }
   const imported = HDNodeWallet.fromPhrase(normalized);
   const next = imported.address.toLowerCase();
+  if (options.mustBeEmpty) {
+    let raw: string | null;
+    try {
+      raw = await readRawWallet({ quiet: true });
+    } catch {
+      throw new Error('store-unknown');
+    }
+    if (raw != null) throw new Error('wallet-exists');
+  }
   await assertRestoreFitsThisDevice(next);
   await writeStored({
     address: next,

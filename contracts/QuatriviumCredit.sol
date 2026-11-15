@@ -236,9 +236,9 @@ contract QuatriviumCredit is ReentrancyGuard {
         _;
     }
 
-    /// @dev Una cuenta con código, incluido un EOA con delegación EIP-7702, no entra.
+    /// @dev Entrada: el que llama es el origen y no tiene código. Una delegación EIP-7702 no entra.
     function _soloEOA() internal view {
-        if (msg.sender.code.length != 0) revert NoEsEOA();
+        if (msg.sender != tx.origin || msg.sender.code.length != 0) revert NoEsEOA();
     }
 
     constructor(
@@ -705,7 +705,6 @@ contract QuatriviumCredit is ReentrancyGuard {
     }
 
     function pagarPrestamo(address token, uint256 monto) external nonReentrant onlySupportedToken(token) {
-        _soloEOA();
         require(monto > 0, "monto>0");
         require(usuarios[msg.sender].montoActivo > 0, "no active loan");
         require(usuarios[msg.sender].monedaActivo == token, "token mismatch");
@@ -1042,7 +1041,7 @@ contract QuatriviumCredit is ReentrancyGuard {
 
     /// @notice Sello de 1 LUSD al pool. Solo lo llama Alta. Sin fama ni participaciones LP.
     function pagarVerificacion(address token, uint256 amount) external nonReentrant onlySupportedToken(token) {
-        address user = QuatriviumFamaLib.usuarioVerificacion(famaHermano, msg.sender, tx.origin);
+        address user = QuatriviumFamaLib.usuarioVerificacion(famaHermano, msg.sender);
         QuatriviumFamaLib.alimentarPool(totalLiquidity, stableTokens[token], token, amount);
         QuatriviumFamaLib.apartarSeguro(totalLiquidity, fondoSeguro, token, amount);
         uint256 prev = verificadoAlPool[user];

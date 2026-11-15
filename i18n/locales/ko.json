@@ -1295,5 +1295,6 @@
   "walletWrapSoftwareNote": "이 휴대폰에는 하드웨어 보관함이 없습니다. 지갑 키는 시스템 보안 저장소에 남고, 읽을 때 지문을 요구하지 않습니다.",
   "lockKeychainSlow": "키체인이 응답하지 않습니다. 다시 시도하세요.",
   "lockCreateFresh": "새 계정을 만들기",
-  "lockUndoFailed": "가입을 되돌리지 못했습니다. 다시 시도하세요."
+  "lockUndoFailed": "가입을 되돌리지 못했습니다. 다시 시도하세요.",
+  "lockWalletSealed": "지갑이 이 전화에 있지만 열리지 않았습니다. 구문으로 복원하세요."
 }

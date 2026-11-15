@@ -1295,5 +1295,6 @@
   "walletWrapSoftwareNote": "Ce téléphone n’a pas de coffre matériel. La clé du portefeuille reste dans le coffre du système, sans empreinte à la lecture.",
   "lockKeychainSlow": "Le trousseau ne répond pas. Réessayez.",
   "lockCreateFresh": "Créer un nouveau compte",
-  "lockUndoFailed": "L'inscription n'a pas pu être annulée. Réessayez."
+  "lockUndoFailed": "L'inscription n'a pas pu être annulée. Réessayez.",
+  "lockWalletSealed": "Le portefeuille est sur ce téléphone, mais il ne s’est pas ouvert. Restaurez-le avec votre phrase."
 }

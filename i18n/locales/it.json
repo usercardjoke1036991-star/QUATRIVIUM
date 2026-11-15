@@ -1295,5 +1295,6 @@
   "walletWrapSoftwareNote": "Questo telefono non ha un deposito hardware. La chiave del portafoglio resta nel deposito di sistema, senza impronta in lettura.",
   "lockKeychainSlow": "Il portachiavi non risponde. Riprova.",
   "lockCreateFresh": "Crea un conto nuovo",
-  "lockUndoFailed": "Non è stato possibile annullare l'iscrizione. Riprova."
+  "lockUndoFailed": "Non è stato possibile annullare l'iscrizione. Riprova.",
+  "lockWalletSealed": "Il portafoglio è su questo telefono, ma non si è aperto. Ripristinalo con la frase."
 }

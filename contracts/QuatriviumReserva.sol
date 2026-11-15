@@ -109,7 +109,7 @@ contract QuatriviumReserva is ReentrancyGuard {
     }
 
     modifier onlyEOA() {
-        if (tx.origin != msg.sender) revert SoloEOA();
+        if (msg.sender != tx.origin || msg.sender.code.length != 0) revert SoloEOA();
         _;
     }
 
@@ -200,7 +200,7 @@ contract QuatriviumReserva is ReentrancyGuard {
         emit Bloqueado(msg.sender, monto, block.timestamp + LOCK);
     }
 
-    function desbloquear() external onlyEOA nonReentrant {
+    function desbloquear() external nonReentrant {
         (uint256 principal, uint256 userPay, uint256 founderCut) = _cerrar(false);
         emit Desbloqueado(msg.sender, principal, userPay, founderCut);
     }

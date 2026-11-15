@@ -1295,5 +1295,6 @@
   "walletWrapSoftwareNote": "Điện thoại này không có kho phần cứng. Khóa ví nằm trong kho an toàn của hệ thống, không hỏi vân tay khi đọc.",
   "lockKeychainSlow": "Chuỗi khóa không phản hồi. Thử lại.",
   "lockCreateFresh": "Tạo tài khoản mới",
-  "lockUndoFailed": "Không hoàn tác được đăng ký. Thử lại."
+  "lockUndoFailed": "Không hoàn tác được đăng ký. Thử lại.",
+  "lockWalletSealed": "Ví có trên điện thoại này nhưng không mở được. Khôi phục bằng cụm từ."
 }

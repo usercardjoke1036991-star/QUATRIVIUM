@@ -25,6 +25,8 @@ let secureReadThrow = '';
 let deleteThrowKey = '';
 let readDelayMs = 0;
 let readDelayKey = '';
+let writeDelayMs = 0;
+let writeDelayKey = '';
 let secureReadHang = '';
 let hideBoundConfirm = false;
 let crashOnSecretPromote = false;
@@ -89,6 +91,9 @@ installMock('expo-secure-store', {
     return memory.has(key) ? memory.get(key) : null;
   },
   async setItemAsync(key, value, options) {
+    if (writeDelayMs > 0 && (!writeDelayKey || key === writeDelayKey)) {
+      await new Promise((resolve) => setTimeout(resolve, writeDelayMs));
+    }
     if (failPasswordWrite && key === 'quatrivium.lock.password') throw new Error('disk');
     if (walletWriteFault === 'persist' && key === WALLET_SLOT) {
       throw new Error('disk');
@@ -230,6 +235,8 @@ describe('app lock PBKDF2', function () {
     deleteThrowKey = '';
     readDelayMs = 0;
     readDelayKey = '';
+    writeDelayMs = 0;
+    writeDelayKey = '';
     hideBoundConfirm = false;
     lock.setVerifyBudgetForTests(null);
     lock.setLockPhaseForTests(null);
@@ -2849,5 +2856,256 @@ describe('app lock PBKDF2', function () {
     expect(accountBytes(), 'bytes').to.deep.equal(before);
     const again = await tap.runGuardedTap(held, () => lock.readSignupPhoto());
     expect(again && again.hadRaw).to.equal(null);
+  });
+
+  async function openSession() {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    await lock.setPassword(PASSWORD);
+    lock.lockNow();
+    expect((await lock.checkPassword(PASSWORD)).ok).to.equal(true);
+  }
+
+  function freshChoice() {
+    return entry.resolveFreshAccount({
+      passwordSet: true,
+      readWallet: () => wallet.readRawWallet({ quiet: true }),
+      readBound: () => binding.getBoundWallet(),
+    });
+  }
+
+  it('does not offer a new account when a sealed wallet will not open', async function () {
+    await openSession();
+    const sealed = box.sealSecret('sobre', `0x${'ab'.repeat(32)}`);
+    memory.set(WALLET_SLOT, sealed);
+    memory.delete(BOUND_SLOT);
+    const before = memory.get(WALLET_SLOT);
+    let code = '';
+    try {
+      await wallet.ensureAppWallet();
+    } catch (error) {
+      code = error instanceof Error ? error.message : 'throw';
+    }
+    const choice = await freshChoice();
+    expect(choice.offers, 'opciones').to.not.include('create');
+    expect(choice.message, 'aviso').to.equal('sealed');
+    const created = wallet.generateSecretPhrase();
+    let replaced = false;
+    try {
+      await wallet.importFromPhrase(created.phrase, { markBackedUp: false, mustBeEmpty: true });
+      replaced = true;
+    } catch (error) {
+      code = error instanceof Error ? error.message : code;
+    }
+    expect(replaced, 'escribio').to.equal(false);
+    expect(memory.get(WALLET_SLOT) === before, 'blob').to.equal(true);
+    expect(code === 'wallet-exists' || code === 'store-unknown', 'codigo').to.equal(true);
+  });
+
+  it('does not offer a new account when the wallet blob is corrupt', async function () {
+    await openSession();
+    memory.set(WALLET_SLOT, 'corrupto');
+    memory.delete(BOUND_SLOT);
+    const before = memory.get(WALLET_SLOT);
+    let code = '';
+    try {
+      await wallet.ensureAppWallet();
+    } catch (error) {
+      code = error instanceof Error ? error.message : 'throw';
+    }
+    const choice = await freshChoice();
+    expect(choice.offers, 'opciones').to.not.include('create');
+    expect(choice.message, 'aviso').to.equal('sealed');
+    expect(code === 'locked' || code === 'mac', 'fallo').to.equal(true);
+    const created = wallet.generateSecretPhrase();
+    let replaced = false;
+    try {
+      await wallet.importFromPhrase(created.phrase, { markBackedUp: false, mustBeEmpty: true });
+      replaced = true;
+    } catch (error) {
+      code = error instanceof Error ? error.message : code;
+    }
+    expect(replaced, 'escribio').to.equal(false);
+    expect(memory.get(WALLET_SLOT) === before, 'blob').to.equal(true);
+  });
+
+  it('shows the keychain message when the wallet read fails', async function () {
+    await openSession();
+    memory.delete(WALLET_SLOT);
+    memory.delete(BOUND_SLOT);
+    secureReadThrow = WALLET_SLOT;
+    const choice = await freshChoice();
+    secureReadThrow = '';
+    expect(choice.message, 'mensaje').to.equal('keychain');
+    expect(choice.offers, 'opciones').to.not.include('create');
+  });
+
+  it('offers create only when the wallet read is confirmed empty', async function () {
+    await openSession();
+    const before = memory.get(PASSWORD_SLOT);
+    memory.delete(WALLET_SLOT);
+    memory.delete(BOUND_SLOT);
+    const choice = await freshChoice();
+    expect(choice.offers, 'opciones').to.include('create');
+    expect(choice.walletRead, 'lectura').to.equal('empty');
+    const created = wallet.generateSecretPhrase();
+    const imported = await wallet.importFromPhrase(created.phrase, { markBackedUp: false });
+    expect(await binding.getBoundWallet()).to.equal(created.address);
+    expect(memory.get(PASSWORD_SLOT) === before, 'clave').to.equal(true);
+    expect(imported.address.toLowerCase()).to.equal(created.address);
+  });
+
+  it('rejects create when a wallet appears before the import', async function () {
+    await openSession();
+    memory.delete(WALLET_SLOT);
+    memory.delete(BOUND_SLOT);
+    const created = wallet.generateSecretPhrase();
+    const arrived = box.sealSecret('llego', `0x${'cd'.repeat(32)}`);
+    memory.set(WALLET_SLOT, arrived);
+    const before = memory.get(WALLET_SLOT);
+    let code = '';
+    try {
+      await wallet.importFromPhrase(created.phrase, { markBackedUp: false, mustBeEmpty: true });
+    } catch (error) {
+      code = error instanceof Error ? error.message : 'throw';
+    }
+    expect(code, 'codigo').to.equal('wallet-exists');
+    expect(memory.get(WALLET_SLOT) === before, 'blob').to.equal(true);
+  });
+
+  it('does not offer create when demo mode only has the wallet fallback', async function () {
+    rpc.setProductMode('demo');
+    memory.set(WALLET_FALLBACK_SLOT, box.sealSecret('respaldo', `0x${'ef'.repeat(32)}`));
+    const before = accountBytes();
+    const choice = await freshChoice();
+    expect(choice.walletRead === 'present', 'respaldo').to.equal(true);
+    expect(choice.offers, 'opciones').to.not.include('create');
+    expect(accountBytes(), 'bytes').to.deep.equal(before);
+    rpc.setProductMode('live');
+  });
+
+  it('returns store-unknown from checkPassword when the password read throws', async function () {
+    await openSession();
+    lock.lockNow();
+    const before = accountBytes();
+    secureReadThrow = PASSWORD_SLOT;
+    let rejected = false;
+    let text = '';
+    try {
+      const result = await lock.checkPassword(PASSWORD);
+      text = copy.passwordUnlockMessage(result, (key) => key);
+      expect(result.ok, 'acceso').to.equal(false);
+    } catch {
+      rejected = true;
+    }
+    secureReadThrow = '';
+    expect(rejected, 'candado').to.equal(false);
+    expect(rejected, 'confirmar').to.equal(false);
+    expect(rejected, 'ajustes').to.equal(false);
+    expect(text, 'mensaje').to.equal('lockStoreUnknown');
+    expect(accountBytes(), 'bytes').to.deep.equal(before);
+  });
+
+  it('unlocks a demo password that lives only in the fallback', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    rpc.setProductMode('demo');
+    await lock.setPassword(PASSWORD);
+    const saved = memory.get(PASSWORD_SLOT);
+    memory.delete(PASSWORD_SLOT);
+    memory.set(PASSWORD_FALLBACK_SLOT, saved);
+    lock.lockNow();
+    const before = accountBytes();
+    secureReadThrow = PASSWORD_SLOT;
+    const opened = await lock.checkPassword(PASSWORD);
+    secureReadThrow = '';
+    expect(opened.ok, 'abre').to.equal(true);
+    expect(accountBytes(), 'bytes').to.deep.equal(before);
+    rpc.setProductMode('live');
+  });
+
+  it('counts a demo wallet fallback in the signup photo', async function () {
+    rpc.setProductMode('demo');
+    memory.set(WALLET_FALLBACK_SLOT, 'sobre-respaldo');
+    const before = accountBytes();
+    const photo = await lock.readSignupPhoto();
+    expect(photo.hadRaw == null, 'foto').to.equal(false);
+    expect(accountBytes(), 'bytes').to.deep.equal(before);
+    rpc.setProductMode('live');
+  });
+
+  it('drops a password write that lands after the 2500 ms budget', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    const before = memory.get(PASSWORD_SLOT);
+    writeDelayKey = PASSWORD_SLOT;
+    writeDelayMs = 3000;
+    let faults = 0;
+    race.setLockFaultReporter(() => {
+      faults += 1;
+    });
+    let code = '';
+    try {
+      await lock.setPassword('Nueva-9z');
+    } catch (error) {
+      code = error instanceof Error ? error.message : 'throw';
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    writeDelayMs = 0;
+    writeDelayKey = '';
+    race.setLockFaultReporter(null);
+    expect(code).to.equal('password-persist');
+    expect(memory.get(PASSWORD_SLOT) === before, 'tarde').to.equal(true);
+    expect(faults).to.equal(1);
+  });
+
+  it('lets the same session retry after a late password write is cleared', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    writeDelayKey = PASSWORD_SLOT;
+    writeDelayMs = 3000;
+    try {
+      await lock.setPassword('Nueva-9z');
+    } catch {
+      // El plazo corto rechaza. La escritura sigue en curso.
+    }
+    writeDelayMs = 0;
+    writeDelayKey = '';
+    await lock.setPassword('OtraClave-9z');
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    expect((await lock.checkPassword('OtraClave-9z')).ok, 'reintento').to.equal(true);
+  });
+
+  it('keeps a later password when the timed out write arrives afterwards', async function () {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    writeDelayKey = PASSWORD_SLOT;
+    writeDelayMs = 3000;
+    const late = lock.setPassword('Nueva-9z').catch(() => {});
+    await new Promise((resolve) => setTimeout(resolve, 2600));
+    writeDelayMs = 0;
+    await lock.setPassword('OtraClave-9z');
+    await late;
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    writeDelayKey = '';
+    expect((await lock.checkPassword('OtraClave-9z')).ok, 'posterior').to.equal(true);
+  });
+
+  it('stores the inviter and the username when creating from the wallet miss', async function () {
+    await openSession();
+    memory.delete(WALLET_SLOT);
+    memory.delete(BOUND_SLOT);
+    const names = loadTs(path.join(__dirname, '..', 'services', 'accountUsername.ts'));
+    const sponsors = loadTs(path.join(__dirname, '..', 'services', 'sponsorLock.ts'));
+    const created = wallet.generateSecretPhrase();
+    const imported = await wallet.importFromPhrase(created.phrase, { markBackedUp: false });
+    await entry.finishFreshAccount({
+      address: imported.address,
+      username: 'ana',
+      invite: '',
+    });
+    expect(await names.loadClaimedUsername(), 'usuario').to.equal('ana');
+    const saved = await sponsors.loadLockedSponsor(imported.address);
+    expect(Boolean(saved), 'padrino').to.equal(true);
   });
 });

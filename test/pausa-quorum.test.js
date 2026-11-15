@@ -36,7 +36,8 @@ describe('Pausa de préstamos con quórum', function () {
     await contract.connect(owner).executeAdminAction(id);
     const hasta = await contract.pausaPrestamosHasta();
     const reposo = await contract.pausaReposoHasta();
-    expect(reposo - hasta).to.equal(7n * 24n * 60n * 60n);
+    const reposoSegundos = 7n * 24n * 60n * 60n;
+    expect(BigInt(reposo) - BigInt(hasta)).to.equal(reposoSegundos);
 
     const debt = await contract.obtenerDeuda(user.address);
     await expect(contract.connect(user).pagarPrestamo(tokenAddr, debt.total)).to.not.be.reverted;

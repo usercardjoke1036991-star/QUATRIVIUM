@@ -1295,5 +1295,6 @@
   "walletWrapSoftwareNote": "This phone has no hardware store. The wallet key stays in the system secure store and is not gated by a fingerprint on read.",
   "lockKeychainSlow": "The keychain is not responding. Try again.",
   "lockCreateFresh": "Create a new account",
-  "lockUndoFailed": "The signup could not be undone. Try again."
+  "lockUndoFailed": "The signup could not be undone. Try again.",
+  "lockWalletSealed": "Your wallet is on this phone, but it could not be opened. Restore it with your phrase."
 }

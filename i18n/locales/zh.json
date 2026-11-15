@@ -1295,5 +1295,6 @@
   "walletWrapSoftwareNote": "这台手机没有硬件保险库。钱包密钥留在系统安全存储中，读取时不要求指纹。",
   "lockKeychainSlow": "钥匙串没有响应。请再试一次。",
   "lockCreateFresh": "创建新账户",
-  "lockUndoFailed": "未能撤销注册。请再试一次。"
+  "lockUndoFailed": "未能撤销注册。请再试一次。",
+  "lockWalletSealed": "钱包在这部手机上，但打不开。请用助记词恢复。"
 }

@@ -72,8 +72,11 @@ contract QuatriviumMoneyHandler is Test {
         token.mint(address(alta), 1 ether);
         vm.prank(address(alta));
         token.approve(address(credit), 1 ether);
+        // cargoDe es el slot 3. Alta lo escribe antes de pagarVerificacion y lo borra al salir.
+        vm.store(address(alta), bytes32(uint256(3)), bytes32(uint256(uint160(actor))));
         vm.prank(address(alta), actor);
         credit.pagarVerificacion(address(token), 1 ether);
+        vm.store(address(alta), bytes32(uint256(3)), bytes32(uint256(0)));
         okVerify += 1;
     }
 

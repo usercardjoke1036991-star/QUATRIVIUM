@@ -22,7 +22,8 @@ describe('Fundador cobra en automático', function () {
 
     const antesPago = await token.balanceOf(owner.address);
     await contract.connect(user).pagarPrestamo(tokenAddr, debt.total);
-    expect((await token.balanceOf(owner.address)) - antesPago).to.equal(corte);
+    const despuesPago = BigInt(await token.balanceOf(owner.address));
+    expect(despuesPago - BigInt(antesPago)).to.equal(BigInt(corte));
     expect(contract.interface.hasFunction('retirarComisiones')).to.equal(false);
     expect(contract.interface.hasFunction('retirarComisionesToken')).to.equal(false);
   });

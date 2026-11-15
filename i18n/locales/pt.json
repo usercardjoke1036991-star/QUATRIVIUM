@@ -1295,5 +1295,6 @@
   "walletWrapSoftwareNote": "Este telefone não tem armazenamento de hardware. A chave da carteira fica no cofre do sistema, sem impressão digital na leitura.",
   "lockKeychainSlow": "O porta-chaves não responde. Tente de novo.",
   "lockCreateFresh": "Criar uma conta nova",
-  "lockUndoFailed": "Não foi possível desfazer o cadastro. Tente de novo."
+  "lockUndoFailed": "Não foi possível desfazer o cadastro. Tente de novo.",
+  "lockWalletSealed": "A carteira está neste telefone, mas não abriu. Restaure com a sua frase."
 }

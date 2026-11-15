@@ -1295,5 +1295,6 @@
   "walletWrapSoftwareNote": "Ponsel ini tidak punya brankas perangkat keras. Kunci dompet tetap di brankas sistem dan tidak meminta sidik jari saat dibaca.",
   "lockKeychainSlow": "Gantungan kunci tidak menjawab. Coba lagi.",
   "lockCreateFresh": "Buat akun baru",
-  "lockUndoFailed": "Pendaftaran tidak bisa dibatalkan. Coba lagi."
+  "lockUndoFailed": "Pendaftaran tidak bisa dibatalkan. Coba lagi.",
+  "lockWalletSealed": "Dompet ada di ponsel ini, tetapi tidak terbuka. Pulihkan dengan frasa Anda."
 }

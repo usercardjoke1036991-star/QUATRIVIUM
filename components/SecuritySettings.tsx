@@ -17,6 +17,7 @@ import { BiometricLockSection } from './BiometricLockSection';
 import { AuthMethodPicker } from './AuthMethodPicker';
 import { AuthenticatorSetup } from './AuthenticatorSetup';
 import { isAuthenticatorEnabled } from '../services/authenticator';
+import { passwordUnlockMessage } from '../utils/lockFailureCopy';
 import {
   loadAuthPrefs,
   type AuthMethod,
@@ -113,7 +114,7 @@ export const SecuritySettings: React.FC = () => {
     if (passwordSet) {
       const checked = await checkPassword(revealPassword);
       if (!checked.ok) {
-        Alert.alert(t('error'), t('lockPasswordWrong'));
+        Alert.alert(t('error'), passwordUnlockMessage(checked, t) || t('lockPasswordWrong'));
         return;
       }
     } else if (pinSet) {
