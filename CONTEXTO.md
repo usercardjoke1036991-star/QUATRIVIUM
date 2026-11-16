@@ -51,7 +51,7 @@ Despliegue, solo con orden explícita: `CONFIRM_MAINNET=yes npm run deploy:arbit
 
 ## Estado
 
-Rama `cursor/soberania-contratos-8e15`. Hardhat 484, Foundry 80. El mapa de commits está en `HANDOFF.md`.
+Rama `cursor/soberania-contratos-8e15`. Hardhat 486, Foundry 80. El mapa de commits está en `HANDOFF.md`.
 
 Abierto, sin arreglar: dos hallazgos bajos del alta (segunda cuenta, y `soltarPadrino` si el padre viniera vacío). NIP-17/44 sigue sin hacerse: `prepareNostrPayload` en `utils/sovereignSurface.ts` devuelve null. `tmp` quedó en 0.2.7. `image-size` sigue alto: la 2.0.3 rompe el paquete de Android.
 

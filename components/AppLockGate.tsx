@@ -44,7 +44,7 @@ import {
   type SignupUndo,
 } from '../services/appLock';
 import { describeLockFailure, lockWaitCopy, unlockPasswordError } from '../utils/lockFailureCopy';
-import { lockStoreFailureText } from '../utils/lockErrors';
+import { lockStoreFailureText, restoreFailText } from '../utils/lockErrors';
 import { raceMs, reportLockFault, setLockFaultReporter } from '../utils/lockRace';
 import { runGuardedTap } from '../utils/tapGuard';
 import { isValidMasterPassword } from '../utils/passwordPolicy';
@@ -1016,18 +1016,7 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
         password: passwordInput,
       });
       if (!restored.ok) {
-        setError(
-          lockStoreFailureText(restored.reason, t) ||
-            (restored.reason === 'wallet-other-app'
-              ? t('errWalletOtherApp')
-              : restored.reason === 'phrase'
-                ? t('seedInvalid')
-                : restored.reason === 'wallet-persist'
-                  ? t('errWalletPersist')
-                  : restored.reason === 'device-bound'
-                    ? t('errDeviceBound')
-                    : t('appWalletFailed'))
-        );
+        setError(restoreFailText(restored.reason, t));
         return;
       }
       const wallet = restored.wallet;

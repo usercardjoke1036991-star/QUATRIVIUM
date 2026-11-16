@@ -34,14 +34,15 @@ Esta revisión la hicieron herramientas de IA en el IDE (lectura del código, Ha
 | L1 | baja | La exclusión mutua de la clave cubre la limpieza que ya pasó la espera, la relectura que devuelve el valor viejo y dos cambios a la vez. La captura de generación y secuencia se corrigió en M1 | `0def53b` | `keeps the newer password when it starts after the cleanup passed its wait` |
 | M1 | media | Una escritura lenta no restaura la contraseña anterior si otra se confirmó mientras esperaba el turno | `1a55c0b` | `keeps a password committed while a slower change waited for the key` |
 | M2 | baja | El llavero lento, el almacén desconocido y un guardado fallido muestran su texto, y una contraseña débil sigue en el aviso de validación. El fallo anterior se demostró con la lógica vieja de passwordFail trasplantada, porque `utils/lockErrors.ts` no existía en `0def53b` | `1a55c0b` | `names a slow keychain, an unknown store and a failed save, and keeps a weak password weak` |
-| N1 | baja | Una contraseña ya cerrada muestra que en este teléfono ya no se cambia, y una débil sigue en el aviso de validación | este commit | `names a slow keychain, an unknown store and a failed save, and keeps a weak password weak` |
-| N2 | baja | El drenaje de tests espera todas las limpiezas armadas, también la que empezó antes de otra más corta | este commit | `waits for every armed password cleanup before the drain returns` |
+| N1 | baja | Una contraseña ya cerrada muestra que en este teléfono ya no se cambia. La lanzan `appLock.ts:1758` y `appLock.ts:1808`. Una débil sigue en el aviso de validación | `8246cf6` | `names a slow keychain, an unknown store and a failed save, and keeps a weak password weak` |
+| N2 | baja | El drenaje de tests espera todas las limpiezas armadas, también la que empezó antes de otra más corta | `8246cf6` | `waits for every armed password cleanup before the drain returns` |
+| O1 | baja | Al restaurar, una contraseña cerrada dice que la solicitud local caducó. En ajustes sigue diciendo que ya no se cambia | este commit | `says a locked password expired when restoring` |
 
 NEW-A, NEW-B y NEW-E son los de la ronda de la app. B1 a B5 son la entrada y la salida EIP-7702. Los casos R18-1 a R18-6 no tienen otra ficha en este árbol: quedaron reconfirmados.
 
 M-HANG queda aceptado. Si el almacenamiento del dueño del turno se cuelga, los demás cambios de contraseña reciben `keychain-timeout` hasta que termine.
 
-Riesgo aceptado solo de tests: `app-lock-kdf` usa ventanas de reloj absolutas y, en una máquina saturada (por ejemplo dos suites en paralelo), puede dar timeouts sueltos; en solitario da 135/135.
+Riesgo aceptado solo de tests: `app-lock-kdf` usa ventanas de reloj absolutas y, en una máquina saturada (por ejemplo dos suites en paralelo), puede dar timeouts sueltos; en solitario da 135/135. Los tests usan `Date.now()`, y si la máquina se suspende, un salto del reloj de pared puede dar timeouts sueltos que no son defectos del código.
 
 ## Medición de esta rama
 
@@ -55,7 +56,7 @@ Rama `cursor/soberania-contratos-8e15`. La medición de este apartado es la de e
 | QuatriviumCredit (Hardhat, deployedBytecode) | 23322 | 1254 |
 | QuatriviumCreditHarness | 24528 | 48 |
 
-Un pago de 40 generaciones usó 1246495 de gas (el test lo imprime y exige menos de 3 000 000). Foundry con `FOUNDRY_PROFILE=ci`: 80 pruebas en verde. Los invariantes corrieron 256 veces, 204800 llamadas y 0 reversiones. Hardhat: 484 pruebas en verde.
+Un pago de 40 generaciones usó 1246495 de gas (el test lo imprime y exige menos de 3 000 000). Foundry con `FOUNDRY_PROFILE=ci`: 80 pruebas en verde. Los invariantes corrieron 256 veces, 204800 llamadas y 0 reversiones. Hardhat: 486 pruebas en verde.
 
 Slither, compilación nueva, `fail_on: high`: 25 resultados, 0 altos, 0 medios, 15 bajos, 10 de optimización. Los medios que no eran un fallo llevan `slither-disable-next-line` con el motivo en la misma línea. No se cambió la lógica de `_soloEOA`, Alta ni Reserva. Los 15 bajos, uno por uno:
 
@@ -101,7 +102,7 @@ Arbitrum One ya acepta EIP-7702 (ArbOS 40, según el blog de la fundación y la 
 
 Un PIN de 6 dígitos solo tiene 1 000 000 de combinaciones. La protección real es el almacén de hardware, cuando el teléfono lo tiene, y el bloqueo creciente tras cada fallo (30 s, 1 min, 5 min, 15 min, 1 h). El PIN puede tener de 6 a 12 dígitos. Si no hay hardware, la clave queda en el almacén del sistema y la app lo avisa.
 
-Fecha de la revisión: 10 de noviembre de 2026 (America/Caracas). Rama `cursor/soberania-contratos-8e15`. Medición de ahora: Hardhat 484, Foundry 80. Credit en forge (runtime): 23132 bytes, 1444 libres de 24576. Credit en Hardhat (`deployedBytecode`): 23322 bytes, 1254 libres de 24576.
+Fecha de la revisión: 10 de noviembre de 2026 (America/Caracas). Rama `cursor/soberania-contratos-8e15`. Medición de ahora: Hardhat 486, Foundry 80. Credit en forge (runtime): 23132 bytes, 1444 libres de 24576. Credit en Hardhat (`deployedBytecode`): 23322 bytes, 1254 libres de 24576.
 
 La clave del historial (commits `10553d4` y `dc40f15`, archivo `.env.worker.example`) ya fue revocada. No está en el árbol. El valor no se copia y la historia no se reescribe.
 
@@ -177,7 +178,7 @@ Nada de lo leído permite que un extraño vacíe el pool, el bote de Reserva o e
 
 ## Cómo se midió
 
-- Hardhat: 484 pruebas, todas en verde, una sola corrida.
+- Hardhat: 486 pruebas, todas en verde, una sola corrida.
 - Foundry: 80 pruebas, todas en verde, con `FOUNDRY_PROFILE=ci` y `--fuzz-runs 256`. Los 3 invariantes, 0 reversiones.
 - `node scripts/check-external-services.mjs`: sin nombres prohibidos en el árbol actual.
 - `node scripts/check-i18n.mjs`: 17 idiomas, 1288 claves cada uno, sin copias largas del inglés.
