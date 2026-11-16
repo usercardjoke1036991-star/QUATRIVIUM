@@ -158,7 +158,7 @@ let passwordReplaceToken: {
 } | null = null;
 let passwordGeneration = 0;
 let passwordCleanup: Promise<void> = Promise.resolve();
-let passwordCleanupJob: Promise<void> = Promise.resolve();
+const passwordCleanupJobs = new Set<Promise<void>>();
 let committedPassword: string | null = null;
 let passwordNoteSeq = 0;
 let passwordKeyTail: Promise<void> = Promise.resolve();
@@ -2142,7 +2142,10 @@ export async function setLockOnOpenEnabled(enabled: boolean): Promise<void> {
 }
 
 function armPasswordCleanup(job: Promise<void>): void {
-  passwordCleanupJob = job;
+  passwordCleanupJobs.add(job);
+  void job.finally(() => {
+    passwordCleanupJobs.delete(job);
+  });
   let release = () => {};
   const gate = new Promise<void>((resolve) => {
     release = resolve;
@@ -2253,11 +2256,6 @@ async function undoLatePasswordWrite(
   } finally {
     releaseKey?.();
   }
-}
-
-async function drainPasswordQueues(): Promise<void> {
-  await passwordCleanupJob;
-  await passwordKeyTail;
 }
 
 async function waitPasswordCleanup(): Promise<void> {
@@ -2387,6 +2385,14 @@ export function shouldRelockAfterBackground(
 }
 
 if (__DEV__) {
+  async function drainPasswordQueues(): Promise<void> {
+    for (;;) {
+      const pending = Array.from(passwordCleanupJobs);
+      if (pending.length === 0) break;
+      await Promise.all(pending);
+    }
+    await passwordKeyTail;
+  }
   const host = globalThis as { __qcDev?: Record<string, Record<string, unknown>> };
   (host.__qcDev ??= {}).lock = {
     setVerifyBudget,

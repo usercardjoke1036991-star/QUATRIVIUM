@@ -3860,4 +3860,29 @@ describe('app lock PBKDF2', function () {
     expect((await lock.checkPassword(kept)).ok, 'abreP').to.equal(false);
     expect((await lock.checkPassword(slower)).ok, 'abreB').to.equal(false);
   });
+
+  it('waits for every armed password cleanup before the drain returns', async function () {
+    this.timeout(45000);
+    await seedHeldWallet();
+    const prior = memory.get(PASSWORD_SLOT);
+    const mark = secureWrites.length;
+    passwordWritePlanMs = [8000, 3500];
+    const pendingLong = lock.setPassword('ClaveA-9zz').then(
+      () => 'ok',
+      (error) => (error instanceof Error ? error.message : 'throw')
+    );
+    await sleep(100);
+    const pendingShort = lock.setPassword('ClaveB-9zz').then(
+      () => 'ok',
+      (error) => (error instanceof Error ? error.message : 'throw')
+    );
+    const settledLong = await pendingLong;
+    const settledShort = await pendingShort;
+    await lock.drainPasswordQueuesForTests();
+    const landed = secureWrites.length - mark;
+    expect(settledLong, 'larga').to.equal('password-persist');
+    expect(settledShort, 'corta').to.equal('password-persist');
+    expect(landed, 'escrituras').to.equal(4);
+    expect(memory.get(PASSWORD_SLOT) === prior, 'final').to.equal(true);
+  });
 });

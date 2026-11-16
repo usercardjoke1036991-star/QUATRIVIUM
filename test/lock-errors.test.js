@@ -20,6 +20,9 @@ describe('lock error text', function () {
     expect(errors.passwordFailText(new Error('password-persist'), t), 'persist').to.equal(
       'No se pudo guardar la cuenta en este teléfono. Intente de nuevo.'
     );
+    expect(errors.passwordFailText(new Error('password-locked'), t), 'bloqueo').to.equal(
+      'La contraseña de este teléfono ya no se cambia.'
+    );
     expect(errors.passwordFailText(new Error('weak-password'), t), 'debil').to.equal(
       '8 a 66 caracteres, con mayúscula, número y símbolo.'
     );
