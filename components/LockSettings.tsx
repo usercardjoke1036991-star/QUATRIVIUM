@@ -20,6 +20,7 @@ import { useFundsConfirm } from './FundsConfirmHost';
 import { DeviceGuardNotice } from './DeviceGuardNotice';
 import { SecretInput } from './SecretInput';
 import { AppText } from './AppText';
+import { passwordFailText } from '../utils/lockErrors';
 
 type LockSettingsMode = 'pin' | 'password';
 
@@ -141,13 +142,6 @@ export const LockSettings: React.FC<{
     ]);
   };
 
-  const passwordFail = (error: unknown) => {
-    const code = error instanceof Error ? error.message : '';
-    if (code === 'password-key') return t('lockPasswordPrivateKey');
-    if (code === 'pbkdf2-missing') return t('lockKdfMissing');
-    return t('lockPasswordWeak');
-  };
-
   const savePassword = async () => {
     if (nextPassword !== confirmPassword) {
       setPasswordMessage(t('lockPasswordMismatch'));
@@ -176,7 +170,7 @@ export const LockSettings: React.FC<{
       Alert.alert(t('ready'), t('settingsSaved'));
     } catch (error) {
       const code = error instanceof Error ? error.message : '';
-      setPasswordMessage(code === 'wrong-pin' ? t('lockPinWrong') : passwordFail(error));
+      setPasswordMessage(code === 'wrong-pin' ? t('lockPinWrong') : passwordFailText(error, t));
     } finally {
       setPasswordBusy(false);
     }

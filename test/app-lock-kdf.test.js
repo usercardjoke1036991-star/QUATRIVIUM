@@ -248,6 +248,7 @@ for (const [from, to] of [
   ['replaceClockNowForTests', 'replaceClockNow'],
   ['retryDeviceProtectionForTests', 'probeDeviceProtection'],
   ['takeRestoreTokenForAbort', 'currentUndoToken'],
+  ['drainPasswordQueuesForTests', 'drainPasswordQueues'],
 ]) {
   lock[from] = lock[to];
 }
@@ -269,7 +270,8 @@ describe('app lock PBKDF2', function () {
     lock.setChainStampsForTests(() => []);
   });
 
-  afterEach(function () {
+  afterEach(async function () {
+    this.timeout(60000);
     kdf.resetPbkdf2ForTests();
     gateFault = '';
     boundFault = '';
@@ -306,6 +308,7 @@ describe('app lock PBKDF2', function () {
     crashOnSecretPromote = false;
     randomByte = 0;
     rpc.setProductMode('live');
+    await lock.drainPasswordQueuesForTests();
     lock.lockNow();
     memory.delete('quatrivium.lock.password');
     memory.delete('mem:quatrivium.lock.password.fallback');
@@ -3826,5 +3829,35 @@ describe('app lock PBKDF2', function () {
     expect(settledB, 'b').to.equal('ok');
     expect(settledC, 'c').to.equal('keychain-timeout');
     expect(opensB, 'quedaB').to.equal(true);
+  });
+
+  it('keeps a password committed while a slower change waited for the key', async function () {
+    this.timeout(45000);
+    const kept = 'ClaveP-9zz';
+    const newer = 'ClaveC-9zz';
+    const slower = 'ClaveB-9zz';
+    await seedHeldWallet();
+    passwordWritePlanMs = [1500, 10000];
+    const pendingC = lock.setPassword(newer).then(
+      () => 'ok',
+      (error) => (error instanceof Error ? error.message : 'throw')
+    );
+    await sleep(100);
+    const pendingB = lock.setPassword(slower).then(
+      () => 'ok',
+      (error) => (error instanceof Error ? error.message : 'throw')
+    );
+    const settledC = await pendingC;
+    const settledB = await pendingB;
+    await sleep(12000);
+    await stopLateDelays();
+    expect(settledC, 'c').to.equal('ok');
+    expect(settledB, 'b').to.equal('password-persist');
+    lock.lockNow();
+    expect((await lock.checkPassword(newer)).ok, 'abreC').to.equal(true);
+    const opened = await wallet.ensureAppWallet();
+    expect(Boolean(opened.address), 'address').to.equal(true);
+    expect((await lock.checkPassword(kept)).ok, 'abreP').to.equal(false);
+    expect((await lock.checkPassword(slower)).ok, 'abreB').to.equal(false);
   });
 });

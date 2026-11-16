@@ -158,6 +158,7 @@ let passwordReplaceToken: {
 } | null = null;
 let passwordGeneration = 0;
 let passwordCleanup: Promise<void> = Promise.resolve();
+let passwordCleanupJob: Promise<void> = Promise.resolve();
 let committedPassword: string | null = null;
 let passwordNoteSeq = 0;
 let passwordKeyTail: Promise<void> = Promise.resolve();
@@ -1807,6 +1808,8 @@ export async function setPassword(
     if (!sessionOpen && !tokenOk) throw new Error('password-locked');
     if (tokenOk && issued) passwordReplaceToken = null;
   }
+  const lateGeneration = passwordGeneration;
+  const lateSeq = passwordNoteSeq;
   const latePrior = await readPasswordSlots();
   const undoPrior = options?.undoable ? latePrior : null;
   if (!existing && !options?.undoable) {
@@ -1843,8 +1846,6 @@ export async function setPassword(
   let written: PasswordSlots = { secure: null, fallback: null };
   let generation = passwordGeneration;
   try {
-    const lateGeneration = passwordGeneration;
-    const lateSeq = passwordNoteSeq;
     const attempt = SecureStore.setItemAsync(PASSWORD_KEY, serialized, OPTIONS).then(
       () => 'ok' as const,
       () => 'reject' as const
@@ -2141,6 +2142,7 @@ export async function setLockOnOpenEnabled(enabled: boolean): Promise<void> {
 }
 
 function armPasswordCleanup(job: Promise<void>): void {
+  passwordCleanupJob = job;
   let release = () => {};
   const gate = new Promise<void>((resolve) => {
     release = resolve;
@@ -2251,6 +2253,11 @@ async function undoLatePasswordWrite(
   } finally {
     releaseKey?.();
   }
+}
+
+async function drainPasswordQueues(): Promise<void> {
+  await passwordCleanupJob;
+  await passwordKeyTail;
 }
 
 async function waitPasswordCleanup(): Promise<void> {
@@ -2393,5 +2400,6 @@ if (__DEV__) {
     probeDeviceProtection,
     currentUndoToken,
     abortPasswordSetup,
+    drainPasswordQueues,
   };
 }

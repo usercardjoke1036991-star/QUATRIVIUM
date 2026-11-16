@@ -44,6 +44,7 @@ import {
   type SignupUndo,
 } from '../services/appLock';
 import { describeLockFailure, lockWaitCopy, unlockPasswordError } from '../utils/lockFailureCopy';
+import { lockStoreFailureText } from '../utils/lockErrors';
 import { raceMs, reportLockFault, setLockFaultReporter } from '../utils/lockRace';
 import { runGuardedTap } from '../utils/tapGuard';
 import { isValidMasterPassword } from '../utils/passwordPolicy';
@@ -1016,17 +1017,16 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
       });
       if (!restored.ok) {
         setError(
-          restored.reason === 'store-unknown'
-            ? t('lockStoreUnknown')
-            : restored.reason === 'wallet-other-app'
+          lockStoreFailureText(restored.reason, t) ||
+            (restored.reason === 'wallet-other-app'
               ? t('errWalletOtherApp')
               : restored.reason === 'phrase'
                 ? t('seedInvalid')
-                : restored.reason === 'password-persist' || restored.reason === 'wallet-persist'
+                : restored.reason === 'wallet-persist'
                   ? t('errWalletPersist')
                   : restored.reason === 'device-bound'
                     ? t('errDeviceBound')
-                    : t('appWalletFailed')
+                    : t('appWalletFailed'))
         );
         return;
       }
@@ -1048,15 +1048,16 @@ export const AppLockGate: React.FC<AppLockGateProps> = ({ children }) => {
     } catch (err) {
       const code = err instanceof Error ? err.message : '';
       setError(
-        code === 'phrase' || code.includes('phrase')
-          ? t('seedInvalid')
-          : code === 'device-bound'
-            ? t('errDeviceBound')
-            : code === 'wallet-persist' || code === 'password-persist'
-              ? t('errWalletPersist')
-              : code === 'wallet-other-app' || code.includes('wallet-other-app')
-                ? t('errWalletOtherApp')
-                : t('appWalletFailed')
+        lockStoreFailureText(code, t) ||
+          (code === 'phrase' || code.includes('phrase')
+            ? t('seedInvalid')
+            : code === 'device-bound'
+              ? t('errDeviceBound')
+              : code === 'wallet-persist'
+                ? t('errWalletPersist')
+                : code === 'wallet-other-app' || code.includes('wallet-other-app')
+                  ? t('errWalletOtherApp')
+                  : t('appWalletFailed'))
       );
     } finally {
       setBusy(false);
