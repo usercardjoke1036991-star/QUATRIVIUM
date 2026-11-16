@@ -22,12 +22,16 @@ let walletWriteFault = '';
 let walletReplacedOnce = false;
 let failFallbackRestore = false;
 let secureReadThrow = '';
+let secureReadThrowDelayMs = 0;
+let secureReadThrowOnce = false;
+let stalePasswordReadMs = 0;
 let deleteThrowKey = '';
 let readDelayMs = 0;
 let readDelayKey = '';
 let writeDelayMs = 0;
 let writeDelayKey = '';
 let fallbackRemoveDelayMs = 0;
+let passwordWritePlanMs = [];
 let writeHang = false;
 let releaseHungWrite = () => {};
 let acceptPasswordWrites = true;
@@ -55,7 +59,16 @@ installMock('expo-secure-store', {
     } else if (secretMeta.get(key) && secretMeta.get(key).requireAuthentication) {
       throw new Error('auth-required');
     }
-    if (secureReadThrow && key === secureReadThrow) throw new Error('io');
+    if (secureReadThrow && key === secureReadThrow) {
+      const delay = secureReadThrowDelayMs;
+      if (secureReadThrowOnce) {
+        secureReadThrow = '';
+        secureReadThrowDelayMs = 0;
+        secureReadThrowOnce = false;
+      }
+      if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
+      throw new Error('io');
+    }
     if (passwordReadBudget > 0 && key === 'quatrivium.lock.password') {
       passwordReads += 1;
       if (passwordReads === passwordReadBudget) throw new Error('io');
@@ -98,6 +111,13 @@ installMock('expo-secure-store', {
         }
       }
     }
+    if (stalePasswordReadMs > 0 && key === 'quatrivium.lock.password') {
+      const snapshot = memory.has(key) ? memory.get(key) : null;
+      const delay = stalePasswordReadMs;
+      stalePasswordReadMs = 0;
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      return snapshot;
+    }
     return memory.has(key) ? memory.get(key) : null;
   },
   async setItemAsync(key, value, options) {
@@ -108,7 +128,10 @@ installMock('expo-secure-store', {
       });
       if (!acceptPasswordWrites) return;
     }
-    if (writeDelayMs > 0 && (!writeDelayKey || key === writeDelayKey)) {
+    if (key === 'quatrivium.lock.password' && passwordWritePlanMs.length > 0) {
+      const planned = passwordWritePlanMs.shift();
+      if (planned > 0) await new Promise((resolve) => setTimeout(resolve, planned));
+    } else if (writeDelayMs > 0 && (!writeDelayKey || key === writeDelayKey)) {
       await new Promise((resolve) => setTimeout(resolve, writeDelayMs));
     }
     if (failPasswordWrite && key === 'quatrivium.lock.password') throw new Error('disk');
@@ -255,6 +278,9 @@ describe('app lock PBKDF2', function () {
     walletReplacedOnce = false;
     failFallbackRestore = false;
     secureReadThrow = '';
+    secureReadThrowDelayMs = 0;
+    secureReadThrowOnce = false;
+    stalePasswordReadMs = 0;
     secureReadHang = '';
     deleteThrowKey = '';
     readDelayMs = 0;
@@ -262,6 +288,7 @@ describe('app lock PBKDF2', function () {
     writeDelayMs = 0;
     writeDelayKey = '';
     fallbackRemoveDelayMs = 0;
+    passwordWritePlanMs = [];
     acceptPasswordWrites = false;
     const release = releaseHungWrite;
     writeHang = false;
@@ -3644,5 +3671,160 @@ describe('app lock PBKDF2', function () {
     await lock.setPassword('ClaveC-9zz');
     lock.lockNow();
     expect((await lock.checkPassword('ClaveC-9zz')).ok, 'abreC').to.equal(true);
+  });
+
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  async function seedHeldWallet() {
+    const { sha256 } = require('@noble/hashes/sha2');
+    kdf.setPbkdf2ForTests(async (secret) => sha256(secret));
+    await lock.setPassword('ClaveP-9zz');
+    const created = wallet.generateSecretPhrase();
+    await wallet.importFromPhrase(created.phrase, { markBackedUp: false });
+  }
+
+  async function startLateA(arm) {
+    const started = Date.now();
+    writeDelayKey = PASSWORD_SLOT;
+    writeDelayMs = 25000;
+    const pending = lock.setPassword('ClaveA-9zz').then(
+      () => 'ok',
+      (error) => (error instanceof Error ? error.message : 'throw')
+    );
+    await sleep(500);
+    arm();
+    return { started, first: await pending };
+  }
+
+  async function stopLateDelays() {
+    writeDelayMs = 0;
+    writeDelayKey = '';
+    fallbackRemoveDelayMs = 0;
+    passwordWritePlanMs = [];
+    secureReadThrow = '';
+    secureReadThrowDelayMs = 0;
+    secureReadThrowOnce = false;
+    stalePasswordReadMs = 0;
+    await sleep(4000);
+  }
+
+  it('keeps the newer password when it starts after the cleanup passed its wait', async function () {
+    this.timeout(45000);
+    const kept = 'ClaveP-9zz';
+    const later = 'ClaveB-9zz';
+    await seedHeldWallet();
+    const { started, first } = await startLateA(() => {
+      secureReadThrow = PASSWORD_SLOT;
+      secureReadThrowDelayMs = 400;
+      secureReadThrowOnce = true;
+    });
+    const wait = 25050 - (Date.now() - started);
+    if (wait > 0) await sleep(wait);
+    writeDelayMs = 60;
+    fallbackRemoveDelayMs = 2000;
+    const settled = await lock.setPassword(later).then(
+      () => 'ok',
+      (error) => (error instanceof Error ? error.message : 'throw')
+    );
+    await stopLateDelays();
+    expect(first, 'primero').to.equal('password-persist');
+    expect(settled, 'b').to.equal('ok');
+    lock.lockNow();
+    expect((await lock.checkPassword(later)).ok, 'abreB').to.equal(true);
+    const opened = await wallet.ensureAppWallet();
+    expect(Boolean(opened.address), 'address').to.equal(true);
+    expect((await lock.checkPassword(kept)).ok, 'abreP').to.equal(false);
+    expect((await lock.checkPassword('ClaveA-9zz')).ok, 'abreA').to.equal(false);
+  });
+
+  it('keeps the newer password when a slow re-read returns the old value', async function () {
+    this.timeout(45000);
+    const kept = 'ClaveP-9zz';
+    const later = 'ClaveB-9zz';
+    await seedHeldWallet();
+    const { started, first } = await startLateA(() => {
+      stalePasswordReadMs = 400;
+    });
+    const wait = 25050 - (Date.now() - started);
+    if (wait > 0) await sleep(wait);
+    writeDelayMs = 60;
+    fallbackRemoveDelayMs = 2000;
+    const settled = await lock.setPassword(later).then(
+      () => 'ok',
+      (error) => (error instanceof Error ? error.message : 'throw')
+    );
+    await stopLateDelays();
+    expect(first, 'primero').to.equal('password-persist');
+    expect(settled, 'b').to.equal('ok');
+    lock.lockNow();
+    expect((await lock.checkPassword(later)).ok, 'abreB').to.equal(true);
+    const opened = await wallet.ensureAppWallet();
+    expect(Boolean(opened.address), 'address').to.equal(true);
+    expect((await lock.checkPassword(kept)).ok, 'abreP').to.equal(false);
+    expect((await lock.checkPassword('ClaveA-9zz')).ok, 'abreA').to.equal(false);
+  });
+
+  it('never leaves the wallet sealed with a password that is not stored when two changes overlap', async function () {
+    this.timeout(45000);
+    const next = 'ClaveB-9zz';
+    const last = 'ClaveC-9zz';
+    await seedHeldWallet();
+    const { started, first } = await startLateA(() => {
+      passwordWritePlanMs = [2100, 10];
+    });
+    const waitB = 23000 - (Date.now() - started);
+    if (waitB > 0) await sleep(waitB);
+    fallbackRemoveDelayMs = 2000;
+    const pendingB = lock.setPassword(next).then(
+      () => 'ok',
+      (error) => (error instanceof Error ? error.message : 'throw')
+    );
+    const waitC = 23050 - (Date.now() - started);
+    if (waitC > 0) await sleep(waitC);
+    const pendingC = lock.setPassword(last).then(
+      () => 'ok',
+      (error) => (error instanceof Error ? error.message : 'throw')
+    );
+    const waitRead = 24800 - (Date.now() - started);
+    if (waitRead > 0) await sleep(waitRead);
+    writeDelayMs = 0;
+    writeDelayKey = '';
+    secureReadThrow = PASSWORD_SLOT;
+    secureReadThrowDelayMs = 400;
+    secureReadThrowOnce = true;
+    const settledB = await pendingB;
+    const settledC = await pendingC;
+    await stopLateDelays();
+    expect(first, 'primero').to.equal('password-persist');
+    expect(settledB === 'ok' || settledB === 'keychain-timeout', 'bForma').to.equal(true);
+    expect(settledC === 'ok' || settledC === 'keychain-timeout', 'cForma').to.equal(true);
+    lock.lockNow();
+    function clearGate() {
+      for (const key of [...memory.keys()]) {
+        if (String(key).includes('lock.gate') || String(key).includes('lock.attempts')) {
+          memory.delete(key);
+        }
+      }
+    }
+    const opensB = (await lock.checkPassword(next)).ok;
+    let opensC = false;
+    if (!opensB) {
+      clearGate();
+      opensC = (await lock.checkPassword(last)).ok;
+    }
+    expect(opensB || opensC, 'abre').to.equal(true);
+    let seal = '';
+    try {
+      const opened = await wallet.ensureAppWallet();
+      seal = opened && opened.address ? 'address' : 'vacio';
+    } catch (error) {
+      seal = error instanceof Error ? error.message : 'throw';
+    }
+    expect(seal, 'sello').to.equal('address');
+    expect(settledB, 'b').to.equal('ok');
+    expect(settledC, 'c').to.equal('keychain-timeout');
+    expect(opensB, 'quedaB').to.equal(true);
   });
 });

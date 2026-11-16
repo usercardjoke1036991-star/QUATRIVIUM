@@ -160,7 +160,33 @@ let passwordGeneration = 0;
 let passwordCleanup: Promise<void> = Promise.resolve();
 let committedPassword: string | null = null;
 let passwordNoteSeq = 0;
-let passwordWriteGate: Promise<void> = Promise.resolve();
+let passwordKeyTail: Promise<void> = Promise.resolve();
+
+async function acquirePasswordKey(waitMs: number): Promise<(() => void) | null> {
+  const prev = passwordKeyTail;
+  let release = () => {};
+  const mine = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  passwordKeyTail = prev.then(() => mine);
+  if (waitMs <= 0) {
+    await prev;
+    return release;
+  }
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const won = await Promise.race([
+    prev.then(() => true),
+    new Promise<boolean>((resolve) => {
+      timer = setTimeout(() => resolve(false), waitMs);
+    }),
+  ]);
+  if (timer) clearTimeout(timer);
+  if (!won) {
+    void prev.then(release);
+    return null;
+  }
+  return release;
+}
 
 function notePasswordKey(value: string | null): void {
   committedPassword = value;
@@ -1811,16 +1837,14 @@ export async function setPassword(
   };
   const nextWrap = material.wrap;
   const serialized = JSON.stringify(record);
-  const lateGeneration = passwordGeneration;
-  const lateSeq = passwordNoteSeq;
-  let openGate = () => {};
-  passwordWriteGate = new Promise<void>((resolve) => {
-    openGate = resolve;
-  });
+  const releaseKey = await acquirePasswordKey(4000);
+  if (!releaseKey) throw new Error('keychain-timeout');
   let stored = false;
   let written: PasswordSlots = { secure: null, fallback: null };
   let generation = passwordGeneration;
   try {
+    const lateGeneration = passwordGeneration;
+    const lateSeq = passwordNoteSeq;
     const attempt = SecureStore.setItemAsync(PASSWORD_KEY, serialized, OPTIONS).then(
       () => 'ok' as const,
       () => 'reject' as const
@@ -1852,7 +1876,7 @@ export async function setPassword(
     if (stored) notePasswordKey(serialized);
     generation = ++passwordGeneration;
   } finally {
-    openGate();
+    releaseKey();
   }
   const undo =
     options?.undoable && undoPrior ? openSignupUndo(undoPrior, written, generation) : null;
@@ -2149,12 +2173,13 @@ async function undoLatePasswordWrite(
   lateGeneration: number,
   lateSeq: number
 ): Promise<void> {
+  let releaseKey: (() => void) | null = null;
   try {
     if (outcome !== 'ok') {
       reportLockFault();
       return;
     }
-    await passwordWriteGate;
+    releaseKey = await acquirePasswordKey(0);
     let now: string | null = null;
     try {
       now = await SecureStore.getItemAsync(PASSWORD_KEY);
@@ -2223,6 +2248,8 @@ async function undoLatePasswordWrite(
     reportLockFault();
   } catch {
     reportLockFault();
+  } finally {
+    releaseKey?.();
   }
 }
 
