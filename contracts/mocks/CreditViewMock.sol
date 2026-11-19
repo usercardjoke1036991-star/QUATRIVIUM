@@ -11,6 +11,11 @@ contract CreditViewMock {
     bool public paused;
     address public owner;
     IERC20 public payToken;
+    address public fundador;
+
+    function setFundador(address f) external {
+        fundador = f;
+    }
 
     function redGenealogica(address usuario) external view returns (address padre, bool bonoActivacionCobrado) {
         return (padreOf[usuario], false);

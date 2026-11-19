@@ -28,7 +28,7 @@ La escalera de 1000 niveles y los porcentajes de arriba no se tocan sin una orde
 
 | Archivo | Rol |
 | --- | --- |
-| `contracts/QuatriviumCredit.sol` | Préstamos, pool, interés, liquidación, admins, sequencer, fondo. Forge (runtime): 23132 bytes, 1444 libres de 24576. Hardhat (`deployedBytecode`): 23322 bytes, 1254 libres. |
+| `contracts/QuatriviumCredit.sol` | Préstamos, pool, interés, liquidación, admins, sequencer, fondo. Forge (runtime): 23007 bytes, 1569 libres de 24576. Hardhat (`deployedBytecode`): 23215 bytes, 1361 libres. |
 | `contracts/QuatriviumAlta.sol` | Alta de 4 LUSD. |
 | `contracts/QuatriviumReserva.sol` | Bloqueos y bote. |
 | `contracts/QuatriviumFamaCaja.sol` | Fama, canje y racha. |
@@ -53,7 +53,7 @@ Despliegue, solo con orden explícita: `CONFIRM_MAINNET=yes npm run deploy:arbit
 
 ## Estado
 
-Rama `cursor/soberania-contratos-8e15`. Hardhat 486, Foundry 80. El mapa de commits está en `HANDOFF.md`.
+Rama `cursor/soberania-contratos-8e15`. Hardhat 496, Foundry 83. El mapa de commits está en `HANDOFF.md`.
 
 Abierto, sin arreglar: dos hallazgos bajos del alta (segunda cuenta, y `soltarPadrino` si el padre viniera vacío). NIP-17/44 sigue sin hacerse: `prepareNostrPayload` en `utils/sovereignSurface.ts` devuelve null. `tmp` quedó en 0.2.7. `image-size` sigue alto: la 2.0.3 rompe el paquete de Android.
 

@@ -52,11 +52,11 @@ Rama `cursor/soberania-contratos-8e15`. La medición de este apartado es la de e
 
 | Pieza | Bytes | Libres |
 | --- | --- | --- |
-| QuatriviumCredit (forge, runtime) | 23132 | 1444 |
-| QuatriviumCredit (Hardhat, deployedBytecode) | 23322 | 1254 |
-| QuatriviumCreditHarness | 24524 | 52 |
+| QuatriviumCredit (forge, runtime) | 23007 | 1569 |
+| QuatriviumCredit (Hardhat, deployedBytecode) | 23215 | 1361 |
+| QuatriviumCreditHarness | 24417 | 159 |
 
-Un pago de 40 generaciones usó 1246495 de gas (el test lo imprime y exige menos de 3 000 000). Foundry con `FOUNDRY_PROFILE=ci`: 80 pruebas en verde. Los invariantes corrieron 256 veces, 204800 llamadas y 0 reversiones. Hardhat: 486 pruebas en verde.
+Un pago de 40 generaciones usó 1246495 de gas (el test lo imprime y exige menos de 3 000 000). Foundry con `FOUNDRY_PROFILE=ci`: 83 pruebas en verde. Los invariantes corrieron 256 veces, 204800 llamadas y 0 reversiones. Hardhat: 496 pruebas en verde.
 
 Slither, compilación nueva, `fail_on: high`: 25 resultados, 0 altos, 0 medios, 15 bajos, 10 de optimización. Los medios que no eran un fallo llevan `slither-disable-next-line` con el motivo en la misma línea. No se cambió la lógica de `_soloEOA`, Alta ni Reserva. Los 15 bajos, uno por uno:
 
@@ -104,7 +104,7 @@ Un PIN de 6 dígitos solo tiene 1 000 000 de combinaciones. La protección real 
 
 Fecha de la revisión inicial: 10 de noviembre de 2026 (America/Caracas).
 
-Fecha de la revisión de la última medición: 16 de noviembre de 2026, commit `9ac28b2`. Rama `cursor/soberania-contratos-8e15`. Medición de ahora: Hardhat 486, Foundry 80. Credit en forge (runtime): 23132 bytes, 1444 libres de 24576. Credit en Hardhat (`deployedBytecode`): 23322 bytes, 1254 libres de 24576.
+Fecha de la revisión de la última medición: 16 de noviembre de 2026, commit `9ac28b2`. Rama `cursor/soberania-contratos-8e15`. Medición de ahora: Hardhat 496, Foundry 83. Credit en forge (runtime): 23007 bytes, 1569 libres de 24576. Credit en Hardhat (`deployedBytecode`): 23215 bytes, 1361 libres de 24576.
 
 La clave del historial (commits `10553d4` y `dc40f15`, archivo `.env.worker.example`) ya fue revocada. No está en el árbol. El valor no se copia y la historia no se reescribe.
 
@@ -314,7 +314,7 @@ El alta on-chain no manda «el resto» al pool de préstamos en el mismo momento
 | --- | --- | --- |
 | Muchas cuentas para cobrar el 1 del padrino | El 1 LUSD sale del alta que la misma persona pagó | Alta de 4 LUSD por cuenta. El neto no es ganancia. |
 | Inflar la racha con préstamos de nivel 1 | Nada | La racha solo cuenta nivel 2 o más y a tiempo (`QuatriviumFamaCaja.sol`, comentario de línea 321 y `_contarCierre`). |
-| No pagar a propósito | Se queda el principal hasta la liquidación | A las 48 horas más el sequencer, un tercero paga la deuda y cobra como mucho el interés. El principal vuelve al pool. |
+| No pagar a propósito | Se queda el principal | A las 48 horas más la gracia del sequencer, cualquiera puede liquidar y cobra un premio (como mucho el 5 % del principal restante, sin pasar del interés restante) que sale del contrato. El principal no vuelve: lo absorben el fondo de seguro y, si no alcanza, el pool. El deudor conserva su nivel y puede volver a pedir tras el cooldown (`test/liquidation.test.js:84`); si eso se limita está pendiente de decisión del dueño (QA-C-01). |
 | Préstamo relámpago | — | Entrada (alta, depósito, préstamo y liquidación): `msg.sender == tx.origin` y `code.length == 0`. `pagarPrestamo` solo cobra la deuda de `msg.sender`. |
 | Vaciar el fondo de seguro | Como mucho el premio de una liquidación, ya acotado | `cubrirImpago` no transfiere a una billetera arbitraria. |
 | Spam de altas | Cada alta cuesta 4 LUSD al atacante | No quema el gas de otro. |

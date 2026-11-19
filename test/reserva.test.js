@@ -24,6 +24,7 @@ async function deployReserva() {
   await token.connect(founder).approve(await reserva.getAddress(), ethers.MaxUint256);
   await credit.setNivel(user.address, 10);
   await credit.setAdmin(founder.address, true);
+  await credit.setFundador(founder.address);
   await credit.setPayToken(await token.getAddress());
   await token.mint(await credit.getAddress(), ethers.parseUnits('1000', 18));
   return { token, credit, reserva, owner, user, extra, founder };

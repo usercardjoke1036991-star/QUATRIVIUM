@@ -316,6 +316,7 @@ contract QuatriviumAuditForgeTest is Test {
         radmins[0] = founder;
         radmins[1] = locker;
         radmins[2] = address(1);
+        vista.setFundador(founder);
         QuatriviumReserva reserva = new QuatriviumReserva(address(token), founder, address(vista), address(vista), address(1), radmins);
         vista.setAdmin(founder, true);
         vista.setNivel(locker, 10);

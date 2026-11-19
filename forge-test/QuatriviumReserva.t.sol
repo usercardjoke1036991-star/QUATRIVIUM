@@ -76,6 +76,7 @@ contract QuatriviumReservaForgeTest is Test {
         radmins[0] = founder;
         radmins[1] = address(0xB0B);
         radmins[2] = address(0xB0C);
+        credit.setFundador(founder);
         reserva = new QuatriviumReserva(address(token), founder, address(credit), address(credit), address(1), radmins);
         handler = new ReservaHandler(reserva, token, founder, credit);
         targetContract(address(handler));
@@ -99,6 +100,7 @@ contract QuatriviumReservaForgeTest is Test {
         localAdmins[0] = founder;
         localAdmins[1] = locker;
         localAdmins[2] = address(1);
+        credit.setFundador(founder);
         QuatriviumReserva local = new QuatriviumReserva(address(token), founder, address(credit), address(credit), address(1), localAdmins);
         credit.setNivel(locker, 10);
         credit.setPayToken(address(token));

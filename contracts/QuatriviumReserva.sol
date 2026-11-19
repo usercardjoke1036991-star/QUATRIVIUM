@@ -17,6 +17,7 @@ interface IQuatriviumCreditView {
         view
         returns (uint256 nivelActual, uint256 solicitudesCompletadas, uint256 ultimoPrestamoTimestamp);
     function admins(address) external view returns (bool);
+    function fundador() external view returns (address);
 }
 
 /**
@@ -41,7 +42,6 @@ contract QuatriviumReserva is ReentrancyGuard {
     uint256 public constant MAX_ADMINS = 3;
 
     IERC20 public immutable token;
-    address public immutable fundador;
     address public immutable credit;
     address public immutable famaCaja;
     uint256 public bote;
@@ -126,7 +126,6 @@ contract QuatriviumReserva is ReentrancyGuard {
         }
         if (admins_.length != MAX_ADMINS) revert Quorum();
         token = IERC20(token_);
-        fundador = fundador_;
         credit = credit_;
         famaCaja = famaCaja_;
         altaFuente = alta_;
@@ -138,6 +137,10 @@ contract QuatriviumReserva is ReentrancyGuard {
         }
         allowedAdminSelector[this.addAdmin.selector] = true;
         allowedAdminSelector[this.removeAdmin.selector] = true;
+    }
+
+    function fundador() public view returns (address) {
+        return IQuatriviumCreditView(credit).fundador();
     }
 
     function tramo(uint256 principal) public pure returns (uint256) {
@@ -255,7 +258,7 @@ contract QuatriviumReserva is ReentrancyGuard {
         boostPagado[beneficiario] += extra;
         uint256 userPay = extra - founderCut;
         if (userPay > 0) IFamaPoolPay(famaCaja).pagarDesdePool(beneficiario, userPay);
-        if (founderCut > 0) IFamaPoolPay(famaCaja).pagarDesdePool(fundador, founderCut);
+        if (founderCut > 0) IFamaPoolPay(famaCaja).pagarDesdePool(fundador(), founderCut);
         emit BoostComision(beneficiario, montoBase, extra, founderCut);
     }
 
@@ -378,7 +381,7 @@ contract QuatriviumReserva is ReentrancyGuard {
             token.safeTransfer(msg.sender, principal);
         }
         if (userPay > 0) token.safeTransfer(msg.sender, userPay);
-        if (founderCut > 0) token.safeTransfer(fundador, founderCut);
+        if (founderCut > 0) token.safeTransfer(fundador(), founderCut);
     }
 
     function _pagarRendimiento(Posicion memory p) internal returns (uint256 userPay, uint256 founderCut) {

@@ -267,6 +267,7 @@ contract QuatriviumEip7702Test is Test {
         QuatriviumReserva local = new QuatriviumReserva(
             address(token), owner, address(vista), address(vista), address(1), radmins
         );
+        vista.setFundador(owner);
         vista.setNivel(locker, 10);
         token.mint(locker, 10 ether);
         vm.prank(locker, locker);

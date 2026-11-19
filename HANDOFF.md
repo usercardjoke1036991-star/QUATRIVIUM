@@ -79,9 +79,9 @@ Todas en `cursor/soberania-contratos-8e15`. PR: https://github.com/usercardjoke1
 
 ## 5. Números
 
-Medidos en `cursor/soberania-contratos-8e15` con `allowUnlimitedContractSize: false`. `QuatriviumCredit` en forge (runtime): 23132 bytes, 1444 libres de 24576. En Hardhat (`deployedBytecode`): 23322 bytes, 1254 libres. El harness de prueba: 24524 bytes, 52 libres (forge, runtime: 24356 bytes, 220 libres). Un pago de 40 generaciones: 1246495 de gas, por debajo de 3 000 000.
+Medidos en `cursor/soberania-contratos-8e15` con `allowUnlimitedContractSize: false`. `QuatriviumCredit` en forge (runtime): 23007 bytes, 1569 libres de 24576. En Hardhat (`deployedBytecode`): 23215 bytes, 1361 libres. El harness de prueba: 24417 bytes, 159 libres (forge, runtime: 24231 bytes, 345 libres). Un pago de 40 generaciones: 1246495 de gas, por debajo de 3 000 000.
 
-Hardhat: 486 pruebas en verde. Foundry con `FOUNDRY_PROFILE=ci`: 80 pruebas en verde. Tres invariantes: 256 corridas, 204800 llamadas, 0 reversiones.
+Hardhat: 496 pruebas en verde. Foundry con `FOUNDRY_PROFILE=ci`: 83 pruebas en verde. Tres invariantes: 256 corridas, 204800 llamadas, 0 reversiones.
 
 Slither: 25 resultados, 0 altos, 0 medios, 15 bajos, 10 optimizaciones. `tmp` está en 0.2.7 por `overrides`. `image-size` sigue alto: 2.0.3 rompe el paquete de Android. Expo, Metro, Hardhat y solc no subieron de versión mayor.
 
@@ -122,13 +122,14 @@ Orden de prioridad:
 6. **Incompleto a propósito en el código actual:**
    - Nostr no abre un websocket ni ofrece mensaje privado: `prepareNostrPayload` devuelve null. La mora sigue bloqueada.
    - El hash del APK instalado no se calcula en el teléfono. Sin registro, la UI dice «versión no verificada».
-   - Credit mide 23132 bytes, 1444 libres de 24576. Cualquier lógica nueva en ese contrato puede no caber. Preferir un contrato hermano, como ya se hizo con Apk, Leveling y LoanLadder.
+   - Credit mide 23007 bytes, 1569 libres de 24576. Cualquier lógica nueva en ese contrato puede no caber. Preferir un contrato hermano, como ya se hizo con Apk, Leveling y LoanLadder.
+   - Para pasar un admin a un Safe: `node scripts/setup-safe-admin.cjs 0xSafe 0xAdminSaliente`, que da 2 pasos por contrato (quitar y luego añadir), en Credit y en Reserva.
 7. La clave que estuvo en el historial (commits `10553d4` y `dc40f15`, archivo `.env.worker.example`) ya fue revocada por Jose. No está en el árbol. No se reescribe la historia y no se copia el valor.
 
 ## 8. Riesgos
 
-- 1444 bytes libres en Credit (23132 de 24576). No añadir funciones ahí sin medir `deployedBytecode`.
-- Hardhat tiene `allowUnlimitedContractSize: false`. El tamaño que cuenta es el `deployedBytecode` del artifact: Credit 23322 bytes, 1254 libres de 24576 (forge, runtime: 23132, 1444 libres).
+- 1569 bytes libres en Credit (23007 de 24576). No añadir funciones ahí sin medir `deployedBytecode`.
+- Hardhat tiene `allowUnlimitedContractSize: false`. El tamaño que cuenta es el `deployedBytecode` del artifact: Credit 23215 bytes, 1361 libres de 24576 (forge, runtime: 23007, 1569 libres).
 - Los `require` de texto se borran del bytecode (`revertStrings: strip`). Los tests no pueden usar `revertedWith("mensaje")` para esos revert. Los errores con nombre (`SequencerFeedRequerido`, `SoloFundador`) sí se distinguen.
 - La pausa de préstamos nuevos exige 2 de 3 y 72 h. Se levanta sola a los 7 días y luego hay 7 de descanso. No frena pagos ni liquidaciones.
 - El pool y el fondo de seguro no tienen retiro. Un error en el reparto no se «arregla» sacando el dinero.

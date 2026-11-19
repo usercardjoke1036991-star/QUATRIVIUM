@@ -732,7 +732,7 @@ contract QuatriviumCredit is ReentrancyGuard {
         uint256 interesYa = (interesDue * pagadoAntes) / totalDue;
         uint256 interesParte = pago == restante
             ? interesDue - interesYa
-            : (interesDue * pago) / totalDue;
+            : (interesDue * (pagadoAntes + pago)) / totalDue - interesYa;
         if (interesParte > pago) interesParte = pago;
         _reducirOutstanding(token, pago - interesParte);
         // slither-disable-next-line reentrancy-no-eth // pagarPrestamo ya sostiene nonReentrant durante estas llamadas
@@ -747,10 +747,6 @@ contract QuatriviumCredit is ReentrancyGuard {
             return;
         }
 
-        uint256 prevOut = (principalDue * pagadoAntes) / totalDue;
-        if (principalDue > prevOut + (pago - interesParte)) {
-            _reducirOutstanding(token, principalDue - prevOut - (pago - interesParte));
-        }
         bool enPlazo = plan.enPlazo;
         _subirNivelSiATiempo(deudor, enPlazo);
         _limpiarPrestamo(deudor);
@@ -906,8 +902,9 @@ contract QuatriviumCredit is ReentrancyGuard {
         uint256 pagado = planPago[deudor].pagado;
         require(totalDue > pagado, "already paid");
         uint256 restante = totalDue - pagado;
-        uint256 interestRestante = (interest * restante) / totalDue;
-        uint256 principalRestante = principal - ((principal * pagado) / totalDue);
+        uint256 interesYaPagado = (interest * pagado) / totalDue;
+        uint256 interestRestante = interest - interesYaPagado;
+        uint256 principalRestante = principal - (pagado - interesYaPagado);
 
         // El liquidador no aporta el principal. Solo el gas puede dejarlo en negativo:
         // el premio sale del contrato y él no transfiere LUSD.
