@@ -24,7 +24,7 @@ function extractRawError(error: unknown): string {
   );
 }
 
-const REVERT_KEYS: Array<[string, TranslationKey]> = [
+const REVERT_KEYS: [string, TranslationKey][] = [
   ['kyc required', 'errKycRequired'],
   ['identity required', 'errIdentityRequired'],
   ['email-required', 'errEmailRequired'],
@@ -45,7 +45,6 @@ const REVERT_KEYS: Array<[string, TranslationKey]> = [
   ['daily origination cap', 'errDailyCap'],
   ['utilization cap', 'errUtilizationCap'],
   ['loan already active', 'errLoanAlreadyActive'],
-  ['no price feed', 'errNoPriceFeed'],
   ['no contracts', 'errNoContracts'],
   ['only timelock', 'errOnlyTimelock'],
   ['timelock', 'errTimelock'],
@@ -57,8 +56,6 @@ const REVERT_KEYS: Array<[string, TranslationKey]> = [
   ['founder', 'errFounderDestroy'],
   ['cooldown 48h', 'errCooldown48h'],
   ['insufficient liquidity', 'errInsufficientLiquidity'],
-  ['peg lost', 'errPegLost'],
-  ['price data too stale', 'errStalePrice'],
   ['unsupported token', 'errUnsupportedToken'],
   ['token mismatch', 'errTokenMismatch'],
   ['insufficient amount', 'errInsufficientAmount'],
@@ -76,20 +73,23 @@ const REVERT_KEYS: Array<[string, TranslationKey]> = [
   ['EnforcedPause', 'errPaused'],
   ['RPC chain mismatch', 'errRpcMismatch'],
   ['El RPC no ve el contrato', 'errRpcNoContract'],
+  ['rpc-money-mismatch', 'rpcMoneyUnconfirmed'],
+  ['pending-nonce', 'rpcSendPending'],
+  ['nonce-unconfirmed', 'rpcNonceUnconfirmed'],
   ['wrong-network-demo', 'linkWalletNetworkDemo'],
   ['wrong-network', 'errWrongNetwork'],
   ['La billetera está en otra red', 'errWrongNetwork'],
   ['La billetera no reporta red', 'errWrongNetwork'],
   ['INSUFFICIENT_FUNDS', 'errNeedGas'],
   ['insufficient funds', 'errNeedGas'],
-  ['platform-fee-bnb', 'errNeedGas'],
   ['demo-identity', 'demoPrepFailed'],
-  ['attester', 'demoPrepFailed'],
   ['notify', 'otpNeedApi'],
   ['rate', 'otpRate'],
   ['internal-wallet-only', 'errInternalOnly'],
   ['no-admin-proposal', 'errNoAdminProposal'],
-  ['tx-timeout', 'txWaitTimeout'],
+  ['broadcast-unseen', 'rpcSendUnseen'],
+  ['tx-pending', 'rpcSendPending'],
+  ['tx-timeout', 'rpcSendPending'],
   ['tx-reverted', 'txFailed'],
   ['user rejected', 'errRejected'],
   ['User rejected', 'errRejected'],
@@ -121,6 +121,7 @@ const REVERT_KEYS: Array<[string, TranslationKey]> = [
   ['invalid feed', 'adminInvalidAddress'],
   ['pool locked', 'poolLockedNote'],
   ['weak-pin', 'lockPinWeak'],
+  ['pbkdf2-missing', 'lockKdfMissing'],
   ['weak-password', 'lockPasswordWeak'],
   ['password-key', 'lockPasswordPrivateKey'],
   ['wrong-pin', 'lockPinWrong'],
@@ -145,7 +146,10 @@ export function humanizeTxError(error: unknown): string {
   const match = REVERT_KEYS.find(([needle]) => raw.includes(needle));
   if (match) {
     const key = match[1] === 'errEmptyRevert' ? emptyRevertKey() : match[1];
-    return table[key];
+    const text = table[key];
+    const hash = (error as { hash?: string }).hash || '';
+    if (key === 'rpcSendPending' && /^0x[0-9a-fA-F]{64}$/.test(hash)) return `${text} ${hash}`;
+    return text;
   }
   if (/execution reverted/i.test(raw) && !/execution reverted:\s+\S/i.test(raw)) {
     return table[emptyRevertKey()];

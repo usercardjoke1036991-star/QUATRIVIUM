@@ -14,7 +14,7 @@ describe('security audit remediations', function () {
       .reverted;
     const fresh = await deployProtocol();
     await seedPool(fresh.token, fresh.contract, fresh.owner, '50');
-    await fresh.contract.connect(fresh.user).registrarHumanoConPadre(ethers.ZeroAddress);
+    await registerAndFund(fresh.token, fresh.contract, fresh.user);
     await expect(fresh.contract.connect(fresh.user).solicitarPrestamo(fresh.tokenAddr, 0)).to.not.be
       .reverted;
   });
@@ -28,24 +28,50 @@ describe('security audit remediations', function () {
     expect(await token.balanceOf(user.address)).to.equal(before);
   });
 
-  it('binds FundsConfirm to Keystore wrap and fail-closed empty queues', function () {
+  it('elige hardware cuando el dispositivo lo tiene y migra el PIN viejo', async function () {
+    require('ts-node/register');
+    const {
+      wrapStoreMode,
+      needsPinUpgrade,
+      PIN_PBKDF2_ROUNDS,
+      PIN_SPLIT,
+      pbkdf2Sha256Hex,
+      PIN_KDF,
+    } = require('../utils/pinKdf.ts');
+    const { lockoutMs, remainingLockMs } = require('../utils/pinPolicy.ts');
+    expect(wrapStoreMode(true)).to.equal('hardware');
+    expect(wrapStoreMode(false)).to.equal('software');
+    expect(needsPinUpgrade({ kdf: 'sha256', rounds: 20_000 })).to.equal(true);
+    expect(needsPinUpgrade({ kdf: PIN_KDF, rounds: PIN_PBKDF2_ROUNDS })).to.equal(true);
+    expect(needsPinUpgrade({ kdf: PIN_KDF, rounds: PIN_PBKDF2_ROUNDS, split: 1 })).to.equal(true);
+    expect(needsPinUpgrade({ kdf: PIN_KDF, rounds: PIN_PBKDF2_ROUNDS, split: PIN_SPLIT })).to.equal(
+      true
+    );
+    expect(
+      needsPinUpgrade({ kdf: PIN_KDF, rounds: PIN_PBKDF2_ROUNDS, split: PIN_SPLIT, device: 1 })
+    ).to.equal(false);
+    expect(
+      needsPinUpgrade({ kdf: PIN_KDF, rounds: 600_000, split: PIN_SPLIT, device: 1 })
+    ).to.equal(true);
+    const hash = await pbkdf2Sha256Hex('847291', 'sal-prueba', 2);
+    expect(hash).to.match(/^[0-9a-f]{64}$/);
+    const again = await pbkdf2Sha256Hex('847291', 'sal-prueba', 2);
+    expect(again).to.equal(hash);
+    expect(PIN_PBKDF2_ROUNDS).to.equal(9_000);
+    expect(PIN_PBKDF2_ROUNDS).to.be.below(600_000);
+    const now = 5_000;
+    expect(remainingLockMs(now + lockoutMs(2), now)).to.equal(60_000);
     const funds = fs.readFileSync(
       path.join(__dirname, '..', 'components', 'FundsConfirmHost.tsx'),
       'utf8'
     );
-    expect(funds).to.include('loadWrapFromBiometric');
-    expect(funds).to.not.include('authenticateBiometric');
     expect(funds).to.include('if (!queue.length) return false');
-    expect(funds).to.not.include('if (!queue.length) return true');
-    const lock = fs.readFileSync(path.join(__dirname, '..', 'services', 'appLock.ts'), 'utf8');
-    expect(lock).to.include("biometricsSecurityLevel: 'strong'");
-    expect(lock).to.include('PIN_ROUNDS = 20_000');
-    expect(lock).to.include('SecureStore.getItemAsync(RECOVERY_WRAP, BIO_WRAP_OPTIONS)');
     const fama = fs.readFileSync(
       path.join(__dirname, '..', 'contracts', 'libraries', 'QuatriviumFamaLib.sol'),
       'utf8'
     );
-    expect(fama).to.include('PEG_MAX_EDAD = 25 hours');
+    expect(fama).to.not.include('PEG_MAX_EDAD');
+    expect(fama).to.include('function altaRegistrada');
     expect(fama).to.include('_avisarReserva');
     expect(fama).to.not.include('recoverAttest');
     const reserva = fs.readFileSync(
@@ -53,11 +79,13 @@ describe('security audit remediations', function () {
       'utf8'
     );
     expect(reserva).to.include('function boostIdOf');
-    expect(reserva).to.include('function applyFamaCaja');
+    expect(reserva).to.not.include('function applyFamaCaja');
     expect(reserva).to.include('BOOST_GAP');
     expect(reserva).to.include('BOOST_DIA_TOPE');
-    expect(reserva).to.include('function addGuardian');
-    expect(reserva).to.include('function pausarBoost');
+    expect(reserva).to.not.include('function addGuardian');
+    expect(reserva).to.include('function proponerAdmin');
+    expect(reserva).to.not.include('function proponerRetiroBote');
+    expect(reserva).to.not.include('function pausarBoost');
   });
 
   it('keeps leftover translation scripts free of password-named keys', function () {

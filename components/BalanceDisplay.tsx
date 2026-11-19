@@ -29,10 +29,15 @@ export const BalanceDisplay: React.FC<BalanceDisplayProps> = ({
         <View style={styles.valueRow}>
           <TokenLogo symbol={selectedTokenSymbol} size={18} />
           <AppText style={[styles.balanceValue, { color: colors.connect }]}>
-            {balances.tokenBalance} {selectedTokenSymbol}
+            {balances.moneyUnconfirmed ? '—' : balances.tokenBalance} {selectedTokenSymbol}
           </AppText>
         </View>
       </View>
+      {balances.moneyUnconfirmed ? (
+        <AppText style={[styles.hint, { color: colors.warnText || colors.textMuted }]}>
+          {t('rpcMoneyUnconfirmed')}
+        </AppText>
+      ) : null}
       <AppText style={[styles.hint, { color: colors.textMuted }]}>{t('walletVsPoolHint')}</AppText>
     </View>
   );

@@ -20,6 +20,7 @@ interface PoolSupportSectionProps {
   poolOutstanding?: string;
   poolCash?: string;
   lpBalance?: string;
+  moneyUnconfirmed?: boolean;
   walletConnected: boolean;
   paused?: boolean;
   onDepositPool: (amount: string) => void;
@@ -33,6 +34,7 @@ export const PoolSupportSection: React.FC<PoolSupportSectionProps> = ({
   poolOutstanding,
   poolCash,
   lpBalance,
+  moneyUnconfirmed = false,
   walletConnected,
   paused = false,
   onDepositPool,
@@ -77,14 +79,16 @@ export const PoolSupportSection: React.FC<PoolSupportSectionProps> = ({
               },
             ]}
           >
-            {t('poolDestination', { amount: `${poolBalance} ${tokenSymbol}` })}
+            {moneyUnconfirmed
+              ? t('rpcMoneyUnconfirmed')
+              : t('poolDestination', { amount: `${poolBalance} ${tokenSymbol}` })}
           </AppText>
         ) : !contractReady ? (
           <AppText style={[styles.warn, { color: colors.warnText }]}>
             {t('liveCreditNotReady')}
           </AppText>
         ) : null}
-        {showNav && poolCash && poolOutstanding ? (
+        {showNav && poolCash && poolOutstanding && !moneyUnconfirmed ? (
           <AppText style={[styles.locked, { color: colors.textMuted }]}>
             {t('poolNavExplain', {
               cash: `${poolCash} ${tokenSymbol}`,

@@ -9,6 +9,8 @@ interface ICreditAlta {
     function fundador() external view returns (address);
     function pagarVerificacion(address token_, uint256 amount) external;
     function verificadoAlPool(address) external view returns (uint256);
+    function cobradorListo(address) external view returns (bool);
+    function ingresarAlPool(address token_, uint256 amount) external;
 }
 
 interface IReservaAlta {
@@ -49,7 +51,7 @@ contract QuatriviumAlta is ReentrancyGuard {
     }
 
     function pagarRegistro() external nonReentrant {
-        if (tx.origin != msg.sender) revert SoloEOA();
+        if (msg.sender != tx.origin || msg.sender.code.length != 0) revert SoloEOA();
         if (registroHecho[msg.sender] || padrinoApartado[msg.sender] != 0) revert YaRegistro();
         address fundador = credit.fundador();
         if (fundador == address(0)) revert DestinoCero();
@@ -60,8 +62,10 @@ contract QuatriviumAlta is ReentrancyGuard {
         token.safeTransfer(fundador, 1e18);
         token.safeTransfer(reserva, 1e18);
         IReservaAlta(reserva).onAlta(1e18);
+        cargoDe = msg.sender;
         token.forceApprove(address(credit), 1e18);
         credit.pagarVerificacion(address(token), 1e18);
+        cargoDe = address(0);
         emit RegistroPagado(msg.sender);
     }
 
@@ -71,6 +75,12 @@ contract QuatriviumAlta is ReentrancyGuard {
         if (monto == 0 || padre == address(0) || padre == deudor) return 0;
         padrinoApartado[deudor] = 0;
         padrinoExpira[deudor] = 0;
+        if (!credit.cobradorListo(padre)) {
+            token.forceApprove(address(credit), monto);
+            credit.ingresarAlPool(address(token), monto);
+            emit PadrinoSoltado(deudor, address(credit), monto);
+            return 0;
+        }
         token.safeTransfer(padre, monto);
         emit PadrinoSoltado(deudor, padre, monto);
         return monto;

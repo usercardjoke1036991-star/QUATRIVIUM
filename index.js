@@ -1,6 +1,4 @@
 // Web3 Polyfills - MUST be imported first
-require('./polyfills.js');
-
 // WalletConnect and other crypto polyfills
 import '@walletconnect/react-native-compat';
 import 'react-native-get-random-values';
@@ -10,6 +8,8 @@ import { LogBox } from 'react-native';
 import { registerRootComponent } from 'expo';
 
 import App from './App';
+
+require('./polyfills.js');
 
 LogBox.ignoreLogs(['User rejected the request', 'Request expired']);
 

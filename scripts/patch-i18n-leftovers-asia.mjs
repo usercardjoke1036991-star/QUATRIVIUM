@@ -2,7 +2,7 @@
 export const PACK_ASIA = {
   id: {
     configWarn: 'Kontrak belum dikonfigurasi.',
-    telegramNeedApi: 'Layanan notifikasi tidak tersedia saat ini.',
+    localNoticeNeed: 'Layanan notifikasi tidak tersedia saat ini.',
     referralHistoryPartial: 'Riwayat terbaru. Komisi lama mungkin tidak tampil.',
     reservaFounderNote: 'Sebagian tambahan dialokasikan untuk operasi platform, sesuai tingkatan.',
     tokenNotEnabled: 'Token belum diaktifkan. Hanya untuk administrator.',
@@ -164,7 +164,7 @@ export const PACK_ASIA = {
   },
   zh: {
     configWarn: '合约未配置。',
-    telegramNeedApi: '通知服务暂时不可用。',
+    localNoticeNeed: '通知服务暂时不可用。',
     referralHistoryPartial: '近期记录。较早的佣金可能未显示。',
     reservaFounderNote: '额外收益的一部分用于平台运营，按档位计算。',
     tokenNotEnabled: '代币未启用。仅限管理员。',
@@ -318,7 +318,7 @@ export const PACK_ASIA = {
   },
   ja: {
     configWarn: '契約が設定されていません。',
-    telegramNeedApi: '通知サービスは現在ご利用いただけません。',
+    localNoticeNeed: '通知サービスは現在ご利用いただけません。',
     referralHistoryPartial: '直近の履歴です。古い手数料は表示されない場合があります。',
     reservaFounderNote: '上乗せ分の一部は段階に応じてプラットフォーム運営に充てられます。',
     tokenNotEnabled: 'トークンは有効ではありません。管理者のみ。',
@@ -473,7 +473,7 @@ export const PACK_ASIA = {
   },
   ko: {
     configWarn: '계약이 구성되지 않았습니다.',
-    telegramNeedApi: '알림 서비스를 지금은 사용할 수 없습니다.',
+    localNoticeNeed: '알림 서비스를 지금은 사용할 수 없습니다.',
     referralHistoryPartial: '최근 기록입니다. 이전 수수료는 빠질 수 있습니다.',
     reservaFounderNote: '추가분의 일부는 구간에 따라 플랫폼 운영에 쓰입니다.',
     tokenNotEnabled: '토큰이 활성화되지 않았습니다. 관리자 전용.',

@@ -73,13 +73,9 @@ function upsert(filePath, key, value) {
 const env = loadMap(envPath);
 const done = [];
 
-if (
-  env.EXPO_PUBLIC_CHAIN_ID &&
-  env.EXPO_PUBLIC_CHAIN_ID !== '421614' &&
-  env.EXPO_PUBLIC_CHAIN_ID !== '97'
-) {
+if (env.EXPO_PUBLIC_CHAIN_ID && env.EXPO_PUBLIC_CHAIN_ID !== '421614') {
   console.error(
-    'Abortado: EXPO_PUBLIC_CHAIN_ID local no es de testnet (421614 / 97). No se toca el .env.'
+    'Abortado: EXPO_PUBLIC_CHAIN_ID local no es Arbitrum Sepolia (421614). No se toca el .env.'
   );
   process.exit(1);
 }

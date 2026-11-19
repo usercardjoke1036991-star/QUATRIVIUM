@@ -1,12 +1,6 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const {
-  deployProtocol,
-  seedPool,
-  registerAndFund,
-  proposeAndExecute,
-  assertNavInvariant,
-} = require('./helpers.cjs');
+const { deployProtocol, seedPool, registerAndFund, assertNavInvariant } = require('./helpers.cjs');
 
 function montoCuota(total, pagado, totales, pagadas) {
   const restante = total - pagado;
@@ -25,8 +19,10 @@ describe('QuatriviumCredit - hardening', function () {
     const { token, contract, owner, tokenAddr } = await deployProtocol();
     await seedPool(token, contract, owner, '500');
     const value = await contract.valorLp(owner.address, tokenAddr);
-    await expect(contract.connect(owner).retirarLiquidez(tokenAddr, value)).to.be.reverted;
-    expect(await contract.valorLp(owner.address, tokenAddr)).to.equal(ethers.parseUnits('500', 18));
+    await expect(
+      contract.connect(owner).retirarLiquidez(tokenAddr, value)
+    ).to.be.revertedWithoutReason();
+    expect(await contract.valorLp(owner.address, tokenAddr)).to.equal(ethers.parseUnits('475', 18));
   });
 
   it('always allows deposits and repayments without any pause gate', async () => {
@@ -37,9 +33,8 @@ describe('QuatriviumCredit - hardening', function () {
 
     await token.mint(owner.address, ethers.parseUnits('10', 18));
     await token.connect(owner).approve(contractAddr, ethers.MaxUint256);
-    await expect(
-      contract.connect(owner).depositarLiquidez(tokenAddr, ethers.parseUnits('10', 18))
-    ).to.not.be.reverted;
+    await expect(contract.connect(owner).depositarLiquidez(tokenAddr, ethers.parseUnits('10', 18)))
+      .to.not.be.reverted;
 
     const debt = await contract.obtenerDeuda(user.address);
     await expect(contract.connect(user).pagarPrestamo(tokenAddr, debt.total)).to.not.be.reverted;
@@ -49,15 +44,15 @@ describe('QuatriviumCredit - hardening', function () {
     const signers = await ethers.getSigners();
     const owner = signers[0];
     const admin2 = signers[1];
+    const admin3 = signers[2];
     const { contract } = await deployProtocol({
-      admins: [owner.address, admin2.address],
-      confirms: 2,
+      admins: [owner.address, admin2.address, admin3.address],
     });
-    const data = contract.interface.encodeFunctionData('setFeeBP', [100]);
+    const data = contract.interface.encodeFunctionData('removeAdmin', [admin3.address]);
     await contract.connect(owner).proposeAdminAction(data);
-    await expect(contract.connect(admin2).cancelAdminAction(1)).to.be.reverted;
+    await expect(contract.connect(admin2).cancelAdminAction(1)).to.be.revertedWithoutReason();
     await contract.connect(owner).cancelAdminAction(1);
-    await expect(contract.connect(owner).executeAdminAction(1)).to.be.reverted;
+    await expect(contract.connect(owner).executeAdminAction(1)).to.be.revertedWithoutReason();
   });
 
   it('does not count a lower-tier loan toward the next level', async () => {
@@ -85,7 +80,9 @@ describe('QuatriviumCredit - hardening', function () {
   });
 
   it('splits $60 into three installments and keeps NAV', async () => {
-    const { token, contract, owner, user, tokenAddr, contractAddr } = await deployProtocol();
+    const { token, contract, owner, user, tokenAddr, contractAddr } = await deployProtocol({
+      harness: true,
+    });
     await seedPool(token, contract, owner, '1000');
     await registerAndFund(token, contract, user, '200');
 
@@ -104,12 +101,7 @@ describe('QuatriviumCredit - hardening', function () {
       .connect(user)
       .pagarPrestamo(tokenAddr, (await contract.obtenerDeuda(user.address)).total);
 
-    await proposeAndExecute(contract, owner, 'setNivel', [
-      2,
-      ethers.parseUnits('60', 18),
-      40 * 24 * 60 * 60,
-      1500,
-    ]);
+    await contract.forceNivel(user.address, 8);
 
     await advanceCooldown();
     await contract.connect(user).solicitarPrestamo(tokenAddr, 0);
@@ -151,7 +143,9 @@ describe('QuatriviumCredit - hardening', function () {
     await contract.connect(user).solicitarPrestamo(tokenAddr, 0);
 
     const info = await contract.usuarios(user.address);
-    await ethers.provider.send('evm_setNextBlockTimestamp', [Number(info.vencimiento) + 10]);
+    await ethers.provider.send('evm_setNextBlockTimestamp', [
+      Number(info.vencimiento) + 48 * 60 * 60 + 10,
+    ]);
     await ethers.provider.send('evm_mine');
 
     const padreBefore = await token.balanceOf(padre.address);
@@ -161,7 +155,7 @@ describe('QuatriviumCredit - hardening', function () {
     expect(await token.balanceOf(padre.address)).to.equal(padreBefore);
   });
 
-  it('rejects stale (>25h) and incomplete oracle rounds', async () => {
+  it('does not block a loan when an external price feed is stale or missing', async () => {
     const { token, contract, owner, user, tokenAddr, feed } = await deployProtocol();
     await seedPool(token, contract, owner, '500');
     await registerAndFund(token, contract, user);
@@ -169,12 +163,7 @@ describe('QuatriviumCredit - hardening', function () {
     await feed.setRound(2, 100000000, 1, 1, 2);
     await ethers.provider.send('evm_increaseTime', [26 * 60 * 60]);
     await ethers.provider.send('evm_mine');
-    await expect(contract.connect(user).solicitarPrestamo(tokenAddr, 0)).to.be.reverted;
-
-    await feed.setRound(3, 100000000, 1, 1, 2);
-    await expect(contract.connect(user).solicitarPrestamo(tokenAddr, 0)).to.be.reverted;
-
-    await feed.updateAnswer(100000000);
+    expect(contract.interface.hasFunction('assertPeg')).to.equal(false);
     await expect(contract.connect(user).solicitarPrestamo(tokenAddr, 0)).to.not.be.reverted;
   });
 
@@ -184,8 +173,8 @@ describe('QuatriviumCredit - hardening', function () {
     await token.mint(extra.address, ethers.parseUnits('500', 18));
     await token.connect(extra).approve(contractAddr, ethers.MaxUint256);
     await contract.connect(extra).depositarLiquidez(tokenAddr, ethers.parseUnits('500', 18));
-    expect(await contract.valorLp(owner.address, tokenAddr)).to.equal(ethers.parseUnits('500', 18));
-    expect(await contract.valorLp(extra.address, tokenAddr)).to.equal(ethers.parseUnits('500', 18));
+    expect(await contract.valorLp(owner.address, tokenAddr)).to.equal(ethers.parseUnits('475', 18));
+    expect(await contract.valorLp(extra.address, tokenAddr)).to.equal(ethers.parseUnits('475', 18));
     await assertNavInvariant(token, contract, tokenAddr, contractAddr);
   });
 

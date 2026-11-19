@@ -11,7 +11,7 @@ import {
   getRuntimeMode,
   subscribeRuntimeMode,
 } from './constants/rpcConfig';
-import { ARBITRUM_MAINNET, ARBITRUM_SEPOLIA } from './constants/bsc';
+import { ARBITRUM_MAINNET, ARBITRUM_SEPOLIA } from './constants/arbitrum';
 
 const PROJECT_ID = process.env.EXPO_PUBLIC_WALLETCONNECT_PROJECT_ID || '';
 

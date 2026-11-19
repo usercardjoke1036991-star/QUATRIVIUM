@@ -34,7 +34,7 @@ export function SponsorPoolButton({ debtors }: SponsorPoolButtonProps) {
     return () => {
       live = false;
     };
-  }, [debtors.join('|')]);
+  }, [debtors]);
 
   if (!isAltaConfigured() || due.length === 0) return null;
 

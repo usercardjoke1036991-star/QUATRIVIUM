@@ -21,7 +21,7 @@ export const AdminAccess: React.FC = () => {
   const { address, isConnected } = useAccount();
   const { walletAddress: appWallet } = useUserProfile();
   const { mode } = useAppMode();
-  const token = useMemo(() => getSupportedTokens()[0], [mode]);
+  const token = useMemo(() => getSupportedTokens(mode === 'demo')[0], [mode]);
   const connected = Boolean(isConnected && address);
   const { userInfo: externalInfo } = useWeb3Balances(
     connected && address ? address.toLowerCase() : '',

@@ -5,7 +5,6 @@ const {
   seedPool,
   registerAndFund,
   drainToken,
-  attestIdentity,
   expectAmt,
 } = require('./helpers.cjs');
 
@@ -14,8 +13,14 @@ async function advanceCooldown() {
   await ethers.provider.send('evm_mine');
 }
 
-async function enableFounderBorrow(contract, owner) {
+async function enableFounderBorrow(token, contract, owner) {
   expect(await contract.humanosVerificados(owner.address)).to.equal(true);
+  const fama = await ethers.getContractAt('QuatriviumFamaCaja', await contract.famaHermano());
+  const alta = await ethers.getContractAt('QuatriviumAlta', await fama.alta());
+  if (await alta.registroHecho(owner.address)) return;
+  await token.mint(owner.address, ethers.parseUnits('4', 18));
+  await token.connect(owner).approve(await alta.getAddress(), ethers.MaxUint256);
+  await alta.connect(owner).pagarRegistro();
 }
 
 describe('QuatriviumCredit - Morosity', function () {
@@ -58,8 +63,8 @@ describe('QuatriviumCredit - Morosity', function () {
     const cash = await token.balanceOf(contractAddr);
     const outstanding = await contract.outstandingLoans(tokenAddr);
     const liquidity = await contract.totalLiquidity(tokenAddr);
-    const fees = await contract.collectedFees(tokenAddr);
-    expect(cash + outstanding).to.equal(liquidity + fees);
+    const fondo = await contract.fondoSeguro(tokenAddr);
+    expect(cash + outstanding).to.equal(liquidity + fondo);
   });
 
   it('keeps earnings during the grace month then freezes them and burns 10 reputation per level per day', async () => {
@@ -135,7 +140,7 @@ describe('QuatriviumCredit - Morosity', function () {
   it('marks the founder delinquent like any other unpaid loan', async () => {
     const { token, contract, owner, extra, tokenAddr, contractAddr } = await deployProtocol();
     await seedPool(token, contract, owner, '500');
-    await enableFounderBorrow(contract, owner);
+    await enableFounderBorrow(token, contract, owner);
     await contract.connect(owner).solicitarPrestamo(tokenAddr, 0);
     await drainToken(token, owner, extra);
 
@@ -151,24 +156,28 @@ describe('QuatriviumCredit - Morosity', function () {
       ethers.parseUnits('1', 18)
     );
     expect(await contract.totalLiquidity(tokenAddr)).to.equal(liqBefore);
-    await expect(contract.connect(owner).solicitarPrestamo(tokenAddr, 0)).to.be.reverted;
+    await expect(
+      contract.connect(owner).solicitarPrestamo(tokenAddr, 0)
+    ).to.be.revertedWithoutReason();
     const cash = await token.balanceOf(contractAddr);
     const outstanding = await contract.outstandingLoans(tokenAddr);
     const liquidity = await contract.totalLiquidity(tokenAddr);
-    const fees = await contract.collectedFees(tokenAddr);
-    expect(cash + outstanding).to.equal(liquidity + fees);
+    const fondo = await contract.fondoSeguro(tokenAddr);
+    expect(cash + outstanding).to.equal(liquidity + fondo);
   });
 
   it('does not waive the founder 48h wait between loans', async () => {
     const { token, contract, owner, tokenAddr, contractAddr } = await deployProtocol();
     await seedPool(token, contract, owner, '500');
-    await enableFounderBorrow(contract, owner);
+    await enableFounderBorrow(token, contract, owner);
     await contract.connect(owner).solicitarPrestamo(tokenAddr, 0);
     const debt = await contract.obtenerDeuda(owner.address);
     await contract.connect(owner).pagarPrestamo(tokenAddr, debt.total);
     const progreso = await contract.obtenerProgresoUsuario(owner.address);
     expect(progreso[2]).to.be.gt(0n);
-    await expect(contract.connect(owner).solicitarPrestamo(tokenAddr, 0)).to.be.reverted;
+    await expect(
+      contract.connect(owner).solicitarPrestamo(tokenAddr, 0)
+    ).to.be.revertedWithoutReason();
     await advanceCooldown();
     await expect(contract.connect(owner).solicitarPrestamo(tokenAddr, 0)).to.not.be.reverted;
     expect(await token.balanceOf(contractAddr)).to.be.gt(0n);

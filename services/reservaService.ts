@@ -1,4 +1,4 @@
-import { Contract, formatUnits, isAddress, parseUnits, type Signer } from 'ethers';
+import { Contract, formatUnits, parseUnits, type Signer } from 'ethers';
 import { ERC20_ABI, getContractAddress, getUsdtAddress } from '../constants/contractConfig';
 import { assertTrustedRpc, getProviderWithFallback, isDemoAccount } from '../constants/rpcConfig';
 import {
@@ -18,14 +18,11 @@ import {
 } from '../constants/reserva';
 import {
   demoAportarBote,
-  demoAplicarRetiro,
   demoBloquear,
   demoDesbloquear,
-  demoProponerRetiro,
   demoRenovar,
   loadDemoBote,
   loadDemoPosicion,
-  loadDemoRetiro,
 } from './reservaDemoStore';
 import { waitMined } from '../utils/waitMined';
 
@@ -234,58 +231,6 @@ export async function aportarReservaBote(signer: Signer, amountUsd: string): Pro
   if (!isReservaConfigured()) throw new Error('reserva-not-ready');
   const reserva = await withToken(signer, amount);
   const tx = await reserva.aportarBote(amount);
-  await waitMined(tx);
-}
-
-export type RetiroBotePendiente = { to: string; amountWei: bigint; desde: number };
-
-export async function leerPendienteRetiroBote(): Promise<RetiroBotePendiente | null> {
-  if (reservaUsesPracticeLedger()) {
-    const row = await loadDemoRetiro();
-    if (!row) return null;
-    return { to: row.to, amountWei: BigInt(row.amount), desde: row.desde };
-  }
-  if (!isReservaConfigured()) return null;
-  const provider = await assertTrustedRpc(getProviderWithFallback());
-  const reserva = new Contract(getReservaAddress(), RESERVA_ABI, provider);
-  const [to, amount, desde] = await Promise.all([
-    reserva.pendienteRetiroA(),
-    reserva.pendienteRetiroMonto(),
-    reserva.pendienteRetiroDesde(),
-  ]);
-  const destino = String(to || '');
-  const monto = BigInt(amount || 0);
-  const desdeN = Number(desde || 0);
-  if (!isAddress(destino) || /^0x0+$/i.test(destino) || monto <= 0n || desdeN <= 0) return null;
-  return { to: destino, amountWei: monto, desde: desdeN };
-}
-
-export async function proponerRetiroReserva(
-  signer: Signer,
-  destino: string,
-  amountUsd: string
-): Promise<void> {
-  if (!isAddress(destino)) throw new Error('reservaMonto');
-  const amount = parseUnits(amountUsd, 18);
-  if (amount <= 0n) throw new Error('reservaMonto');
-  if (reservaUsesPracticeLedger()) {
-    await demoProponerRetiro(destino, amount);
-    return;
-  }
-  if (!isReservaConfigured()) throw new Error('reserva-not-ready');
-  const reserva = new Contract(getReservaAddress(), RESERVA_ABI, signer);
-  const tx = await reserva.proponerRetiroBote(destino, amount);
-  await waitMined(tx);
-}
-
-export async function aplicarRetiroReserva(signer: Signer): Promise<void> {
-  if (reservaUsesPracticeLedger()) {
-    await demoAplicarRetiro();
-    return;
-  }
-  if (!isReservaConfigured()) throw new Error('reserva-not-ready');
-  const reserva = new Contract(getReservaAddress(), RESERVA_ABI, signer);
-  const tx = await reserva.applyRetiroBote();
   await waitMined(tx);
 }
 

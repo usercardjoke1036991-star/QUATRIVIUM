@@ -10,7 +10,7 @@ const { TextEncoder, TextDecoder } = require('text-encoding');
 const { Readable } = require('readable-stream');
 const EventEmitter = require('events');
 
-// Buffer polyfill - Required for ethers.js, snarkjs, and other Web3 libraries
+// Buffer polyfill - Required for ethers.js and other Web3 libraries
 if (typeof global.Buffer === 'undefined') {
   global.Buffer = Buffer;
 }
@@ -24,7 +24,7 @@ if (typeof global.TextDecoder === 'undefined') {
   global.TextDecoder = TextDecoder;
 }
 
-// Readable stream polyfill - Required for snarkjs and circomlibjs
+// Readable stream polyfill - Required by Web3 libraries on React Native
 if (typeof global.Readable === 'undefined') {
   global.Readable = Readable;
 }
@@ -190,4 +190,6 @@ if (typeof global.URLSearchParams === 'undefined') {
   };
 }
 
-console.log('✅ Web3 polyfills loaded successfully');
+if (typeof __DEV__ !== 'undefined' && __DEV__) {
+  console.log('✅ Web3 polyfills loaded successfully');
+}

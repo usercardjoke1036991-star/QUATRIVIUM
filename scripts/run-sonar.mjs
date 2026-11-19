@@ -1,5 +1,5 @@
 /**
- * SonarCloud Magno usa Automatic Analysis (repo GitHub público).
+ * SonarCloud de QUATRIVIUM usa Automatic Analysis (repo GitHub público).
  * Este script no lanza scanner manual contra Cloud. Token: SONAR_TOKEN en .env.
  * Servidor local opcional: SONAR_HOST_URL=http://127.0.0.1:9000
  */
@@ -15,8 +15,8 @@ loadDotEnv(resolve(root, '.env'));
 const host = stripTrailSlash(process.env.SONAR_HOST_URL || 'https://sonarcloud.io');
 const token = String(process.env.SONAR_TOKEN || '').trim();
 const compose = resolve(root, 'docker-compose.sonar.yml');
-const MAGNO_KEY = 'usercardjoke1036991-star_Magno';
-const CLOUD_REPORT = `https://sonarcloud.io/project/overview?id=${MAGNO_KEY}`;
+const PROJECT_KEY = 'usercardjoke1036991-star_QUATRIVIUM';
+const CLOUD_REPORT = `https://sonarcloud.io/project/overview?id=${PROJECT_KEY}`;
 
 function run(cmd, args, opts = {}) {
   return spawnSync(cmd, args, {
@@ -119,7 +119,7 @@ function scan() {
 try {
   console.log(`SonarQube ${host}`);
   if (!isLocalHost()) {
-    console.log('Magno está anclado a GitHub con Automatic Analysis (repo público).');
+    console.log('QUATRIVIUM está anclado a GitHub con Automatic Analysis (repo público).');
     console.log('No se lanza scanner manual: chocaría con el análisis automático.');
     console.log(`Informe ${CLOUD_REPORT}`);
     process.exit(0);
@@ -135,7 +135,7 @@ try {
     await waitHealthy();
   }
   scan();
-  console.log(`Informe ${host}/dashboard?id=${MAGNO_KEY}`);
+  console.log(`Informe ${host}/dashboard?id=${PROJECT_KEY}`);
 } catch (err) {
   const message = err instanceof Error ? err.message : String(err);
   console.error(`SonarQube falló: ${message}`);

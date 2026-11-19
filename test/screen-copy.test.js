@@ -88,7 +88,14 @@ describe('copy de pantallas clave', function () {
     }
   });
 
-  it('aportar al fondo no ofrece retirar del pool', function () {
+  it('aportar al fondo no ofrece retirar del pool', async function () {
+    const { ethers } = require('hardhat');
+    const { deployProtocol, seedPool } = require('./helpers.cjs');
+    const { token, contract, owner, tokenAddr } = await deployProtocol();
+    await seedPool(token, contract, owner, '50');
+    await expect(
+      contract.connect(owner).retirarLiquidez(tokenAddr, ethers.parseUnits('1', 18))
+    ).to.be.revertedWithoutReason();
     const pool = read('components/PoolSupportSection.tsx');
     const home = read('app/index.tsx');
     expect(pool).to.include("t('poolPublicLead')");
@@ -130,7 +137,15 @@ describe('copy de pantallas clave', function () {
     }
   });
 
-  it('Reserva no se presenta como un retiro del fondo de préstamos', function () {
+  it('Reserva no se presenta como un retiro del fondo de préstamos', async function () {
+    const { deployProtocol } = require('./helpers.cjs');
+    const deployed = await deployProtocol();
+    expect(typeof deployed.reserva.desbloquear).to.equal('function');
+    await expect(
+      deployed.reserva.connect(deployed.owner).desbloquear()
+    ).to.be.revertedWithCustomError(deployed.reserva, 'NadaQueMover');
+    expect(deployed.reserva.interface.hasFunction('retirarBote')).to.equal(false);
+    expect(deployed.reserva.interface.hasFunction('retirarLiquidez')).to.equal(false);
     const reserva = read('components/ReservaSection.tsx');
     expect(reserva).to.include("t('reservaLead')");
     expect(reserva).to.not.include('retirarLiquidez');

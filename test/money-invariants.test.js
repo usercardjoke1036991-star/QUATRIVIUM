@@ -7,20 +7,17 @@ async function deployHarness() {
   const owner = signers[0];
   const user = signers[1];
   const Token = await ethers.getContractFactory('ERC20Mock');
-  const Aggregator = await ethers.getContractFactory('MockV3Aggregator');
   const { getLinkedCreditFactory } = require('../scripts/linkCredit.cjs');
   const { deployFamaAndCredit } = require('./helpers.cjs');
   const Harness = await getLinkedCreditFactory(ethers, 'QuatriviumCreditHarness');
   const token = await Token.deploy();
-  const feed = await Aggregator.deploy(8, 100000000);
   const tokenAddr = await token.getAddress();
   const { contract } = await deployFamaAndCredit(
     Harness,
     tokenAddr,
-    await feed.getAddress(),
     owner,
     500,
-    [owner.address],
+    [owner.address, user.address, signers[2].address],
     1
   );
   return { token, contract, owner, user, tokenAddr, contractAddr: await contract.getAddress() };
@@ -48,6 +45,8 @@ describe('Reglas de dinero', function () {
     await seedPool(token, contract, owner, '100');
     await registerAndFund(token, contract, user, '80');
     await contract.forceNivel(user.address, 10);
-    await expect(contract.connect(user).solicitarPrestamo(tokenAddr, 10)).to.be.reverted;
+    await expect(
+      contract.connect(user).solicitarPrestamo(tokenAddr, 10)
+    ).to.be.revertedWithoutReason();
   });
 });

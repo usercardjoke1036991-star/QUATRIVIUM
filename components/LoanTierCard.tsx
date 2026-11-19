@@ -171,6 +171,15 @@ export const LoanTierCard: React.FC<LoanTierCardProps> = ({
           <AppText style={[styles.tierMeta, { color: colors.textMuted }]}>
             {t('interestAmount', { amount: formatUSD(interest) })}
           </AppText>
+          <AppText style={[styles.tierMeta, { color: colors.textMuted }]}>
+            {t('loanFounderShare')}
+          </AppText>
+          <AppText style={[styles.tierMeta, { color: colors.textMuted }]}>
+            {t('loanInsuranceShare')}
+          </AppText>
+          <AppText style={[styles.tierMeta, { color: colors.textMuted }]}>
+            {t('loanSequencerGrace')}
+          </AppText>
           <AppText style={[styles.tierTotal, { color: colors.text }]}>
             {t('totalRepay', { amount: formatUSD(totalRepay) })}
           </AppText>

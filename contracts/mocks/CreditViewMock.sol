@@ -9,9 +9,13 @@ contract CreditViewMock {
     mapping(address => uint256) public nivelOf;
     mapping(address => bool) public adminOf;
     bool public paused;
-    address public attester;
     address public owner;
     IERC20 public payToken;
+    address public fundador;
+
+    function setFundador(address f) external {
+        fundador = f;
+    }
 
     function redGenealogica(address usuario) external view returns (address padre, bool bonoActivacionCobrado) {
         return (padreOf[usuario], false);
@@ -41,10 +45,6 @@ contract CreditViewMock {
 
     function setPaused(bool value) external {
         paused = value;
-    }
-
-    function setAttester(address next) external {
-        attester = next;
     }
 
     function setNivel(address usuario, uint256 nivel) external {

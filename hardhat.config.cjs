@@ -11,11 +11,6 @@ function accountsFromEnv() {
   return [];
 }
 
-const testnetRpc =
-  process.env.BSC_TESTNET_RPC_URL ||
-  process.env.EXPO_PUBLIC_BSC_RPC_URL_PRIMARY ||
-  'https://bsc-testnet.publicnode.com';
-
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: {
@@ -31,30 +26,25 @@ module.exports = {
   },
   networks: {
     hardhat: {
-      allowUnlimitedContractSize: true,
+      allowUnlimitedContractSize: false,
       blockGasLimit: 100_000_000,
     },
     arbitrumOne: {
-      url: process.env.ARBITRUM_MAINNET_RPC_URL || 'https://arb1.arbitrum.io/rpc',
+      url:
+        process.env.ARBITRUM_ONE_RPC_URL ||
+        process.env.ARBITRUM_MAINNET_RPC_URL ||
+        'https://arb1.arbitrum.io/rpc',
       chainId: 42161,
       accounts: accountsFromEnv(),
       timeout: 180000,
     },
     arbitrumSepolia: {
-      url: process.env.ARBITRUM_TESTNET_RPC_URL || 'https://sepolia-rollup.arbitrum.io/rpc',
+      url:
+        process.env.ARBITRUM_SEPOLIA_RPC_URL ||
+        process.env.ARBITRUM_TESTNET_RPC_URL ||
+        'https://sepolia-rollup.arbitrum.io/rpc',
       chainId: 421614,
       accounts: accountsFromEnv(),
-    },
-    bscTestnet: {
-      url: testnetRpc,
-      chainId: 97,
-      accounts: accountsFromEnv(),
-    },
-    bscMainnet: {
-      url: process.env.BSC_MAINNET_RPC_URL || 'https://arb1.arbitrum.io/rpc',
-      chainId: 42161,
-      accounts: accountsFromEnv(),
-      timeout: 180000,
     },
   },
   paths: {

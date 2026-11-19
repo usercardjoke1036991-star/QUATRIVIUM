@@ -3,7 +3,7 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const { ethers } = require('ethers');
-const { BSC_MAINNET, isHexAddress, isZero } = require('./bscNetworks.cjs');
+const { ARBITRUM_MAINNET, isHexAddress, isZero } = require('./arbitrumNetworks.cjs');
 
 function loadEnv(filePath) {
   const map = {};
@@ -40,13 +40,10 @@ async function codeOk(provider, address, label) {
 async function main() {
   const root = path.join(__dirname, '..');
   const local = loadEnv(path.join(root, '.env'));
-  const worker = loadEnv(path.join(root, '.env.worker'));
   const founderWanted = '0x5023bf46dB7458B9bb9152a7ffE64f195CD1a047';
-  const attesterWanted = '0x140Fb8bD6611aC0c64cF254Dea1Ef4Caf15A821E';
   const staleMainnet = '0xa6aac9ce4923789a4095fbc0504db9a697f8a46d';
 
   const deployer = addrFromKey(local.PRIVATE_KEY);
-  const attester = addrFromKey(worker.ATTESTER_PRIVATE_KEY);
   const admins = String(local.ADMINS || '')
     .split(',')
     .map((item) => item.trim())
@@ -58,29 +55,23 @@ async function main() {
 
   console.log(
     'CONFIRM_MAINNET',
-    confirm === 'yes' ? 'yes (NO desplegar aún si no hay BNB)' : '(vacío, bloqueado — correcto)'
+    confirm === 'yes' ? 'yes (NO desplegar aún si no hay ETH)' : '(vacío, bloqueado — correcto)'
   );
   console.log('APP chainId local', chainId || '(vacío)');
   console.log('Deployer', deployer || '(PRIVATE_KEY inválida)');
-  console.log('Attester', attester || '(ATTESTER inválida)');
   console.log('ADMINS', admins.join(',') || '(vacío)');
   console.log('FEE_COLLECTOR', collector || '(vacío)');
   console.log('MAINNET_CONTRACT', mainnetAddr || '(vacío, correcto hasta el deploy)');
 
   const checks = [];
   checks.push(['deployer=fundadora', deployer.toLowerCase() === founderWanted.toLowerCase()]);
-  checks.push(['attester=esperado', attester.toLowerCase() === attesterWanted.toLowerCase()]);
-  checks.push([
-    'attester≠deployer',
-    Boolean(attester) && attester.toLowerCase() !== deployer.toLowerCase(),
-  ]);
   checks.push([
     'ADMINS incluye fundadora',
     admins.some((a) => a.toLowerCase() === founderWanted.toLowerCase()),
   ]);
   checks.push(['FEE_COLLECTOR=fundadora', collector.toLowerCase() === founderWanted.toLowerCase()]);
   checks.push(['CONFIRM no es yes', confirm !== 'yes']);
-  checks.push(['teléfono sigue testnet', chainId !== '56']);
+  checks.push(['teléfono sigue testnet', chainId !== '42161']);
   checks.push([
     'mainnet addr no es el viejo',
     !mainnetAddr || mainnetAddr.toLowerCase() !== staleMainnet,
@@ -90,19 +81,18 @@ async function main() {
     fs.readFileSync(path.join(root, '.gitignore'), 'utf8').includes('.env'),
   ]);
 
-  const rpc = local.BSC_MAINNET_RPC_URL || BSC_MAINNET.rpc[0];
-  const provider = new ethers.JsonRpcProvider(rpc, 56);
-  let bnb = 0n;
+  const rpc = local.ARBITRUM_ONE_RPC_URL || ARBITRUM_MAINNET.rpc[0];
+  const provider = new ethers.JsonRpcProvider(rpc, 42161);
+  let eth = 0n;
   let usdtBal = 0n;
   try {
     const net = await provider.getNetwork();
-    checks.push(['RPC mainnet chain 56', Number(net.chainId) === 56]);
-    await codeOk(provider, BSC_MAINNET.usdt, 'USDT');
-    await codeOk(provider, BSC_MAINNET.usdtUsdFeed, 'feed USDT/USD');
+    checks.push(['RPC mainnet chain 42161', Number(net.chainId) === 42161]);
+    await codeOk(provider, ARBITRUM_MAINNET.lusd, 'LUSD');
     if (deployer) {
-      bnb = await provider.getBalance(deployer);
+      eth = await provider.getBalance(deployer);
       const usdt = new ethers.Contract(
-        BSC_MAINNET.usdt,
+        ARBITRUM_MAINNET.lusd,
         ['function balanceOf(address) view returns (uint256)'],
         provider
       );
@@ -113,19 +103,19 @@ async function main() {
     console.log('RPC_ERROR', err instanceof Error ? err.message : String(err));
   }
 
-  const bnbFmt = ethers.formatEther(bnb);
+  const ethFmt = ethers.formatEther(eth);
   const usdtFmt = ethers.formatUnits(usdtBal, 18);
-  console.log('BNB fundadora', bnbFmt);
-  console.log('USDT fundadora', usdtFmt);
-  const enoughGas = bnb >= ethers.parseEther('0.03');
-  checks.push(['BNB >= 0.03 para gas (recomendado 0.05+)', enoughGas]);
+  console.log('ETH fundadora', ethFmt);
+  console.log('LUSD fundadora', usdtFmt);
+  const enoughGas = eth >= ethers.parseEther('0.03');
+  checks.push(['ETH >= 0.03 para gas (recomendado 0.05+)', enoughGas]);
 
   let fail = 0;
   for (const [name, ok] of checks) {
     console.log(`${ok ? 'OK' : 'FAIL'}  ${name}`);
     if (!ok) fail += 1;
   }
-  console.log(enoughGas ? 'GAS_LISTO sí' : 'GAS_LISTO no — espera a que entre BNB y avísame');
+  console.log(enoughGas ? 'GAS_LISTO sí' : 'GAS_LISTO no — espera a que entre ETH y avísame');
   console.log(`PREFLIGHT ${checks.length - fail}/${checks.length}`);
   process.exit(fail ? 1 : 0);
 }
