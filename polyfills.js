@@ -190,4 +190,6 @@ if (typeof global.URLSearchParams === 'undefined') {
   };
 }
 
-console.log('✅ Web3 polyfills loaded successfully');
+if (typeof __DEV__ !== 'undefined' && __DEV__) {
+  console.log('✅ Web3 polyfills loaded successfully');
+}

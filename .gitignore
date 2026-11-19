@@ -37,6 +37,8 @@ yarn-error.*
 .env
 .env.worker
 .env*.local
+.env.*
+!.env.example
 .notify-data.json
 
 # typescript

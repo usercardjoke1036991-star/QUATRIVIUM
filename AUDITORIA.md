@@ -114,7 +114,7 @@ Antes de dinero real hace falta una auditoría externa y una billetera de fundad
 
 ## Estado de los hallazgos
 
-El quinto punto grave del resumen (feed viejo) era **B-01, Medio**, no Alto. Tras los arreglos quedan **0 altos abiertos en el código**. A-04 sigue pendiente del dueño: hay que borrar la clave en la cuenta de Resend. No está en la app. Credit en forge (runtime): 23132 bytes, 1444 libres de 24576. En Hardhat (`deployedBytecode`): 23322 bytes, 1254 libres.
+El quinto punto grave del resumen (feed viejo) era **B-01, Medio**, no Alto. Tras los arreglos quedan **0 altos abiertos en el código**. A-04 está cerrado por el dueño: la clave del historial ya fue revocada. No está en la app. Credit en forge (runtime): 23132 bytes, 1444 libres de 24576. En Hardhat (`deployedBytecode`): 23322 bytes, 1254 libres.
 
 | ID | Era | Estado |
 | --- | --- | --- |
@@ -164,7 +164,7 @@ No se reescribieron en esta pasada.
 
 ## Informe original
 
-Solo lectura en su origen. Los arreglos posteriores están en la tabla de arriba.
+Solo lectura en su origen. Los arreglos posteriores están en la tabla de arriba. Las cifras de esta sección (tamaños de la tabla de bytecode, 2807 libres, conteos) son de entonces; las actuales están en «Medición de esta rama».
 
 No se compiló la app, no se generó un APK y no se desplegó nada. La interfaz se leyó en el código, no en un teléfono.
 
@@ -184,7 +184,7 @@ Nada de lo leído permite que un extraño vacíe el pool, el bote de Reserva o e
 - Foundry: 80 pruebas, todas en verde, con `FOUNDRY_PROFILE=ci` y `--fuzz-runs 256`. Los 3 invariantes, 0 reversiones.
 - `node scripts/check-external-services.mjs`: sin nombres prohibidos en el árbol actual.
 - `node scripts/check-i18n.mjs`: 17 idiomas, 1288 claves cada uno, sin copias largas del inglés.
-- `npm audit` antes: 37 avisos (15 bajos, 20 moderados, 2 altos, 0 críticos). Después de fijar `tmp` en 0.2.7: 35 avisos (14 bajos, 20 moderados, 1 alto, 0 críticos). El alto que queda es `image-size`, porque 2.0.3 rompe el paquete. Expo, Metro, Hardhat y solc no subieron de versión mayor. hoy 34 por cambios en la base de avisos, sin cambio del árbol.
+- `npm audit` antes: 37 avisos (15 bajos, 20 moderados, 2 altos, 0 críticos). Después de fijar `tmp` en 0.2.7: 35 avisos (14 bajos, 20 moderados, 1 alto, 0 críticos). El alto que queda es `image-size`, porque 2.0.3 rompe el paquete. Expo, Metro, Hardhat y solc no subieron de versión mayor. Hoy 34 por cambios en la base de avisos, sin cambio del árbol.
 - Slither de esta rama está en «Medición de esta rama»: 0 altos y 0 medios. La frase vieja de que Slither no estaba instalado ya no vale.
 
 Tamaños de bytecode desplegado (artifact de Hardhat, límite EIP-170 = 24576):

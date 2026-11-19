@@ -28,4 +28,19 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
   return context.resolveRequest(context, moduleName, platform);
 };
 
+const dropAssets = new Set(['pdf', 'html', 'yaml', 'yml', 'zip', 'db', 'psd']);
+config.resolver.assetExts = config.resolver.assetExts.filter((ext) => !dropAssets.has(ext));
+
+const rootPattern = path
+  .resolve(__dirname)
+  .split(/[/\\]/)
+  .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  .join('[\\\\/]');
+const docBlock = new RegExp(
+  '^' +
+    rootPattern +
+    '[\\\\/](?:[^\\\\/]+\\.(?:md|pdf|txt|doc|docx)$|(?:contracts|test|forge-test|scripts|store-assets|web|lib|docs|informe[^\\\\/]*|notas[^\\\\/]*)[\\\\/])'
+);
+config.resolver.blockList = [].concat(config.resolver.blockList || [], docBlock);
+
 module.exports = config;
