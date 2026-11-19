@@ -14,6 +14,7 @@ No hay servidor de la empresa. La billetera nace en el teléfono (`services/appW
 - Donar y aportar dan fama visible y no se canjean por LUSD del pool. Solo la fama de intereses pagados se convierte.
 - Fondo de seguro: 5 % de las entradas al pool. Solo paga el premio del impago.
 - Reserva: nivel ≥ 10, 30 días, tope 12 % anual del bote, principal siempre devuelto. Sin owner ni retiro del bote.
+- El fundador cobra 5 % (<50 LUSD), 8 % (50–499) o 12 % (≥500) del rendimiento pagado del bote y del extra de comisión, según el tramo del principal (corteFundadorBp).
 - Liquidación: 48 h más la caída leída de la ronda anterior del feed y 1 h tras volver. `answer == 0` es sequencer arriba aunque la ronda tenga meses. Si el feed falla o `startedAt` es cero, se pospone la liquidación. El liquidador no pone el principal: el seguro absorbe la deuda y el premio (el menor entre 5 % y el interés) sale del contrato. Feed `0xFdB631F5EE196F0ed6FAa767959853A9F217697D`, obligatorio si chainId es 42161.
 - Unilevel, padrino, fama y racha exigen alta y L1 (`cobradorListo`). Si no, esa parte entra al pool. La racha solo cuenta nivel ≥ 2 pagado a tiempo.
 - Avisos locales. No hay mensaje privado por Nostr: el cifrado NIP-17/44 no está hecho y `prepareNostrPayload` devuelve null. La mora no se publica. Ranking leído de eventos de la cadena.
