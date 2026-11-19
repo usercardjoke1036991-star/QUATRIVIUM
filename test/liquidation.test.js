@@ -8,7 +8,7 @@ describe('QuatriviumCredit - Liquidation', function () {
     await ethers.provider.send('evm_mine');
   }
 
-  it('allows third-party liquidation after default', async () => {
+  it('allows a third-party write-off after default and keeps the debt', async () => {
     const {
       token,
       contract,
@@ -35,12 +35,13 @@ describe('QuatriviumCredit - Liquidation', function () {
       .reverted;
 
     const postInfo = await contract.usuarios(user.address);
-    expect(postInfo.montoActivo).to.equal(0);
-    expect(await contract.esMoroso(user.address)).to.equal(false);
-    expect(await contract.prestamosCerrados(user.address)).to.equal(1n);
+    expect(postInfo.montoActivo).to.equal(ethers.parseUnits('1', 18));
+    expect(await contract.esMoroso(user.address)).to.equal(true);
+    expect(await contract.prestamosCerrados(user.address)).to.equal(0n);
+    await expect(contract.connect(liquidator).liquidate(user.address, tokenAddr)).to.be.reverted;
   });
 
-  it('writes off an L1 default, pays the liquidator a net prize, and clears outstanding', async () => {
+  it('writes off an L1 default without a prize and clears outstanding', async () => {
     const {
       token,
       contract,
@@ -63,10 +64,7 @@ describe('QuatriviumCredit - Liquidation', function () {
 
     await token.mint(liquidator.address, ethers.parseUnits('10', 18));
     await token.connect(liquidator).approve(contractAddr, ethers.MaxUint256);
-    const interest = debt.interes;
     const principal = debt.principal;
-    let reward = (principal * 5n) / 100n;
-    if (reward > interest) reward = interest;
     const liqBefore = await contract.totalLiquidity(tokenAddr);
     const fondoBefore = await contract.fondoSeguro(tokenAddr);
     const outBefore = await contract.outstandingLoans(tokenAddr);
@@ -76,12 +74,12 @@ describe('QuatriviumCredit - Liquidation', function () {
     expect(await contract.outstandingLoans(tokenAddr)).to.equal(outBefore - principal);
     const liqDelta = (await contract.totalLiquidity(tokenAddr)) - liqBefore;
     const fondoDelta = (await contract.fondoSeguro(tokenAddr)) - fondoBefore;
-    expect(liqDelta + fondoDelta).to.equal(-(principal + reward));
-    expect(await token.balanceOf(liquidator.address)).to.equal(balBefore + reward);
-    expect(reward).to.be.gt(0n);
+    expect(liqDelta + fondoDelta).to.equal(-principal);
+    expect(await token.balanceOf(liquidator.address)).to.equal(balBefore);
+    expect(await contract.castigado(user.address)).to.equal(principal);
   });
 
-  it('lets a liquidated user borrow again after cooldown', async () => {
+  it('keeps a written-off user blocked until he repays, then waits 48 h from the repayment', async () => {
     const {
       token,
       contract,
@@ -101,10 +99,23 @@ describe('QuatriviumCredit - Liquidation', function () {
     await ethers.provider.send('evm_mine');
     await token.mint(liquidator.address, ethers.parseUnits('10', 18));
     await token.connect(liquidator).approve(contractAddr, ethers.MaxUint256);
+    const poolBefore =
+      (await contract.totalLiquidity(tokenAddr)) + (await contract.fondoSeguro(tokenAddr));
     await contract.connect(liquidator).liquidate(user.address, tokenAddr);
 
     await advanceCooldown();
     await token.mint(user.address, ethers.parseUnits('2', 18));
+    await expect(contract.connect(user).solicitarPrestamo(tokenAddr, 0)).to.be.reverted;
+
+    const debt = await contract.obtenerDeuda(user.address);
+    await contract.connect(user).pagarPrestamo(tokenAddr, debt.total);
+    expect(await contract.castigado(user.address)).to.equal(0n);
+    expect(await contract.esMoroso(user.address)).to.equal(false);
+    const poolAfter =
+      (await contract.totalLiquidity(tokenAddr)) + (await contract.fondoSeguro(tokenAddr));
+    expect(poolAfter).to.be.gte(poolBefore);
+    await expect(contract.connect(user).solicitarPrestamo(tokenAddr, 0)).to.be.reverted;
+    await advanceCooldown();
     await expect(contract.connect(user).solicitarPrestamo(tokenAddr, 0)).to.not.be.reverted;
   });
 

@@ -125,7 +125,7 @@ describe('Fase 1 — soberanía de cobros, racha, alta, liquidación y oráculo'
     expect(await contract.totalLiquidity(tokenAddr)).to.equal(liq);
   });
 
-  it('waits 48h after due before liquidation and caps the prize by interest at level 1000', async () => {
+  it('waits 48h after due before the write-off and pays no prize at level 1000', async () => {
     const {
       token,
       contract,
@@ -143,8 +143,6 @@ describe('Fase 1 — soberanía de cobros, racha, alta, liquidación y oráculo'
     await contract.connect(user).solicitarPrestamo(tokenAddr, 1000);
     const info = await contract.usuarios(user.address);
     const debt = await contract.obtenerDeuda(user.address);
-    let reward = (debt.principal * 5n) / 100n;
-    if (reward > debt.interes) reward = debt.interes;
     await ethers.provider.send('evm_setNextBlockTimestamp', [Number(info.vencimiento) + 10]);
     await ethers.provider.send('evm_mine');
     const minted = ethers.parseUnits('1200000', 18);
@@ -158,8 +156,8 @@ describe('Fase 1 — soberanía de cobros, racha, alta, liquidación y oráculo'
     ]);
     await ethers.provider.send('evm_mine');
     await contract.connect(liquidator).liquidate(user.address, tokenAddr);
-    expect(await token.balanceOf(liquidator.address)).to.equal(minted + reward);
+    expect(await token.balanceOf(liquidator.address)).to.equal(minted);
     expect(await contract.outstandingLoans(tokenAddr)).to.equal(0n);
-    expect(reward).to.equal(debt.interes);
+    expect(await contract.castigado(user.address)).to.equal(debt.principal);
   });
 });

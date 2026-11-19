@@ -60,7 +60,10 @@ describe('QuatriviumCredit - security hardening', function () {
     await ethers.provider.send('evm_mine');
     await expect(contract.connect(liquidator).liquidate(user.address, tokenAddr)).to.not.be
       .reverted;
-    expect((await contract.usuarios(user.address)).montoActivo).to.equal(0);
+    expect((await contract.usuarios(user.address)).montoActivo).to.equal(
+      ethers.parseUnits('50', 18)
+    );
+    expect(await contract.castigado(user.address)).to.equal(ethers.parseUnits('50', 18));
   });
 
   it('accepts deposits when an external feed would have reported a broken peg', async () => {

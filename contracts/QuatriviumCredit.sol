@@ -151,6 +151,8 @@ contract QuatriviumCredit is ReentrancyGuard {
     mapping(address => uint256) public prestamosPagadosATiempo;
     mapping(address => uint256) public prestamosMorosos;
     mapping(address => uint256) public penalizacionesAcumuladas;
+    /// @notice Principal que `liquidate` ya castigó y que el deudor todavía debe. Sus pagos lo devuelven al pool.
+    mapping(address => uint256) public castigado;
 
     struct ProgresoNivel {
         uint256 nivelActual;
@@ -674,6 +676,7 @@ contract QuatriviumCredit is ReentrancyGuard {
         usuarios[deudor].tasaAplicadaBP = 0;
         delete planPago[deudor];
         delete moraDesde[deudor];
+        progresoUsuarios[deudor].ultimoPrestamoTimestamp = block.timestamp;
         prestamosCerrados[deudor] += 1;
         if (esMoroso[deudor]) {
             esMoroso[deudor] = false;
@@ -734,7 +737,15 @@ contract QuatriviumCredit is ReentrancyGuard {
             ? interesDue - interesYa
             : (interesDue * (pagadoAntes + pago)) / totalDue - interesYa;
         if (interesParte > pago) interesParte = pago;
-        _reducirOutstanding(token, pago - interesParte);
+        uint256 principalParte = pago - interesParte;
+        uint256 enCastigo = castigado[deudor];
+        if (enCastigo > 0) {
+            uint256 vuelve = principalParte < enCastigo ? principalParte : enCastigo;
+            castigado[deudor] = enCastigo - vuelve;
+            totalLiquidity[token] += vuelve;
+            principalParte -= vuelve;
+        }
+        _reducirOutstanding(token, principalParte);
         // slither-disable-next-line reentrancy-no-eth // pagarPrestamo ya sostiene nonReentrant durante estas llamadas
         uint256 comisionesRed = _repartirPago(deudor, token, interesParte);
 
@@ -759,9 +770,9 @@ contract QuatriviumCredit is ReentrancyGuard {
 
     /// @notice Tras el mes de gracia las comisiones y bonos del usuario van al pool.
     function dispersionCongelada(address usuario) public view returns (bool) {
-        if (usuario == fundador || !esMoroso[usuario]) return false;
-        uint256 desde = moraDesde[usuario];
-        return desde != 0 && block.timestamp > desde + GRACIA_MORA;
+        if (usuario == fundador) return false;
+        uint256 vence = usuarios[usuario].vencimiento;
+        return vence != 0 && block.timestamp > vence + GRACIA_MORA;
     }
 
     function _cajaLibre(address token) internal view returns (uint256) {
@@ -835,7 +846,7 @@ contract QuatriviumCredit is ReentrancyGuard {
         if (!_estaVencido(usuario) || esMoroso[usuario]) return;
         esMoroso[usuario] = true;
         usuarios[usuario].enMora = true;
-        moraDesde[usuario] = block.timestamp;
+        moraDesde[usuario] = usuarios[usuario].vencimiento;
         moraDiasCobrados[usuario] = 0;
         prestamosMorosos[usuario] += 1;
         emit MorosityUpdated(usuario, true);
@@ -885,12 +896,16 @@ contract QuatriviumCredit is ReentrancyGuard {
         } catch {}
     }
 
+    /// @notice Castigo contable de un impago, sin premio. La deuda no se borra: el deudor sigue
+    ///         debiendo, sigue moroso y no puede pedir hasta pagarla entera. Lo que pague después
+    ///         vuelve al pool. Se puede llamar una vez por préstamo.
     function liquidate(address deudor, address tokenAddress) external nonReentrant onlySupportedToken(tokenAddress) {
         _soloEOA();
         require(msg.sender != deudor, "self");
         require(usuarios[deudor].montoActivo > 0, "no active loan");
         require(usuarios[deudor].monedaActivo == tokenAddress, "token mismatch");
         require(_estaVencido(deudor), "not defaulted");
+        require(castigado[deudor] == 0, "ya castigado");
         (uint256 extra, bool posponer) = _syncSequencer(usuarios[deudor].vencimiento);
         if (posponer) revert SequencerNoListo();
         if (block.timestamp <= usuarios[deudor].vencimiento + LIQUIDACION_GRACIA + extra) {
@@ -902,14 +917,7 @@ contract QuatriviumCredit is ReentrancyGuard {
         uint256 pagado = planPago[deudor].pagado;
         require(totalDue > pagado, "already paid");
         uint256 restante = totalDue - pagado;
-        uint256 interesYaPagado = (interest * pagado) / totalDue;
-        uint256 interestRestante = interest - interesYaPagado;
-        uint256 principalRestante = principal - (pagado - interesYaPagado);
-
-        // El liquidador no aporta el principal. Solo el gas puede dejarlo en negativo:
-        // el premio sale del contrato y él no transfiere LUSD.
-        uint256 reward = (principalRestante * 5) / 100;
-        if (reward > interestRestante) reward = interestRestante;
+        uint256 principalRestante = principal - (pagado - (interest * pagado) / totalDue);
 
         uint256 fondo = fondoSeguro[tokenAddress];
         uint256 cubierto = principalRestante <= fondo ? principalRestante : fondo;
@@ -923,40 +931,14 @@ contract QuatriviumCredit is ReentrancyGuard {
             totalLiquidity[tokenAddress] -= perdida;
         }
         _reducirOutstanding(tokenAddress, principalRestante);
+        castigado[deudor] = principalRestante;
 
-        uint256 caja = stableTokens[tokenAddress].balanceOf(address(this));
-        if (reward > totalLiquidity[tokenAddress]) reward = totalLiquidity[tokenAddress];
-        if (reward > caja) reward = caja;
-        if (reward > 0) {
-            totalLiquidity[tokenAddress] -= reward;
-            stableTokens[tokenAddress].safeTransfer(msg.sender, reward);
-        }
+        _aplicarMoraSiVencido(deudor);
+        penalizacionesAcumuladas[deudor] += penalizacionPorMora;
+        reputacion[deudor] = reputacion[deudor] > penalizacionPorMora ? reputacion[deudor] - penalizacionPorMora : 0;
+        emit ReputationUpdated(deudor, reputacion[deudor]);
 
-        cierreNivel[deudor] = usuarios[deudor].nivelActual;
-        cierreATiempo[deudor] = false;
-        usuarios[deudor].montoActivo = 0;
-        usuarios[deudor].vencimiento = 0;
-        usuarios[deudor].enMora = false;
-        usuarios[deudor].monedaActivo = address(0);
-        usuarios[deudor].tasaAplicadaBP = 0;
-        delete planPago[deudor];
-        prestamosCerrados[deudor] += 1;
-
-        if (esMoroso[deudor]) {
-            esMoroso[deudor] = false;
-            emit MorosityUpdated(deudor, false);
-        } else {
-            prestamosMorosos[deudor] += 1;
-            penalizacionesAcumuladas[deudor] += penalizacionPorMora;
-            if (reputacion[deudor] >= penalizacionPorMora) {
-                reputacion[deudor] -= penalizacionPorMora;
-            } else {
-                reputacion[deudor] = 0;
-            }
-            emit ReputationUpdated(deudor, reputacion[deudor]);
-        }
-
-        emit LiquidationExecuted(msg.sender, deudor, tokenAddress, restante, reward);
+        emit LiquidationExecuted(msg.sender, deudor, tokenAddress, restante, 0);
         emit LoanLiquidated(deudor, msg.sender, tokenAddress, restante);
     }
 

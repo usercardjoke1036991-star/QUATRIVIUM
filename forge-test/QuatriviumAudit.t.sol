@@ -166,7 +166,7 @@ contract QuatriviumAuditForgeTest is Test {
         credit.liquidate(user, address(token));
         _assertNav();
         (, uint256 montoActivo,,,,) = credit.usuarios(user);
-        assertEq(montoActivo, 0);
+        assertEq(montoActivo, 1 ether, "la deuda sigue tras el castigo");
     }
 
     function test_no_pause_or_ban_selectors_and_repay_works() public {

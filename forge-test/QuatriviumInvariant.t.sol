@@ -143,7 +143,7 @@ contract QuatriviumMoneyHandler is Test {
             borrow(actorSeed, true);
             (, activo, vencimiento,,,) = credit.usuarios(actor);
         }
-        if (activo == 0 || vencimiento == 0) return;
+        if (activo == 0 || vencimiento == 0 || credit.castigado(actor) > 0) return;
         if (block.timestamp <= vencimiento + 48 hours + 1 hours) {
             vm.warp(vencimiento + 48 hours + 1 hours + 1);
         }

@@ -52,11 +52,11 @@ Rama `cursor/soberania-contratos-8e15`. La medición de este apartado es la de e
 
 | Pieza | Bytes | Libres |
 | --- | --- | --- |
-| QuatriviumCredit (forge, runtime) | 23007 | 1569 |
-| QuatriviumCredit (Hardhat, deployedBytecode) | 23215 | 1361 |
-| QuatriviumCreditHarness | 24417 | 159 |
+| QuatriviumCredit (forge, runtime) | 22728 | 1848 |
+| QuatriviumCredit (Hardhat, deployedBytecode) | 22993 | 1583 |
+| QuatriviumCreditHarness | 24198 | 378 |
 
-Un pago de 40 generaciones usó 1246495 de gas (el test lo imprime y exige menos de 3 000 000). Foundry con `FOUNDRY_PROFILE=ci`: 83 pruebas en verde. Los invariantes corrieron 256 veces, 204800 llamadas y 0 reversiones. Hardhat: 496 pruebas en verde.
+Un pago de 40 generaciones usó 1250095 de gas (el test lo imprime y exige menos de 3 000 000). Foundry con `FOUNDRY_PROFILE=ci`: 91 pruebas en verde. Los invariantes corrieron 256 veces, 204800 llamadas y 0 reversiones. Hardhat: 496 pruebas en verde.
 
 Slither, compilación nueva, `fail_on: high`: 25 resultados, 0 altos, 0 medios, 15 bajos, 10 de optimización. Los medios que no eran un fallo llevan `slither-disable-next-line` con el motivo en la misma línea. No se cambió la lógica de `_soloEOA`, Alta ni Reserva. Los 15 bajos, uno por uno:
 
@@ -104,7 +104,7 @@ Un PIN de 6 dígitos solo tiene 1 000 000 de combinaciones. La protección real 
 
 Fecha de la revisión inicial: 10 de noviembre de 2026 (America/Caracas).
 
-Fecha de la revisión de la última medición: 16 de noviembre de 2026, commit `9ac28b2`. Rama `cursor/soberania-contratos-8e15`. Medición de ahora: Hardhat 496, Foundry 83. Credit en forge (runtime): 23007 bytes, 1569 libres de 24576. Credit en Hardhat (`deployedBytecode`): 23215 bytes, 1361 libres de 24576.
+Fecha de la revisión de la última medición: 19 de noviembre de 2026, base `36e3996` más la tanda 2. Rama `cursor/soberania-contratos-8e15`. Medición de ahora: Hardhat 496, Foundry 91. Credit en forge (runtime): 22728 bytes, 1848 libres de 24576. Credit en Hardhat (`deployedBytecode`): 22993 bytes, 1583 libres de 24576.
 
 La clave del historial (commits `10553d4` y `dc40f15`, archivo `.env.worker.example`) ya fue revocada. No está en el árbol. El valor no se copia y la historia no se reescribe.
 
@@ -294,7 +294,7 @@ El alta on-chain no manda «el resto» al pool de préstamos en el mismo momento
 - El pool no se retira: `retirarLiquidez` revierte (`QuatriviumCredit.sol`, líneas 816-817).
 - El fondo de seguro es el 5 % (`SEGURO_BP = 500`) y `cubrirImpago` solo mueve contabilidad hacia el pool. No hay función para sacarlo.
 - El fundador cobra el 15 % del interés en el mismo pago (`FUNDADOR_BP = 1500`, `dispersarInteres`, líneas 354-356). La generación 0 no exige alta ni L1. El resto de la línea sí (`_pagarCapped`, líneas 425-427).
-- El premio del liquidador es el menor entre el 5 % del principal restante y el interés que queda tras el fee (`liquidate`, líneas 921-925). El fee se queda en el pool.
+- `liquidate` no paga premio. Es un castigo contable: pasa el principal restante a pérdida (primero el fondo de seguro y, si no alcanza, el pool) y lo anota en `castigado[deudor]`. La deuda no se borra. Lo que el deudor paga de principal después vuelve al pool. Un préstamo se castiga una sola vez.
 - La liquidación espera 48 horas más el tiempo caído más 1 hora. Entrar a liquidar exige `msg.sender == tx.origin` y `code.length == 0`. Nadie se liquida a sí mismo.
 - Reserva: nivel 10, 30 días, tope 12 % (`MAX_APY_BP = 1200`), el principal se transfiere al desbloquear (`_cerrar`, líneas 345-365). Si el bote no alcanza, el rendimiento se recorta y no revierte. No hay función para sacar el bote. Los admins solo votan su entrada o salida, 2 de 3 y 72 horas, y no pueden bajar de 2.
 - El quórum de Credit está fijo en 2 (`_requiredConfirms`). Un voto no se repite (`already confirmed`). La propuesta no caduca. No se puede proponer otra función que `addAdmin` o `removeAdmin`.
@@ -314,9 +314,9 @@ El alta on-chain no manda «el resto» al pool de préstamos en el mismo momento
 | --- | --- | --- |
 | Muchas cuentas para cobrar el 1 del padrino | El 1 LUSD sale del alta que la misma persona pagó | Alta de 4 LUSD por cuenta. El neto no es ganancia. |
 | Inflar la racha con préstamos de nivel 1 | Nada | La racha solo cuenta nivel 2 o más y a tiempo (`QuatriviumFamaCaja.sol`, comentario de línea 321 y `_contarCierre`). |
-| No pagar a propósito | Se queda el principal | A las 48 horas más la gracia del sequencer, cualquiera puede liquidar y cobra un premio (como mucho el 5 % del principal restante, sin pasar del interés restante) que sale del contrato. El principal no vuelve: lo absorben el fondo de seguro y, si no alcanza, el pool. El deudor conserva su nivel y puede volver a pedir tras el cooldown (`test/liquidation.test.js:84`); si eso se limita está pendiente de decisión del dueño (QA-C-01). |
+| No pagar a propósito | Nada: el principal sigue como deuda | La deuda no se borra. A las 48 horas más la gracia del sequencer, cualquiera puede castigarla en la contabilidad (`liquidate`), sin premio. El deudor sigue moroso, no puede pedir otro préstamo ni bloquear en la Reserva, y a los 30 días del vencimiento se congelan sus comisiones y bonos. Puede pagar cuando quiera, en cuotas o completo. Lo que paga vuelve al pool y las 48 horas para volver a pedir cuentan desde el pago que cierra. Conserva su nivel (QA-C-01). |
 | Préstamo relámpago | — | Entrada (alta, depósito, préstamo y liquidación): `msg.sender == tx.origin` y `code.length == 0`. `pagarPrestamo` solo cobra la deuda de `msg.sender`. |
-| Vaciar el fondo de seguro | Como mucho el premio de una liquidación, ya acotado | `cubrirImpago` no transfiere a una billetera arbitraria. |
+| Vaciar el fondo de seguro | Nada: `liquidate` no paga premio | `cubrirImpago` no transfiere a una billetera arbitraria. |
 | Spam de altas | Cada alta cuesta 4 LUSD al atacante | No quema el gas de otro. |
 | Dos admins echan al tercero | Controlan quién entra | Es el diseño de 2 de 3. No pueden bajar de dos. |
 | Un admin pausa para siempre | Nadie pide préstamos nuevos | Ver A-02. No toca el dinero ya prestado. |
@@ -362,7 +362,7 @@ Idioma: 17 archivos, mismas claves, sin textos vacíos según `check-i18n.mjs`. 
 
 `scripts/deploy-arbitrum-sovereign.cjs` exige el feed `0xFdB631F5EE196F0ed6FAa767959853A9F217697D` en chainId 42161 y el LUSD oficial. Si el script se corta a mitad, pueden quedar contratos desplegados sin enlazar. No hay que rellenar `constants/deployedAddresses.ts` hasta tener las direcciones reales. El script no debe imprimir `PRIVATE_KEY`. No se encontró una clave privada escrita en los scripts actuales.
 
-Si LUSD se detiene o un RPC miente, la app rota RPC públicos (`constants/rpcConfig.ts`) pero no puede inventar otro estado. Si todos fallan, las lecturas quedan en el último valor o en error. Si el pool se vacía, no salen préstamos nuevos. Las liquidaciones necesitan que alguien traiga el LUSD de la deuda.
+Si LUSD se detiene o un RPC miente, la app rota RPC públicos (`constants/rpcConfig.ts`) pero no puede inventar otro estado. Si todos fallan, las lecturas quedan en el último valor o en error. Si el pool se vacía, no salen préstamos nuevos. El castigo de un impago no mueve LUSD: la deuda queda hasta que el deudor la paga.
 
 ## Qué no se pudo revisar
 

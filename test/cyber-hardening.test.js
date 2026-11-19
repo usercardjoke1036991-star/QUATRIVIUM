@@ -265,7 +265,7 @@ describe('cyber hardening — PIN and secret box', function () {
       'utf8'
     );
     const slitherCfg = fs.readFileSync(path.join(__dirname, '..', 'slither.config.json'), 'utf8');
-    expect(credit).to.include('(principalRestante * 5) / 100');
+    expect(credit).to.include('(interest * pagado) / totalDue');
     expect(credit).not.to.include('(interestRestante * feeBasisPoints) / 10000');
     expect(credit).to.include('next <= nivel - (nivel % 100)');
     expect(leveling).to.include('nivel - (nivel % HITO_PASO)');

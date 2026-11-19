@@ -35,7 +35,7 @@ describe('Sequencer de Arbitrum y liquidaciones', function () {
     await en(info.vencimiento + 48n * BigInt(HORA) + 10n);
     await expect(contract.connect(liquidator).liquidate(user.address, tokenAddr)).to.not.be
       .reverted;
-    expect((await contract.usuarios(user.address)).montoActivo).to.equal(0n);
+    expect(await contract.castigado(user.address)).to.equal(ethers.parseUnits('1', 18));
   });
 
   it('no liquida si answer es 1, y tras volver espera más de una hora', async () => {
@@ -61,7 +61,7 @@ describe('Sequencer de Arbitrum y liquidaciones', function () {
     await marca(BigInt(ahora) + BigInt(HORA) + 2n);
     await expect(contract.connect(liquidator).liquidate(user.address, tokenAddr)).to.not.be
       .reverted;
-    expect((await contract.usuarios(user.address)).montoActivo).to.equal(0n);
+    expect(await contract.castigado(user.address)).to.equal(ethers.parseUnits('1', 18));
   });
 
   it('una caída de 20 h leída de la ronda anterior suma 48 h + 20 h + 1 h', async () => {
@@ -79,7 +79,7 @@ describe('Sequencer de Arbitrum y liquidaciones', function () {
     await marca(vuelta + BigInt(HORA) + 2n);
     await expect(contract.connect(liquidator).liquidate(user.address, tokenAddr)).to.not.be
       .reverted;
-    expect((await contract.usuarios(user.address)).montoActivo).to.equal(0n);
+    expect(await contract.castigado(user.address)).to.equal(ethers.parseUnits('1', 18));
   });
 
   it('si la hora de margen ya pasó, la caída de 20 h sigue frenando con GraciaLiquidacion', async () => {

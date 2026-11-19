@@ -128,10 +128,9 @@ contract QuatriviumFase3Test is Test {
         int256 sistema = int256(liq1 + fondo1) - int256(liq0 + fondo0);
         uint256 corte = (interes * 1500) / 10000;
         uint256 bueno = interes - corte;
-        uint256 premio = 0.05 ether;
-        if (premio > interes) premio = interes;
         // El 1 del padrino que entra al pool y el principal que el seguro absorbe se anulan.
-        // El premio sale del sistema. El principal no vuelve en tokens.
+        // El castigo no paga premio: el liquidador no se lleva nada del sistema.
+        uint256 premio = 0;
         int256 esperado = int256(buenos * (2 ether + bueno)) - int256(malos * premio);
         int256 ganancia = sistema - int256(n * 1 ether + buenos * 1 ether);
         int256 fondoDelta = int256(fondo1) - int256(fondo0);
@@ -211,20 +210,17 @@ contract QuatriviumFase3Test is Test {
         credit.solicitarPrestamo(address(token), 1);
 
         (, uint256 principal, uint256 vencimiento,,,) = credit.usuarios(deudor);
-        (, uint256 interes,,) = credit.obtenerDeuda(deudor);
         vm.warp(vencimiento + 48 hours + 2 hours);
 
         address liq = address(0x1111);
-        uint256 premio = (principal * 5) / 100;
-        if (premio > interes) premio = interes;
         uint256 suma = _caja(token, credit, alta, reserva, deudor, liq);
         uint256 fondoAntes = credit.fondoSeguro(address(token));
 
         vm.prank(liq, liq);
         credit.liquidate(deudor, address(token));
 
-        assertEq(token.balanceOf(liq), premio);
-        assertGt(premio, 0);
+        assertEq(token.balanceOf(liq), 0, "sin premio");
+        assertEq(credit.castigado(deudor), principal, "castigo = principal");
         assertEq(credit.outstandingLoans(address(token)), 0);
         assertEq(_caja(token, credit, alta, reserva, deudor, liq), suma);
         assertEq(
