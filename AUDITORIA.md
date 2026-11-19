@@ -78,7 +78,7 @@ Slither, compilación nueva, `fail_on: high`: 25 resultados, 0 altos, 0 medios, 
 
 Ninguno de los 15 se marcó como arreglado: cambiarlos o reordenar el cobro movería Alta, Reserva o el pago. Los 10 de optimización (`constant` / `immutable`) no cambian el comportamiento.
 
-`npm audit` del árbol completo: 35 avisos (14 bajos, 20 moderados, 1 alto, 0 críticos). El alto que queda es `image-size` (0.6.3–2.0.2): la 2.0.3 rompe la lectura de PNG al exportar Android, así que no hay override. `tmp` quedó en 0.2.7. Expo, Metro, Hardhat y solc no subieron de versión mayor. `handlebars` de desarrollo está en 4.7.10, fuera del rango vulnerable.
+`npm audit` del árbol completo: 34 avisos (5 bajos, 28 moderados, 1 alto, 0 críticos). El alto que queda es `image-size` (0.6.3–2.0.2): la 2.0.3 rompe la lectura de PNG al exportar Android, así que no hay override. `tmp` quedó en 0.2.7. Expo, Metro, Hardhat y solc no subieron de versión mayor. `handlebars` de desarrollo está en 4.7.10, fuera del rango vulnerable.
 
 ### Candado
 
@@ -95,7 +95,7 @@ Un recibo cuenta cuando 2 de los N RPC propios coinciden en hash, bloque y estad
 ### Pendiente
 
 - Decisión de Jose: entrada rechaza cuentas con código y llamadas indirectas (`msg.sender == tx.origin` y `code.length == 0`); salida libre en `pagarPrestamo` y `desbloquear`; verificación sin `tx.origin`. Credit mide 23132 bytes, 1444 libres de 24576. Antes de este cambio medía 23127.
-- El enlace de SonarCloud lo cambia el dueño en el panel. El chequeo sigue apuntando al id viejo.
+- El enlace de SonarCloud lo cambia el dueño en el panel. El análisis del PR #1 está en el proyecto `usercardjoke1036991-star_Magno-copia`; en `034fdba` el quality gate pasó con 0 issues y 0 hotspots.
 - `image-size` sigue alto. La versión parcheada 2.0.3 rompe la lectura de PNG en el paquete de Android, así que no hay override. Solo afecta a desarrollo y al empaquetado, no a los contratos. `tmp` quedó en 0.2.7.
 
 Arbitrum One ya acepta EIP-7702 (ArbOS 40, según el blog de la fundación y la lista de autorizaciones de Arbiscan). Decisión de Jose: entrada rechaza cuentas con código y llamadas indirectas (`msg.sender == tx.origin` y `code.length == 0`); salida libre en `pagarPrestamo` y `desbloquear`; verificación sin `tx.origin`. Fuente: https://blog.arbitrum.foundation/the-smartest-wallet-you-already-own-is-on-arbitrum/ y https://eips.ethereum.org/EIPS/eip-7702.
@@ -124,7 +124,7 @@ El quinto punto grave del resumen (feed viejo) era **B-01, Medio**, no Alto. Tra
 | A-04 | Alto | Cerrado por el dueño. La clave estaba en el historial, commits `10553d4` y `dc40f15`, archivo `.env.worker.example`. Ya fue revocada. No está en la app. El valor no se copia. El historial no se reescribe. |
 | B-01 | Medio | El tope de 24 h se quitó. Ese feed no late cada día: con `answer == 0` se liquida aunque la ronda tenga meses. La caída se lee de la ronda anterior. |
 | B-02 | Medio | Arreglado en la superficie: `prepareNostrPayload` devuelve null en todos los caminos. No hay pantalla de mensaje privado. Cifrar NIP-17/44 sigue sin hacerse. La mora no se publica. |
-| B-03 | Medio | Abierto en parte. Ya no hay críticos. `npm audit`: 35 avisos (14 bajos, 20 moderados, 1 alto, 0 críticos). `handlebars` quedó en 4.7.10. El alto que queda es `image-size`: 2.0.3 rompe el paquete de Android. `tmp` quedó en 0.2.7. |
+| B-03 | Medio | Abierto en parte. Ya no hay críticos. `npm audit`: 34 avisos (5 bajos, 28 moderados, 1 alto, 0 críticos). `handlebars` quedó en 4.7.10. El alto que queda es `image-size`: 2.0.3 rompe el paquete de Android. `tmp` quedó en 0.2.7. |
 | C-01 | Bajo | Arreglado. El comentario de `pagarVerificacion` ya no dice 0.50 LUSD. El comportamiento no cambió. |
 | C-02 | Bajo | Pendiente. Reescribir cada test que lee fuente sería un refactor. Los arreglos de esta ronda sí ejecutan el contrato. |
 | C-03 | Bajo | Arreglado. `web/invite/index.html` ya no muestra un hash inventado. |
@@ -184,7 +184,7 @@ Nada de lo leído permite que un extraño vacíe el pool, el bote de Reserva o e
 - Foundry: 80 pruebas, todas en verde, con `FOUNDRY_PROFILE=ci` y `--fuzz-runs 256`. Los 3 invariantes, 0 reversiones.
 - `node scripts/check-external-services.mjs`: sin nombres prohibidos en el árbol actual.
 - `node scripts/check-i18n.mjs`: 17 idiomas, 1288 claves cada uno, sin copias largas del inglés.
-- `npm audit` antes: 37 avisos (15 bajos, 20 moderados, 2 altos, 0 críticos). Después de fijar `tmp` en 0.2.7: 35 avisos (14 bajos, 20 moderados, 1 alto, 0 críticos). El alto que queda es `image-size`, porque 2.0.3 rompe el paquete. Expo, Metro, Hardhat y solc no subieron de versión mayor.
+- `npm audit` antes: 37 avisos (15 bajos, 20 moderados, 2 altos, 0 críticos). Después de fijar `tmp` en 0.2.7: 35 avisos (14 bajos, 20 moderados, 1 alto, 0 críticos). El alto que queda es `image-size`, porque 2.0.3 rompe el paquete. Expo, Metro, Hardhat y solc no subieron de versión mayor. hoy 34 por cambios en la base de avisos, sin cambio del árbol.
 - Slither de esta rama está en «Medición de esta rama»: 0 altos y 0 medios. La frase vieja de que Slither no estaba instalado ya no vale.
 
 Tamaños de bytecode desplegado (artifact de Hardhat, límite EIP-170 = 24576):
@@ -271,7 +271,7 @@ Nostr no cifra y no se conecta. La mora sí está bloqueada.
 
 ### B-03 · Medio · dependencia
 
-Ya no hay críticos. `npm audit`: 35 avisos (14 bajos, 20 moderados, 1 alto, 0 críticos). `handlebars` de desarrollo está en 4.7.10, fuera del rango vulnerable. El alto que queda es `image-size` (`expo` → `@expo/metro` → `metro`): la 2.0.3 rompe la lectura de PNG y no se subió Expo. `tmp` quedó en 0.2.7, sin subir solc. Se fijaron dentro de Expo 54: `decode-uri-component` 0.5.1, `node-forge` 1.4.3, `undici` 6.29.1, `source-map-js` 1.2.2, `axios` 1.21.1 y `fast-uri` 3.1.9.
+Ya no hay críticos. `npm audit`: 34 avisos (5 bajos, 28 moderados, 1 alto, 0 críticos). `handlebars` de desarrollo está en 4.7.10, fuera del rango vulnerable. El alto que queda es `image-size` (`expo` → `@expo/metro` → `metro`): la 2.0.3 rompe la lectura de PNG y no se subió Expo. `tmp` quedó en 0.2.7, sin subir solc. Se fijaron dentro de Expo 54: `decode-uri-component` 0.5.1, `node-forge` 1.4.3, `undici` 6.29.1, `source-map-js` 1.2.2, `axios` 1.21.1 y `fast-uri` 3.1.9.
 
 ### C-01 · Bajo · texto
 

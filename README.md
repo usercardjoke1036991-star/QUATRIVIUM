@@ -30,7 +30,7 @@ npm run format:check
 - Bajo: una segunda cuenta puede cobrar el LUSD apartado de la primera. Cuesta los otros 3 LUSD más el interés del nivel 1.
 - Bajo: `soltarPadrino` no suelta ese LUSD si el padre viniera vacío. El registro normal no hace eso.
 - Bajo: algunos tests de dinero todavía leen texto. La lista está en `AUDITORIA.md`.
-- Alto, aceptado: `npm audit` deja 35 avisos (14 bajos, 20 moderados, 1 alto, 0 críticos). El alto es `image-size@1.2.1` (`expo` → `@expo/metro` → `metro@0.83.3`). La 2.0.3 rompe `metro/src/Assets.js:173` porque recibe una ruta.
+- Alto, aceptado: `npm audit` deja 34 avisos (5 bajos, 28 moderados, 1 alto, 0 críticos). El alto es `image-size@1.2.1` (`expo` → `@expo/metro` → `metro@0.83.3`). La 2.0.3 rompe `metro/src/Assets.js:173` porque recibe una ruta.
 - Medio: el cifrado NIP-17/44 no está implementado.
 
 ## Pendiente antes de dinero real
