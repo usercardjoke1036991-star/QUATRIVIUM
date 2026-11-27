@@ -288,7 +288,7 @@ describe('cyber hardening — PIN and secret box', function () {
     expect(cyber).to.include('TRIVY_${label}_DID_NOT_RUN');
     expect(cyber).to.include('--bin-runtime');
     expect(cyber).to.include('"$MAGNO/package-lock.json"');
-    expect(cyber).to.include('"$MAGNO/Dockerfile.notify"');
+    expect(cyber).to.not.include('Dockerfile.notify');
     expect(cyber).to.include('"$MAGNO/scripts"');
     expect(cyber).to.not.match(/trivy_step [^\n]*"\$MAGNO"$/m);
     const zap = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'zap-health-wsl.sh'), 'utf8');

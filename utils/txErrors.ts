@@ -6,11 +6,6 @@ function emptyRevertKey(): TranslationKey {
   return isDemoAccount() ? 'errEmptyRevertDemo' : 'errEmptyRevert';
 }
 
-/** Demo y Real no comparten el texto de red. humanizeTxError lo traduce. */
-export function networkFailureError(demo: boolean): Error {
-  return new Error(demo ? 'wrong-network-demo' : 'wrong-network');
-}
-
 function extractRawError(error: unknown): string {
   const err = error as {
     shortMessage?: string;

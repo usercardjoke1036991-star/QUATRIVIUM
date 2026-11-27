@@ -63,7 +63,6 @@ import { getProductMode, publicRpcList } from '../constants/rpcConfig';
 import { allowWalletAsyncFallback } from '../utils/walletVaultPolicy';
 import { BOUND_UNKNOWN, getBoundWallet } from './deviceBinding';
 import { clearWalletSession, getWalletWrapKey, setWalletWrapKey } from './walletSession';
-import { externalWalletHandoffActive } from './walletHandoff';
 import { isPickerHeld } from '../utils/pickerHold';
 import { reportLockFault } from '../utils/lockRace';
 import { sha256, toUtf8Bytes } from 'ethers';
@@ -2377,7 +2376,6 @@ export function shouldRelockAfterBackground(
   if (isPickerHeld(mono)) return false;
   if (backgroundedAt == null) return false;
   if (now < backgroundedAt) return true;
-  if (externalWalletHandoffActive()) return false;
   if (now - backgroundedAt >= BACKGROUND_LOCK_MS) return true;
   if (monoAt == null) return false;
   if (mono < monoAt) return true;

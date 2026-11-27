@@ -17,7 +17,7 @@ Node 22.
 ```bash
 npm ci --ignore-scripts
 npm test
-forge test --fuzz-runs 32
+forge test --fuzz-runs 256
 npm run typecheck
 npm run lint
 npm run format:check

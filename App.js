@@ -17,14 +17,7 @@ import * as Linking from 'expo-linking';
 import { rememberAppUrl } from './utils/pendingDeepLink';
 import { BrandSplash } from './components/BrandSplash';
 
-LogBox.ignoreLogs([
-  'User rejected methods',
-  'Reject Session',
-  'Proposal expired',
-  'Request expired',
-  'User denied',
-  'denied transaction',
-]);
+LogBox.ignoreLogs(['User denied', 'denied transaction']);
 
 const BRAND_HOLD_MS = 1700;
 

@@ -39,10 +39,6 @@ ignore:
     - '*':
         reason: uuid 7 via expo-constants 18 / Expo 54; el fix pide Expo 55
         expires: 2027-09-29T00:00:00.000Z
-  javascript/HttpToHttps:
-    - 'scripts/notify-worker.mjs':
-        reason: HTTP solo en el puerto privado; TLS lo termina Render/Caddy
-        expires: 2027-10-02T00:00:00.000Z
   javascript/PT:
     - 'scripts/scan-mobile.mjs':
         reason: CLI local de MobSF; solo lee .apk/.aab/.ipa dentro del repo

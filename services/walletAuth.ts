@@ -11,7 +11,6 @@ import { getDeviceHash } from './deviceBinding';
 
 export type AuthPurpose =
   | 'vincular-avisos'
-  | 'vincular-billetera'
   | 'perfil'
   | 'otp'
   | 'email'
@@ -21,17 +20,6 @@ export type AuthPurpose =
   | 'identity'
   | 'autofund'
   | 'admin-totp';
-
-export const BIND_WALLET_PURPOSE = 'vincular-billetera' as const;
-
-export const BIND_TYPES: Record<string, TypedDataField[]> = {
-  BindWallet: [
-    { name: 'appWallet', type: 'address' },
-    { name: 'externalWallet', type: 'address' },
-    { name: 'purpose', type: 'string' },
-    { name: 'timestamp', type: 'uint256' },
-  ],
-};
 
 const ZERO_PLACEHOLDER = '0x0000000000000000000000000000000000000001';
 const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000';
@@ -142,44 +130,4 @@ export function recoverWalletAuth(
 export function isFreshTimestamp(timestamp: number, maxAgeMs = 5 * 60 * 1000): boolean {
   const now = Date.now();
   return Number.isFinite(timestamp) && timestamp > 0 && Math.abs(now - timestamp) <= maxAgeMs;
-}
-
-function bindValue(appWallet: string, externalWallet: string, timestamp: number) {
-  return {
-    appWallet: getAddress(appWallet),
-    externalWallet: getAddress(externalWallet),
-    purpose: BIND_WALLET_PURPOSE,
-    timestamp,
-  };
-}
-
-export async function signBindExternalWallet(
-  signer: Signer,
-  appWallet: string,
-  externalWallet: string
-): Promise<{ timestamp: number; signature: string }> {
-  const timestamp = Date.now();
-  const value = bindValue(appWallet, externalWallet, timestamp);
-  const signature = await signer.signTypedData(authDomain(), BIND_TYPES, value);
-  const recovered = recoverBindExternalWallet(appWallet, externalWallet, timestamp, signature);
-  if (recovered !== getAddress(externalWallet)) throw new Error('bind');
-  return { timestamp, signature };
-}
-
-export function recoverBindExternalWallet(
-  appWallet: string,
-  externalWallet: string,
-  timestamp: number,
-  signature: string,
-  chainId = NETWORK_CONFIG.chainId,
-  verifyingContract = getContractAddress()
-): string {
-  return getAddress(
-    verifyTypedData(
-      authDomain(chainId, verifyingContract),
-      BIND_TYPES,
-      bindValue(appWallet, externalWallet, timestamp),
-      signature
-    )
-  );
 }

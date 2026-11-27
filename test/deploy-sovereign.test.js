@@ -1,6 +1,11 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const { assertDeployConfig, deploySovereign, ZERO } = require('../scripts/deploySovereign.cjs');
+const {
+  assertDeployConfig,
+  deploySovereign,
+  ZERO,
+  SEQUENCER_ARBITRUM_ONE,
+} = require('../scripts/deploySovereign.cjs');
 const {
   assertOfficialLusd,
   LUSD_ARBITRUM_ONE,
@@ -34,6 +39,23 @@ describe('Despliegue soberano local', function () {
         token: '0x93b346b6BC2548dA6A1E7d98E9a421B42541425b',
       })
     ).to.throw(/feed/);
+    const other = '0x0000000000000000000000000000000000000004';
+    expect(() =>
+      assertDeployConfig({
+        chainId: 42161,
+        founder,
+        admins,
+        sequencerFeed: other,
+        confirmFounder: 'yes',
+      })
+    ).to.throw(/feed oficial/);
+    assertDeployConfig({
+      chainId: 42161,
+      founder,
+      admins,
+      sequencerFeed: SEQUENCER_ARBITRUM_ONE.toLowerCase(),
+      confirmFounder: 'yes',
+    });
   });
 
   it('en 42161 aborta si el LUSD no es el oficial', function () {

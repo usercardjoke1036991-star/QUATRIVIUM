@@ -168,7 +168,7 @@ describe('avisos y fallos de red', function () {
       }
     }
     const errors = fs.readFileSync(path.join(root, 'utils', 'txErrors.ts'), 'utf8');
-    expect(errors).to.include('export function networkFailureError');
+    expect(errors).to.not.include('networkFailureError');
     expect(errors).to.include("['RPC chain mismatch', 'errRpcMismatch']");
     expect(errors).to.include("['wrong-network-demo', 'linkWalletNetworkDemo']");
     expect(errors).to.include("['wrong-network', 'errWrongNetwork']");

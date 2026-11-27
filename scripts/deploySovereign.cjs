@@ -22,8 +22,8 @@ function assertDeployConfig(cfg) {
     if (cfg.confirmFounder !== 'yes') {
       throw new Error('Arbitrum One exige CONFIRM_FOUNDER_WALLET=yes.');
     }
-    if (!ethers.isAddress(feed) || feed === ZERO) {
-      throw new Error('Arbitrum One exige el feed del sequencer.');
+    if (!ethers.isAddress(feed) || feed.toLowerCase() !== SEQUENCER_ARBITRUM_ONE.toLowerCase()) {
+      throw new Error('Arbitrum One exige el feed oficial del sequencer.');
     }
   } else if (chainId !== 31337 && chainId !== 421614) {
     throw new Error('Red no soportada.');

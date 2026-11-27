@@ -266,14 +266,19 @@ describe('QuatriviumReserva', function () {
     const signers = await ethers.getSigners();
     const incoming = signers[5];
     const data = reserva.interface.encodeFunctionData('removeAdmin', [user.address]);
-    await reserva.connect(owner).proponerAdmin(data);
+    const quitar = reserva.interface.getFunction('removeAdmin').selector;
+    await expect(reserva.connect(owner).proponerAdmin(data))
+      .to.emit(reserva, 'AdminPropuesto')
+      .withArgs(1n, owner.address, quitar);
     await ethers.provider.send('evm_increaseTime', [72 * 60 * 60]);
     await ethers.provider.send('evm_mine');
     await expect(reserva.connect(owner).ejecutarAdmin(1)).to.be.revertedWithCustomError(
       reserva,
       'Quorum'
     );
-    await reserva.connect(founder).confirmarAdmin(1);
+    await expect(reserva.connect(founder).confirmarAdmin(1))
+      .to.emit(reserva, 'AdminConfirmado')
+      .withArgs(1n, founder.address, 2n);
     await reserva.connect(owner).ejecutarAdmin(1);
     expect(await reserva.admins(user.address)).to.equal(false);
     expect(await reserva.requiredConfirmations()).to.equal(2n);

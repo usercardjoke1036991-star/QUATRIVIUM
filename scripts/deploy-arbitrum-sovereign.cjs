@@ -15,6 +15,18 @@ function assertOfficialLusd(chainId, lusd) {
   }
 }
 
+/** latestRoundData(): el feed oficial de Chainlink responde con cinco palabras. */
+async function assertOfficialSequencerCode(provider) {
+  const code = await provider.getCode(SEQUENCER_ARBITRUM_ONE);
+  if (!code || code === '0x') {
+    throw new Error('Arbitrum One exige el feed oficial del sequencer.');
+  }
+  const round = await provider.call({ to: SEQUENCER_ARBITRUM_ONE, data: '0xfeaf968c' });
+  if (!round || round === '0x' || (String(round).length - 2) / 2 < 160) {
+    throw new Error('Arbitrum One exige el feed oficial del sequencer.');
+  }
+}
+
 async function main() {
   const chainId = Number((await ethers.provider.getNetwork()).chainId);
   if (chainId === 42161 && process.env.CONFIRM_MAINNET !== 'yes') {
@@ -24,6 +36,9 @@ async function main() {
     throw new Error('Arbitrum One exige CONFIRM_FOUNDER_WALLET=yes.');
   }
   assertOfficialLusd(chainId, process.env.LUSD_ADDRESS);
+  if (chainId === 42161) {
+    await assertOfficialSequencerCode(ethers.provider);
+  }
   const [deployer] = await ethers.getSigners();
   const founder = process.env.FOUNDER_ADDRESS || deployer.address;
   const admins = (process.env.ADMINS || '')
@@ -52,5 +67,5 @@ if (require.main === module) {
   });
 }
 
-module.exports = { main, assertOfficialLusd, LUSD_ARBITRUM_ONE };
+module.exports = { main, assertOfficialLusd, assertOfficialSequencerCode, LUSD_ARBITRUM_ONE };
 void network;

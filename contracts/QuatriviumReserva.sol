@@ -102,6 +102,8 @@ contract QuatriviumReserva is ReentrancyGuard {
     event BoostComision(address indexed beneficiario, uint256 montoBase, uint256 extra, uint256 corteFundador);
     event AdminAdded(address indexed admin);
     event AdminRemoved(address indexed admin);
+    event AdminPropuesto(uint256 indexed id, address indexed proposer, bytes4 selector);
+    event AdminConfirmado(uint256 indexed id, address indexed confirmante, uint256 confirms);
 
     modifier onlyAdmin() {
         if (!admins[msg.sender]) revert SoloAdmin();
@@ -289,6 +291,7 @@ contract QuatriviumReserva is ReentrancyGuard {
             cancelled: false
         });
         confirmed[id][msg.sender] = true;
+        emit AdminPropuesto(id, msg.sender, bytes4(data));
     }
 
     function confirmarAdmin(uint256 id) external onlyAdmin {
@@ -296,6 +299,7 @@ contract QuatriviumReserva is ReentrancyGuard {
         if (p.eta == 0 || p.executed || p.cancelled || confirmed[id][msg.sender]) revert NoAutorizado();
         confirmed[id][msg.sender] = true;
         p.confirms += 1;
+        emit AdminConfirmado(id, msg.sender, p.confirms);
     }
 
     function _votosVigentes(uint256 id) internal view returns (uint256 n) {

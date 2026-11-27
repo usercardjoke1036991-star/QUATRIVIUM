@@ -15,7 +15,7 @@ describe('lock error text', function () {
       'El llavero no responde. Intente de nuevo.'
     );
     expect(errors.passwordFailText(new Error('store-unknown'), t), 'store').to.equal(
-      'Almacenamiento no disponible. Intenta de nuevo.'
+      'Almacenamiento no disponible. Intente de nuevo.'
     );
     expect(errors.passwordFailText(new Error('password-persist'), t), 'persist').to.equal(
       'No se pudo guardar la cuenta en este teléfono. Intente de nuevo.'
@@ -40,7 +40,7 @@ describe('lock error text', function () {
       'El llavero no responde. Intente de nuevo.'
     );
     expect(errors.restoreFailText('store-unknown', t), 'store').to.equal(
-      'Almacenamiento no disponible. Intenta de nuevo.'
+      'Almacenamiento no disponible. Intente de nuevo.'
     );
     expect(errors.restoreFailText('password-persist', t), 'persist').to.equal(
       'No se pudo guardar la cuenta en este teléfono. Intente de nuevo.'

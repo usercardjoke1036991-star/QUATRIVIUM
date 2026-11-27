@@ -208,7 +208,6 @@ const box = loadTs(path.join(__dirname, '..', 'utils', 'secretBox.ts'));
 const lock = loadTs(path.join(__dirname, '..', 'services', 'appLock.ts'));
 const auth = loadTs(path.join(__dirname, '..', 'services', 'authenticator.ts'));
 const totp = loadTs(path.join(__dirname, '..', 'utils', 'totp.ts'));
-const handoff = loadTs(path.join(__dirname, '..', 'services', 'walletHandoff.ts'));
 const entry = loadTs(path.join(__dirname, '..', 'utils', 'accountEntry.ts'));
 const session = loadTs(path.join(__dirname, '..', 'services', 'walletSession.ts'));
 const restore = loadTs(path.join(__dirname, '..', 'services', 'restoreAccount.ts'));
@@ -1698,14 +1697,8 @@ describe('app lock PBKDF2', function () {
     }
   });
 
-  it('relocks when the phone clock goes backwards during a wallet handoff', function () {
-    handoff.beginExternalWalletHandoff();
-    try {
-      expect(handoff.externalWalletHandoffActive()).to.equal(true);
-      expect(lock.shouldRelockAfterBackground(5_000, 4_000, 1_000, 1_100)).to.equal(true);
-    } finally {
-      handoff.endExternalWalletHandoff();
-    }
+  it('relocks when the phone clock goes backwards', function () {
+    expect(lock.shouldRelockAfterBackground(5_000, 4_000, 1_000, 1_100)).to.equal(true);
   });
 
   it('locks on a cold start whenever an account is on the phone', function () {

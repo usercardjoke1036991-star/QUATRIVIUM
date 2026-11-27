@@ -51,9 +51,9 @@ describe('wallet link requires a bind signature', function () {
     const handlers = read('hooks', 'useHomeHandlers.ts');
     expect(transfer).to.not.include('saveLinkedExternalWallet');
     expect(handlers).to.not.include('saveLinkedExternalWallet');
-    expect(auth).to.include("BIND_WALLET_PURPOSE = 'vincular-billetera'");
-    expect(auth).to.include('signBindExternalWallet');
-    expect(auth).to.include('purpose: BIND_WALLET_PURPOSE');
+    expect(auth).to.not.include('BIND_WALLET_PURPOSE');
+    expect(auth).to.not.include('signBindExternalWallet');
+    expect(auth).to.not.include('vincular-billetera');
   });
 
   it('keeps an Arbitrum One proof out of Arbitrum Sepolia', function () {
