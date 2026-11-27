@@ -1290,5 +1290,19 @@
   "appWalletInGas": "Envíe también un poco de ETH por la misma red: la billetera de la app lo necesita para pagar el gas de cada firma.",
   "settingsAdminSafe": "Si administra con una Safe, firme fuera de la app en app.safe.global, con el contrato {address}.",
   "appWalletBalanceUnread": "No se pudo leer el saldo de la billetera de la app. Revise la conexión e inténtelo de nuevo.",
-  "linkWalletChange": "Cambiar billetera"
+  "linkWalletChange": "Cambiar billetera",
+  "linkTestLead": "Para vincularla, envíe un monto de prueba desde esa billetera a la de la app. Así se comprueba que es suya.",
+  "linkWalletAddressLabel": "Dirección de su billetera externa",
+  "linkWalletAddressInvalid": "Dirección no válida. Debe empezar por 0x y tener 42 caracteres.",
+  "linkWalletAddressSelf": "Esa es la dirección de la app. Escriba la de su billetera externa.",
+  "linkTestStart": "Crear monto de prueba",
+  "linkTestSend": "Desde {from}, envíe exactamente {amount} {symbol} a la billetera de la app. Tiene {minutes} minutos.",
+  "linkTestCopyAmount": "Copiar monto",
+  "linkTestKept": "El monto se queda en su billetera de la app. La billetera externa necesita un poco de ETH para el gas.",
+  "linkTestVerify": "Ya lo envié: comprobar",
+  "linkTestWaiting": "Aún no se ve la transferencia. Espere un minuto y vuelva a comprobar.",
+  "linkTestUnconfirmed": "La transferencia aparece, pero aún no la confirman dos nodos. Vuelva a comprobar en un minuto.",
+  "linkTestExpired": "La prueba caducó sin una transferencia válida. Cree un monto nuevo; el anterior ya no sirve.",
+  "linkTestOffline": "No se pudo consultar la red. Revise la conexión e inténtelo de nuevo.",
+  "linkTestCancel": "Cancelar prueba"
 }

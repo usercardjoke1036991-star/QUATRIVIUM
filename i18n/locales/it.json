@@ -1290,5 +1290,19 @@
   "appWalletInGas": "Invii anche un po’ di ETH sulla stessa rete: il portafoglio dell’app ne ha bisogno per pagare il gas di ogni firma.",
   "settingsAdminSafe": "Se amministra con una Safe, firmi fuori dall’app su app.safe.global, con il contratto {address}.",
   "appWalletBalanceUnread": "Non è stato possibile leggere il saldo del portafoglio dell’app. Controlli la connessione e riprovi.",
-  "linkWalletChange": "Cambia portafoglio"
+  "linkWalletChange": "Cambia portafoglio",
+  "linkTestLead": "Per collegarlo, invia un importo di prova da quel portafoglio a quello dell'app. Così si dimostra che è tuo.",
+  "linkWalletAddressLabel": "Indirizzo del suo portafoglio esterno",
+  "linkWalletAddressInvalid": "Indirizzo non valido. Deve iniziare con 0x e avere 42 caratteri.",
+  "linkWalletAddressSelf": "Questo è l’indirizzo dell’app. Scriva quello del suo portafoglio esterno.",
+  "linkTestStart": "Crea importo di prova",
+  "linkTestSend": "Da {from}, invia esattamente {amount} {symbol} al portafoglio dell'app. Hai {minutes} minuti.",
+  "linkTestCopyAmount": "Copia l'importo",
+  "linkTestKept": "L'importo resta nel tuo portafoglio dell'app. Il portafoglio esterno ha bisogno di un po' di ETH per il gas.",
+  "linkTestVerify": "L'ho inviato: verifica",
+  "linkTestWaiting": "Il trasferimento non è ancora visibile. Attendi un minuto e verifica di nuovo.",
+  "linkTestUnconfirmed": "Il trasferimento compare, ma due nodi non lo hanno ancora confermato. Verifica di nuovo tra un minuto.",
+  "linkTestExpired": "La prova è scaduta senza un trasferimento valido. Crea un nuovo importo; quello precedente non vale più.",
+  "linkTestOffline": "Impossibile raggiungere la rete. Controlla la connessione e riprova.",
+  "linkTestCancel": "Annulla la prova"
 }

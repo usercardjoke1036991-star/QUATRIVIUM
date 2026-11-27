@@ -1290,5 +1290,19 @@
   "appWalletInGas": "Envie também um pouco de ETH pela mesma rede: a carteira da app precisa dele para pagar o gás de cada assinatura.",
   "settingsAdminSafe": "Se administra com uma Safe, assine fora da app em app.safe.global, com o contrato {address}.",
   "appWalletBalanceUnread": "Não foi possível ler o saldo da carteira da app. Verifique a conexão e tente de novo.",
-  "linkWalletChange": "Trocar carteira"
+  "linkWalletChange": "Trocar carteira",
+  "linkTestLead": "Para vinculá-la, envie um valor de teste dessa carteira para a carteira do app. Assim se comprova que ela é sua.",
+  "linkWalletAddressLabel": "Endereço da sua carteira externa",
+  "linkWalletAddressInvalid": "Endereço inválido. Deve começar por 0x e ter 42 caracteres.",
+  "linkWalletAddressSelf": "Esse é o endereço da app. Escreva o da sua carteira externa.",
+  "linkTestStart": "Criar valor de teste",
+  "linkTestSend": "De {from}, envie exatamente {amount} {symbol} para a carteira do app. Você tem {minutes} minutos.",
+  "linkTestCopyAmount": "Copiar valor",
+  "linkTestKept": "O valor fica na sua carteira do app. A carteira externa precisa de um pouco de ETH para o gás.",
+  "linkTestVerify": "Já enviei: verificar",
+  "linkTestWaiting": "A transferência ainda não aparece. Aguarde um minuto e verifique de novo.",
+  "linkTestUnconfirmed": "A transferência aparece, mas dois nós ainda não a confirmaram. Verifique de novo em um minuto.",
+  "linkTestExpired": "O teste expirou sem uma transferência válida. Crie um valor novo; o anterior não serve mais.",
+  "linkTestOffline": "Não foi possível consultar a rede. Verifique a conexão e tente de novo.",
+  "linkTestCancel": "Cancelar teste"
 }

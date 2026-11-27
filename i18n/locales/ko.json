@@ -1290,5 +1290,19 @@
   "appWalletInGas": "같은 네트워크로 ETH도 조금 보내세요. 앱 지갑은 서명마다 가스비를 내기 위해 ETH가 필요합니다.",
   "settingsAdminSafe": "Safe로 관리한다면 앱 밖의 app.safe.global에서 컨트랙트 {address}로 서명하세요.",
   "appWalletBalanceUnread": "앱 지갑 잔액을 읽지 못했습니다. 연결을 확인하고 다시 시도하세요.",
-  "linkWalletChange": "지갑 변경"
+  "linkWalletChange": "지갑 변경",
+  "linkTestLead": "연결하려면 해당 지갑에서 앱 지갑으로 테스트 금액을 보내세요. 이것으로 지갑이 본인 것임이 증명됩니다.",
+  "linkWalletAddressLabel": "외부 지갑 주소",
+  "linkWalletAddressInvalid": "주소가 올바르지 않습니다. 0x로 시작하는 42자여야 합니다.",
+  "linkWalletAddressSelf": "앱 주소입니다. 외부 지갑 주소를 입력하세요.",
+  "linkTestStart": "테스트 금액 만들기",
+  "linkTestSend": "{from}에서 앱 지갑으로 정확히 {amount} {symbol}을(를) 보내세요. 남은 시간은 {minutes}분입니다.",
+  "linkTestCopyAmount": "금액 복사",
+  "linkTestKept": "이 금액은 앱 지갑에 그대로 남습니다. 외부 지갑에는 가스비로 약간의 ETH가 필요합니다.",
+  "linkTestVerify": "보냈습니다: 확인",
+  "linkTestWaiting": "아직 송금이 보이지 않습니다. 1분 후 다시 확인하세요.",
+  "linkTestUnconfirmed": "송금이 보이지만 아직 두 노드가 확인하지 않았습니다. 1분 후 다시 확인하세요.",
+  "linkTestExpired": "유효한 송금 없이 테스트가 만료되었습니다. 새 금액을 만드세요. 이전 금액은 더 이상 쓸 수 없습니다.",
+  "linkTestOffline": "네트워크에 연결할 수 없습니다. 연결을 확인하고 다시 시도하세요.",
+  "linkTestCancel": "테스트 취소"
 }

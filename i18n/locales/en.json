@@ -1290,5 +1290,19 @@
   "appWalletInGas": "Also send a little ETH on the same network: the app wallet needs it to pay the gas for each signature.",
   "settingsAdminSafe": "If you administer with a Safe, sign outside the app at app.safe.global, with the contract {address}.",
   "appWalletBalanceUnread": "Could not read the app wallet balance. Check the connection and try again.",
-  "linkWalletChange": "Change wallet"
+  "linkWalletChange": "Change wallet",
+  "linkTestLead": "To link it, send a test amount from that wallet to the app wallet. This proves it is yours.",
+  "linkWalletAddressLabel": "Your external wallet address",
+  "linkWalletAddressInvalid": "Invalid address. It must start with 0x and have 42 characters.",
+  "linkWalletAddressSelf": "That is the app address. Enter your external wallet address.",
+  "linkTestStart": "Create test amount",
+  "linkTestSend": "From {from}, send exactly {amount} {symbol} to the app wallet. You have {minutes} minutes.",
+  "linkTestCopyAmount": "Copy amount",
+  "linkTestKept": "The amount stays in your app wallet. The external wallet needs a little ETH for gas.",
+  "linkTestVerify": "I sent it: check",
+  "linkTestWaiting": "The transfer is not visible yet. Wait a minute and check again.",
+  "linkTestUnconfirmed": "The transfer appears, but two nodes have not confirmed it yet. Check again in a minute.",
+  "linkTestExpired": "The test expired without a valid transfer. Create a new amount; the previous one no longer works.",
+  "linkTestOffline": "Could not reach the network. Check the connection and try again.",
+  "linkTestCancel": "Cancel test"
 }

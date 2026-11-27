@@ -1290,5 +1290,19 @@
   "appWalletInGas": "Senden Sie auch etwas ETH im selben Netzwerk: Die App-Wallet braucht es, um das Gas für jede Signatur zu zahlen.",
   "settingsAdminSafe": "Wenn Sie mit einem Safe verwalten, signieren Sie außerhalb der App auf app.safe.global mit dem Vertrag {address}.",
   "appWalletBalanceUnread": "Das Guthaben der App-Wallet konnte nicht gelesen werden. Prüfen Sie die Verbindung und versuchen Sie es erneut.",
-  "linkWalletChange": "Wallet ändern"
+  "linkWalletChange": "Wallet ändern",
+  "linkTestLead": "Senden Sie zum Verknüpfen einen Testbetrag von dieser Wallet an die App-Wallet. So wird bewiesen, dass sie Ihnen gehört.",
+  "linkWalletAddressLabel": "Adresse Ihrer externen Wallet",
+  "linkWalletAddressInvalid": "Ungültige Adresse. Sie muss mit 0x beginnen und 42 Zeichen haben.",
+  "linkWalletAddressSelf": "Das ist die Adresse der App. Geben Sie die Ihrer externen Wallet ein.",
+  "linkTestStart": "Testbetrag erstellen",
+  "linkTestSend": "Senden Sie von {from} genau {amount} {symbol} an die App-Wallet. Sie haben {minutes} Minuten Zeit.",
+  "linkTestCopyAmount": "Betrag kopieren",
+  "linkTestKept": "Der Betrag bleibt in Ihrer App-Wallet. Die externe Wallet braucht etwas ETH für das Gas.",
+  "linkTestVerify": "Gesendet: prüfen",
+  "linkTestWaiting": "Die Überweisung ist noch nicht sichtbar. Warten Sie eine Minute und prüfen Sie erneut.",
+  "linkTestUnconfirmed": "Die Überweisung ist sichtbar, aber noch nicht von zwei Knoten bestätigt. Prüfen Sie in einer Minute erneut.",
+  "linkTestExpired": "Der Test ist ohne gültige Überweisung abgelaufen. Erstellen Sie einen neuen Betrag; der alte gilt nicht mehr.",
+  "linkTestOffline": "Das Netzwerk war nicht erreichbar. Prüfen Sie die Verbindung und versuchen Sie es erneut.",
+  "linkTestCancel": "Test abbrechen"
 }

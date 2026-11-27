@@ -1290,5 +1290,19 @@
   "appWalletInGas": "Envoyez aussi un peu d’ETH sur le même réseau : le portefeuille de l’app en a besoin pour payer le gaz de chaque signature.",
   "settingsAdminSafe": "Si vous administrez avec un Safe, signez hors de l’app sur app.safe.global, avec le contrat {address}.",
   "appWalletBalanceUnread": "Impossible de lire le solde du portefeuille de l’app. Vérifiez la connexion et réessayez.",
-  "linkWalletChange": "Changer de portefeuille"
+  "linkWalletChange": "Changer de portefeuille",
+  "linkTestLead": "Pour le lier, envoyez un montant de test depuis ce portefeuille vers celui de l'app. Cela prouve qu'il vous appartient.",
+  "linkWalletAddressLabel": "Adresse de votre portefeuille externe",
+  "linkWalletAddressInvalid": "Adresse non valide. Elle doit commencer par 0x et compter 42 caractères.",
+  "linkWalletAddressSelf": "C’est l’adresse de l’app. Saisissez celle de votre portefeuille externe.",
+  "linkTestStart": "Créer un montant de test",
+  "linkTestSend": "Depuis {from}, envoyez exactement {amount} {symbol} au portefeuille de l'app. Vous avez {minutes} minutes.",
+  "linkTestCopyAmount": "Copier le montant",
+  "linkTestKept": "Le montant reste dans votre portefeuille de l'app. Le portefeuille externe a besoin d'un peu d'ETH pour le gaz.",
+  "linkTestVerify": "Je l'ai envoyé : vérifier",
+  "linkTestWaiting": "Le virement n'est pas encore visible. Attendez une minute et vérifiez à nouveau.",
+  "linkTestUnconfirmed": "Le virement apparaît, mais deux nœuds ne l'ont pas encore confirmé. Vérifiez à nouveau dans une minute.",
+  "linkTestExpired": "Le test a expiré sans virement valide. Créez un nouveau montant ; l'ancien ne sert plus.",
+  "linkTestOffline": "Impossible de joindre le réseau. Vérifiez la connexion et réessayez.",
+  "linkTestCancel": "Annuler le test"
 }

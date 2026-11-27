@@ -34,16 +34,17 @@ describe('wallet link requires a bind signature', function () {
     expect(recovered).to.equal(signer.address);
   });
 
-  it('does not save a link without an on-chain proof', function () {
+  it('does not save a link without a test transfer confirmed on chain', function () {
     const read = (...parts) => fs.readFileSync(path.join(__dirname, '..', ...parts), 'utf8');
     const form = read('components', 'LinkWalletForm.tsx');
     const card = read('components', 'LinkedWalletCard.tsx');
     const linked = read('services', 'linkedWallet.ts');
     const auth = read('services', 'walletAuth.ts');
-    expect(linked).to.not.include('saveLinkedExternalWallet');
-    expect(linked).to.not.include('typed:');
+    expect(linked).to.include('proof: LinkProof');
+    expect(linked).to.include("TRANSFER_PREFIX = 'transfer:'");
     expect(linked).to.include("PROVEN_PREFIX = 'proven:'");
-    expect(form).to.not.include('saveLinkedExternalWallet');
+    expect(linked).to.not.include('typed:');
+    expect(form).to.include('saveLinkedExternalWallet(internalWallet, result.proof)');
     expect(card).to.not.include('saveLinkedExternalWallet');
     expect(card).to.include('LinkWalletForm');
     const transfer = read('components', 'TransferWalletsModal.tsx');

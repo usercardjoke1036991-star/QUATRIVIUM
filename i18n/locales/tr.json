@@ -1290,5 +1290,19 @@
   "appWalletInGas": "Aynı ağdan biraz ETH de gönderin: uygulama cüzdanının her imzanın gas ücretini ödemesi için gerekir.",
   "settingsAdminSafe": "Bir Safe ile yönetiyorsanız uygulamanın dışında app.safe.global üzerinde {address} sözleşmesiyle imzalayın.",
   "appWalletBalanceUnread": "Uygulama cüzdanının bakiyesi okunamadı. Bağlantıyı kontrol edip tekrar deneyin.",
-  "linkWalletChange": "Cüzdanı değiştir"
+  "linkWalletChange": "Cüzdanı değiştir",
+  "linkTestLead": "Bağlamak için o cüzdandan uygulama cüzdanına bir deneme tutarı gönderin. Böylece cüzdanın size ait olduğu kanıtlanır.",
+  "linkWalletAddressLabel": "Harici cüzdan adresiniz",
+  "linkWalletAddressInvalid": "Geçersiz adres. 0x ile başlamalı ve 42 karakter olmalıdır.",
+  "linkWalletAddressSelf": "Bu uygulamanın adresi. Harici cüzdanınızın adresini yazın.",
+  "linkTestStart": "Deneme tutarı oluştur",
+  "linkTestSend": "{from} adresinden uygulama cüzdanına tam olarak {amount} {symbol} gönderin. {minutes} dakikanız var.",
+  "linkTestCopyAmount": "Tutarı kopyala",
+  "linkTestKept": "Tutar uygulama cüzdanınızda kalır. Harici cüzdanın gas için biraz ETH’ye ihtiyacı var.",
+  "linkTestVerify": "Gönderdim: kontrol et",
+  "linkTestWaiting": "Transfer henüz görünmüyor. Bir dakika bekleyip tekrar kontrol edin.",
+  "linkTestUnconfirmed": "Transfer görünüyor ancak henüz iki düğüm tarafından onaylanmadı. Bir dakika sonra tekrar kontrol edin.",
+  "linkTestExpired": "Deneme geçerli bir transfer olmadan sona erdi. Yeni bir tutar oluşturun; öncekisi artık geçmez.",
+  "linkTestOffline": "Ağa ulaşılamadı. Bağlantıyı kontrol edip tekrar deneyin.",
+  "linkTestCancel": "Denemeyi iptal et"
 }

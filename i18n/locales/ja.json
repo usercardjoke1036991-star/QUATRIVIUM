@@ -1290,5 +1290,19 @@
   "appWalletInGas": "同じネットワークで少量の ETH も送ってください。アプリのウォレットは署名ごとのガス代の支払いにそれを使います。",
   "settingsAdminSafe": "Safe で管理する場合は、アプリの外の app.safe.global で、コントラクト {address} を使って署名してください。",
   "appWalletBalanceUnread": "アプリのウォレットの残高を読み取れませんでした。接続を確認して、もう一度お試しください。",
-  "linkWalletChange": "ウォレットを変更"
+  "linkWalletChange": "ウォレットを変更",
+  "linkTestLead": "連携するには、そのウォレットからアプリのウォレットへテスト金額を送金してください。あなたのウォレットであることの証明になります。",
+  "linkWalletAddressLabel": "外部ウォレットのアドレス",
+  "linkWalletAddressInvalid": "アドレスが正しくありません。0x で始まる 42 文字である必要があります。",
+  "linkWalletAddressSelf": "それはアプリのアドレスです。外部ウォレットのアドレスを入力してください。",
+  "linkTestStart": "テスト金額を作成",
+  "linkTestSend": "{from} からアプリのウォレットへ、ちょうど {amount} {symbol} を送金してください。制限時間は {minutes} 分です。",
+  "linkTestCopyAmount": "金額をコピー",
+  "linkTestKept": "この金額はアプリのウォレットに残ります。外部ウォレットにはガス代として少量の ETH が必要です。",
+  "linkTestVerify": "送金しました：確認する",
+  "linkTestWaiting": "送金はまだ確認できません。1分待ってからもう一度確認してください。",
+  "linkTestUnconfirmed": "送金は見えていますが、まだ2つのノードで確認されていません。1分後にもう一度確認してください。",
+  "linkTestExpired": "有効な送金がないままテストの期限が切れました。新しい金額を作成してください。前の金額は使えません。",
+  "linkTestOffline": "ネットワークに接続できませんでした。接続を確認して、もう一度お試しください。",
+  "linkTestCancel": "テストを中止"
 }

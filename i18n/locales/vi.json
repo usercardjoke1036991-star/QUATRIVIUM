@@ -1290,5 +1290,19 @@
   "appWalletInGas": "Hãy gửi thêm một ít ETH trên cùng mạng: ví ứng dụng cần nó để trả phí gas cho mỗi lần ký.",
   "settingsAdminSafe": "Nếu bạn quản trị bằng Safe, hãy ký bên ngoài ứng dụng tại app.safe.global, với hợp đồng {address}.",
   "appWalletBalanceUnread": "Không đọc được số dư ví ứng dụng. Hãy kiểm tra kết nối rồi thử lại.",
-  "linkWalletChange": "Đổi ví"
+  "linkWalletChange": "Đổi ví",
+  "linkTestLead": "Để liên kết, hãy gửi một khoản thử từ ví đó đến ví của ứng dụng. Điều này chứng minh ví là của bạn.",
+  "linkWalletAddressLabel": "Địa chỉ ví ngoài của bạn",
+  "linkWalletAddressInvalid": "Địa chỉ không hợp lệ. Địa chỉ phải bắt đầu bằng 0x và có 42 ký tự.",
+  "linkWalletAddressSelf": "Đó là địa chỉ của ứng dụng. Hãy nhập địa chỉ ví ngoài của bạn.",
+  "linkTestStart": "Tạo khoản thử",
+  "linkTestSend": "Từ {from}, hãy gửi chính xác {amount} {symbol} đến ví của ứng dụng. Bạn có {minutes} phút.",
+  "linkTestCopyAmount": "Sao chép số tiền",
+  "linkTestKept": "Số tiền này vẫn nằm trong ví ứng dụng của bạn. Ví bên ngoài cần một ít ETH để trả gas.",
+  "linkTestVerify": "Tôi đã gửi: kiểm tra",
+  "linkTestWaiting": "Chưa thấy giao dịch chuyển. Hãy đợi một phút rồi kiểm tra lại.",
+  "linkTestUnconfirmed": "Đã thấy giao dịch chuyển nhưng chưa được hai nút xác nhận. Hãy kiểm tra lại sau một phút.",
+  "linkTestExpired": "Bài thử đã hết hạn mà không có giao dịch hợp lệ. Hãy tạo khoản mới; khoản trước không còn dùng được.",
+  "linkTestOffline": "Không thể kết nối mạng. Hãy kiểm tra kết nối và thử lại.",
+  "linkTestCancel": "Hủy bài thử"
 }

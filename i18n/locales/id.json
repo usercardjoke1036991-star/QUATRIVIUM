@@ -1290,5 +1290,19 @@
   "appWalletInGas": "Kirim juga sedikit ETH di jaringan yang sama: dompet aplikasi memerlukannya untuk membayar gas setiap tanda tangan.",
   "settingsAdminSafe": "Jika Anda mengelola dengan Safe, tanda tangani di luar aplikasi di app.safe.global, dengan kontrak {address}.",
   "appWalletBalanceUnread": "Saldo dompet aplikasi tidak dapat dibaca. Periksa koneksi lalu coba lagi.",
-  "linkWalletChange": "Ganti dompet"
+  "linkWalletChange": "Ganti dompet",
+  "linkTestLead": "Untuk menautkannya, kirim jumlah uji dari dompet itu ke dompet aplikasi. Ini membuktikan dompet itu milik Anda.",
+  "linkWalletAddressLabel": "Alamat dompet eksternal Anda",
+  "linkWalletAddressInvalid": "Alamat tidak valid. Harus diawali 0x dan terdiri dari 42 karakter.",
+  "linkWalletAddressSelf": "Itu alamat aplikasi. Tulis alamat dompet eksternal Anda.",
+  "linkTestStart": "Buat jumlah uji",
+  "linkTestSend": "Dari {from}, kirim tepat {amount} {symbol} ke dompet aplikasi. Anda punya waktu {minutes} menit.",
+  "linkTestCopyAmount": "Salin jumlah",
+  "linkTestKept": "Jumlah itu tetap ada di dompet aplikasi Anda. Dompet eksternal memerlukan sedikit ETH untuk gas.",
+  "linkTestVerify": "Sudah saya kirim: periksa",
+  "linkTestWaiting": "Transfer belum terlihat. Tunggu satu menit lalu periksa lagi.",
+  "linkTestUnconfirmed": "Transfer terlihat, tetapi belum dikonfirmasi dua node. Periksa lagi dalam satu menit.",
+  "linkTestExpired": "Uji kedaluwarsa tanpa transfer yang valid. Buat jumlah baru; jumlah sebelumnya tidak berlaku lagi.",
+  "linkTestOffline": "Tidak dapat menghubungi jaringan. Periksa koneksi lalu coba lagi.",
+  "linkTestCancel": "Batalkan uji"
 }

@@ -1290,5 +1290,19 @@
   "appWalletInGas": "也请通过同一网络发送少量 ETH：应用钱包需要它来支付每次签名的 Gas。",
   "settingsAdminSafe": "如果您使用 Safe 管理，请在应用外的 app.safe.global 上签名，合约为 {address}。",
   "appWalletBalanceUnread": "无法读取应用钱包余额。请检查网络连接后重试。",
-  "linkWalletChange": "更换钱包"
+  "linkWalletChange": "更换钱包",
+  "linkTestLead": "要绑定它，请从该钱包向应用钱包发送一笔测试金额，以证明该钱包属于您。",
+  "linkWalletAddressLabel": "您的外部钱包地址",
+  "linkWalletAddressInvalid": "地址无效。必须以 0x 开头，共 42 个字符。",
+  "linkWalletAddressSelf": "这是应用的地址。请输入您的外部钱包地址。",
+  "linkTestStart": "生成测试金额",
+  "linkTestSend": "请从 {from} 向应用钱包准确发送 {amount} {symbol}。您有 {minutes} 分钟。",
+  "linkTestCopyAmount": "复制金额",
+  "linkTestKept": "该金额会留在您的应用钱包中。外部钱包需要少量 ETH 支付 gas。",
+  "linkTestVerify": "我已发送：检查",
+  "linkTestWaiting": "暂未看到这笔转账。请等待一分钟后再检查。",
+  "linkTestUnconfirmed": "已看到这笔转账，但尚未有两个节点确认。请一分钟后再检查。",
+  "linkTestExpired": "测试已过期，未收到有效转账。请生成新金额；之前的金额已失效。",
+  "linkTestOffline": "无法连接网络。请检查连接后重试。",
+  "linkTestCancel": "取消测试"
 }
