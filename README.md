@@ -8,7 +8,7 @@ Reserva: nivel 10 o más, bloqueo de 30 días, tope del 12 % anual pagado del bo
 
 Sin Rust y sin pruebas de conocimiento cero. Sin servidor y sin tienda de aplicaciones. El mensaje privado por Nostr está oculto: no hay cifrado NIP-17/44.
 
-El detalle cerrado, el mapa y lo que falta están en `HANDOFF.md`. Hardhat 496, Foundry 91. Credit en forge (runtime): 22728 bytes, 1848 libres de 24576. Credit en Hardhat (`deployedBytecode`): 22993 bytes, 1583 libres de 24576.
+El detalle cerrado, el mapa y lo que falta están en `HANDOFF.md`. Hardhat 499, Foundry 92. Credit en forge (runtime): 22734 bytes, 1842 libres de 24576. Credit en Hardhat (`deployedBytecode`): 22999 bytes, 1577 libres de 24576.
 
 ## Probar
 

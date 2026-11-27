@@ -7,7 +7,6 @@ import { LOCKED_DEEP_LINK_ROOMS, parseAppDeepLink } from '../utils/appDeepLink';
 import { getWalletWrapKey } from '../services/walletSession';
 import { rankingVisible } from '../utils/fameRankings';
 import { rememberAppUrl, takePendingAppUrl } from '../utils/pendingDeepLink';
-import { AppKit, useAccount, useAppKit, useProvider } from '@reown/appkit-react-native';
 import { parseUnits } from 'ethers';
 import { setWalletSigner } from '../services/quatriviumCreditService';
 import { useWeb3Balances } from '../hooks/useWeb3Balances';
@@ -96,9 +95,6 @@ function HomeScreenWithHooks() {
     failed: walletFailed,
     retry: retryWallet,
   } = useAppWallet();
-  const { address: adminAddress, isConnected: adminConnected } = useAccount();
-  const { provider: adminProvider } = useProvider();
-  const { open: openExternalWallet } = useAppKit();
 
   const { mode } = useAppMode();
   const { confirmFunds } = useFundsConfirm();
@@ -163,24 +159,19 @@ function HomeScreenWithHooks() {
     loanReadsReady,
     refetch,
   } = useWeb3Balances(walletAddress, selectedToken);
-  const { userInfo: adminInfo } = useWeb3Balances(
-    adminConnected && adminAddress ? adminAddress.toLowerCase() : '',
-    selectedToken
-  );
   const founderHere =
     Boolean(userInfo.referral.isFundador) ||
     isFounderWallet(walletAddress, userInfo.founderAddress);
-  const externalReady = Boolean(adminConnected && adminAddress);
-  const adminInfoIsSeat = Boolean(adminInfo.isOwner || adminInfo.isAdmin);
-  const appIsSeat = Boolean(userInfo.isOwner || userInfo.isAdmin || userInfo.referral.isFundador);
-  const showAdminControls = externalReady ? adminInfoIsSeat : appIsSeat;
+  const showAdminControls = Boolean(
+    userInfo.isOwner || userInfo.isAdmin || userInfo.referral.isFundador
+  );
   const adminSeat = adminSeatOpen({
     demo: isDemoAccount(),
-    connected: externalReady,
-    address: adminAddress || walletAddress,
-    isAdmin: Boolean(adminInfo.isAdmin || userInfo.isAdmin),
-    isOwner: Boolean(adminInfo.isOwner || userInfo.isOwner),
-    roster: adminInfo.adminRoster.length ? adminInfo.adminRoster : userInfo.adminRoster,
+    connected: false,
+    address: walletAddress,
+    isAdmin: Boolean(userInfo.isAdmin),
+    isOwner: Boolean(userInfo.isOwner),
+    roster: userInfo.adminRoster,
     founder: founderHere,
   });
   const debtReminder = useLoanPaymentReminders(userInfo);
@@ -258,10 +249,6 @@ function HomeScreenWithHooks() {
     balances,
     selectedToken,
     appSigner,
-    adminConnected,
-    adminProvider,
-    adminAddress,
-    openExternalWallet,
     confirmFunds,
     refetch,
     clearPendingInvite,
@@ -863,7 +850,7 @@ function HomeScreenWithHooks() {
             isLoading={txLoading}
             tokenSymbol={selectedToken.symbol}
             tokenSupported={userInfo.isTokenSupported}
-            walletConnected={Boolean(walletAddress)}
+            walletReady={Boolean(walletAddress)}
             founderAddress={userInfo.founderAddress}
             donatedUsd={userInfo.donatedUsd || 0}
             altaPaid={Boolean(userInfo.altaPagada)}
@@ -981,7 +968,7 @@ function HomeScreenWithHooks() {
             poolCash={balances.poolCash}
             moneyUnconfirmed={balances.moneyUnconfirmed}
             lpBalance={balances.lpBalance}
-            walletConnected={Boolean(walletAddress)}
+            walletReady={Boolean(walletAddress)}
             paused={creditPaused}
             onDepositPool={servicesOpen ? handleDepositarPool : () => denyUse()}
           />
@@ -1035,8 +1022,8 @@ function HomeScreenWithHooks() {
           <AdminStatusReadout paused={creditPaused} admins={userInfo.adminRoster || []} />
           {showAdminControls ? (
             <AdminPanel
-              isOwner={externalReady ? adminInfo.isOwner : Boolean(userInfo.isOwner || founderHere)}
-              isAdmin={externalReady ? adminInfo.isAdmin : userInfo.isAdmin}
+              isOwner={Boolean(userInfo.isOwner || founderHere)}
+              isAdmin={userInfo.isAdmin}
               isLoading={txLoading}
               tokenSymbol={selectedToken.symbol}
               tokenAddress={selectedToken.address}
@@ -1049,21 +1036,16 @@ function HomeScreenWithHooks() {
               onLiquidar={handleLiquidarDeudor}
               onMarcarMoroso={handleMarcarMorosoSiVencido}
               onAportarReserva={handleAportarReserva}
-              adminRoster={
-                adminInfo.adminRoster.length ? adminInfo.adminRoster : userInfo.adminRoster
-              }
-              requiredConfirmations={
-                adminInfo.requiredConfirmations || userInfo.requiredConfirmations
-              }
-              proposalCount={adminInfo.proposalCount || userInfo.proposalCount}
-              openProposal={adminInfo.openProposal || userInfo.openProposal}
-              founderAddress={adminInfo.founderAddress || userInfo.founderAddress}
+              adminRoster={userInfo.adminRoster}
+              requiredConfirmations={userInfo.requiredConfirmations}
+              proposalCount={userInfo.proposalCount}
+              openProposal={userInfo.openProposal}
+              founderAddress={userInfo.founderAddress}
             />
           ) : (
             <AppText style={{ color: colors.text }}>{t('appWalletAdminConnect')}</AppText>
           )}
         </AppWindow>
-        <AppKit />
         <BusyMark />
         {waitingChain ? (
           <View style={styles.bootCover}>

@@ -1,6 +1,5 @@
-// Web3 Polyfills - MUST be imported first
-// WalletConnect and other crypto polyfills
-import '@walletconnect/react-native-compat';
+// Polyfills: deben cargarse antes que cualquier otro módulo.
+import './utils/earlyShims';
 import 'react-native-get-random-values';
 import '@react-native-async-storage/async-storage';
 

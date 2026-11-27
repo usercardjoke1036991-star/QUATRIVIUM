@@ -40,7 +40,7 @@ describe('copy de pantallas clave', function () {
     const app = read('App.js');
     const splash = read('components/BrandSplash.tsx');
     expect(app).to.include('<BrandSplash />');
-    expect(app).to.include('<BrandSplash tagline={');
+    expect(app).to.not.include('web3Config');
     expect(app).to.not.include('wordmark={false}');
     expect(splash).to.include('wordmark = true');
     expect(splash).to.include('QUATRIVIUM');

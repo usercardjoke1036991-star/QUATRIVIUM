@@ -107,14 +107,14 @@ describe('Fase 4 — app soberana', function () {
     expect(es.reservaNeedLevel).to.match(/10/);
   });
 
-  it('la billetera interna cifra la frase y WalletConnect queda opcional', function () {
+  it('la billetera interna cifra la frase y no hay conexión de billetera externa', function () {
     const wallet = read('services/appWallet.ts');
     expect(wallet).to.include('expo-secure-store');
     expect(wallet).to.include('createAppWallet');
     expect(wallet).to.include('importFromPhrase');
     expect(wallet).to.include('getSecretPhrase');
     expect(read('app/index.tsx')).to.include('useAppWallet');
-    expect(read('utils/openWalletConnect.ts')).to.be.a('string');
+    expect(read('App.js')).to.not.include('web3Config');
   });
 
   it('programa avisos locales y no pide push remoto', function () {

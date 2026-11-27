@@ -4,16 +4,8 @@
  * Cada handler valida precondiciones y delega al hook useWeb3Transactions.
  */
 import { useRef, useState } from 'react';
-import {
-  Contract,
-  Interface,
-  parseEther,
-  parseUnits,
-  type Eip1193Provider,
-  type Signer,
-} from 'ethers';
+import { Contract, Interface, parseEther, parseUnits, type Signer } from 'ethers';
 import { Alert, Linking } from 'react-native';
-import { getEthersSignerFromProvider } from '../web3Config';
 import { CONTRACT_ABI, ERC20_ABI } from '../constants/contractConfig';
 import { getTokenMeta, isOfficialWorldToken } from '../constants/tokens';
 import { setWalletSigner, QuatriviumCreditService } from '../services/quatriviumCreditService';
@@ -39,10 +31,8 @@ import {
   creditNeedsPhrase,
   hasCreditAccess,
 } from '../utils/creditGates';
-import { enviarToken, isPhraseBackedUp } from '../services/appWallet';
-import { loadRequiredExternalWallet } from '../services/linkedWallet';
-import { ensureExternalWalletOnAppChain } from '../utils/walletChain';
-import { openWalletConnect } from '../utils/openWalletConnect';
+import { isPhraseBackedUp } from '../services/appWallet';
+import { copyText } from '../utils/copyText';
 import { esperaParaVolverAPedir } from '../utils/creditCooldown';
 import { markLoanFullyPaid } from '../utils/loanPaidMark';
 import { formatCooldown, formatUSD, parsePositiveDecimal } from '../utils/formatters';
@@ -50,7 +40,7 @@ import { milestoneBonusUsd } from '../constants/loanTiers';
 import { FAMA_CANJE_POR_USDT, usdtFromFama } from '../constants/fama';
 import { FAMA_ABI } from '../constants/famaConfig';
 import { useI18n } from '../i18n/LanguageContext';
-import { humanizeTxError, networkFailureError } from '../utils/txErrors';
+import { humanizeTxError } from '../utils/txErrors';
 import type { FundsConfirmPurpose } from '../services/fundsConfirm';
 import { approveFollows, fundsTx, quoteNetworkFee } from '../utils/fundsConfirmGate';
 import { getReservaAddress, RESERVA_ABI } from '../constants/reservaConfig';
@@ -122,10 +112,6 @@ export interface HomeHandlersParams {
   balances: { tokenBalance: string; bnbBalance: string };
   selectedToken: Token;
   appSigner: Signer | null | undefined;
-  adminConnected: boolean;
-  adminProvider: unknown;
-  adminAddress?: string;
-  openExternalWallet?: () => void;
   confirmFunds: (
     purpose?: FundsConfirmPurpose,
     details?: ReturnType<typeof fundsTx>
@@ -141,10 +127,6 @@ export const useHomeHandlers = ({
   balances,
   selectedToken,
   appSigner,
-  adminConnected,
-  adminProvider,
-  adminAddress,
-  openExternalWallet,
   confirmFunds,
   refetch,
   clearPendingInvite,
@@ -177,41 +159,17 @@ export const useHomeHandlers = ({
     marcarMorosoSiVencido,
   } = useWeb3Transactions();
 
-  /** Ejecuta una acción admin cambiando temporalmente el signer al de MetaMask/WalletConnect. */
-  const runAsAdmin = async (fn: () => Promise<void>) => {
+  /** Ejecuta una acción admin con la billetera de la app. Una Safe firma fuera de la app. */
+  const runAsAdmin = async (fn: (signer: Signer) => Promise<void>) => {
     const appIsSeat = Boolean(
       userInfo.isAdmin || userInfo.isOwner || userInfo.referral?.isFundador
     );
-    const useAppSigner =
-      appIsSeat && Boolean(appSigner && walletAddress) && (!adminConnected || !adminProvider);
-    if (!useAppSigner && (!adminConnected || !adminProvider)) {
+    if (!appIsSeat || !appSigner || !walletAddress) {
       Alert.alert(t('admin'), t('appWalletAdminConnect'));
       return;
     }
     try {
-      let signer = appSigner;
-      let adminWallet = String(walletAddress || '');
-      if (!useAppSigner) {
-        try {
-          await Promise.race([
-            ensureExternalWalletOnAppChain(adminProvider as Eip1193Provider),
-            new Promise<never>((_, reject) => {
-              setTimeout(
-                () => reject(networkFailureError(isDemoAccount() || isDemoMode())),
-                25_000
-              );
-            }),
-          ]);
-        } catch (error) {
-          Alert.alert(t('connect'), humanizeTxError(error));
-          return;
-        }
-        signer = await getEthersSignerFromProvider(adminProvider as Eip1193Provider);
-        if (!signer) throw new Error('admin');
-        adminWallet = await signer.getAddress();
-      }
-      if (!signer || !adminWallet) throw new Error('admin');
-      const adminEth = await readOnChainEth(adminWallet);
+      const adminEth = await readOnChainEth(walletAddress);
       if (adminEth === null || adminEth < MIN_GAS_WEI) {
         if (isDemoAccount() || isDemoMode()) {
           Alert.alert(t('errNeedGas'), t('errNeedGasAdmin'), [
@@ -223,12 +181,12 @@ export const useHomeHandlers = ({
         }
         return;
       }
-      setWalletSigner(signer);
-      await fn();
+      setWalletSigner(appSigner);
+      await fn(appSigner);
     } catch (error) {
       Alert.alert(t('admin'), humanizeTxError(error));
     } finally {
-      if (appSigner) setWalletSigner(appSigner);
+      setWalletSigner(appSigner);
     }
   };
 
@@ -263,88 +221,45 @@ export const useHomeHandlers = ({
     return false;
   };
 
-  const askToLinkExternal = (message: string) => {
-    showNotice(t('linkWalletTitle'), message, [
-      { text: t('cancel'), style: 'cancel' },
-      {
-        text: t('connectWallet'),
-        onPress: () => void openWalletConnect(() => openExternalWallet?.()),
-      },
-    ]);
-  };
-
-  const requireLinkedExternal = async (): Promise<string> => {
-    if (!walletAddress) {
-      Alert.alert(t('connect'), t('appWalletNotReady'));
-      return '';
-    }
-    const linked = await loadRequiredExternalWallet(walletAddress);
-    if (!linked) {
-      askToLinkExternal(t('linkWalletNeedFunds'));
-      return '';
-    }
-    if (!adminConnected || !adminProvider) {
-      askToLinkExternal(t('linkWalletNeed'));
-      return '';
-    }
-    if (String(adminAddress || '').toLowerCase() !== linked.toLowerCase()) {
-      askToLinkExternal(t('linkWalletMismatch'));
-      return '';
-    }
-    return linked;
-  };
-
-  const fundInternalFromExternal = async (
-    amountWei: string,
-    tokenAddress: string
-  ): Promise<boolean> => {
+  /** El pago sale de la billetera de la app. Si no alcanza, se explica cómo recargarla. */
+  const ensureInternalFunds = async (amountWei: string, tokenAddress: string): Promise<boolean> => {
     if (!walletAddress) return false;
     const need = BigInt(amountWei);
     if (need <= 0n) return false;
-    const internalBal = await tokenBalanceOf(tokenAddress, walletAddress);
+    let internalBal = await tokenBalanceOf(tokenAddress, walletAddress);
     if (internalBal !== null && internalBal >= need) {
       return true;
     }
-    const linked = await requireLinkedExternal();
-    if (!linked || !adminProvider) return false;
-    try {
-      await ensureExternalWalletOnAppChain(adminProvider as Eip1193Provider);
-    } catch (error) {
-      Alert.alert(t('connect'), humanizeTxError(error));
-      return false;
-    }
-    const signer = await getEthersSignerFromProvider(adminProvider as Eip1193Provider);
-    if (!signer) {
-      Alert.alert(t('connect'), t('appWalletNotReady'));
-      return false;
-    }
     if (isDemoAccount()) {
       try {
-        await QuatriviumCreditService.mintDemoUsdtTo(tokenAddress, linked, amountWei);
+        await QuatriviumCreditService.mintDemoUsdtTo(tokenAddress, walletAddress, amountWei);
+        internalBal = await tokenBalanceOf(tokenAddress, walletAddress);
+        if (internalBal !== null && internalBal >= need) return true;
       } catch {
-        // Si no hay minteo, se intenta con el saldo de la billetera vinculada.
+        // Sin minteo de prueba se pide recargar, igual que en Real.
       }
     }
-    const extBal = await tokenBalanceOf(tokenAddress, linked);
-    if (extBal !== null && extBal < need) {
-      Alert.alert(
-        t('amountExceedsBalance'),
-        t('poolNeedInternalFunds', { symbol: selectedToken.symbol })
-      );
+    if (internalBal === null) {
+      showNotice(t('error'), t('appWalletBalanceUnread'));
       return false;
     }
-    const extEth = await readOnChainEth(linked);
-    if (extEth !== null && extEth < MIN_GAS_WEI) {
-      showNotice(t('errNeedGasExternal'), t('errNeedGasExternal'));
-      return false;
-    }
-    try {
-      await enviarToken(signer, tokenAddress, walletAddress, amountWei, true);
-      return true;
-    } catch (error) {
-      Alert.alert(t('error'), humanizeTxError(error));
-      return false;
-    }
+    const address = walletAddress;
+    showNotice(
+      t('amountExceedsBalance'),
+      t('poolNeedInternalFunds', { symbol: selectedToken.symbol }),
+      [
+        { text: t('cancel'), style: 'cancel' },
+        {
+          text: t('copyAddress'),
+          onPress: () =>
+            void copyText(address).then((result) => {
+              if (result === 'copied') showNotice(t('ready'), t('addressCopied'));
+              else if (result === 'failed') showNotice(t('wallet'), address);
+            }),
+        },
+      ]
+    );
+    return false;
   };
 
   const handleRegistrarHumano = async () => {
@@ -842,7 +757,7 @@ export const useHomeHandlers = ({
       return;
     try {
       const amountWei = parseUnits(parsed, selectedToken.decimals).toString();
-      if (!(await fundInternalFromExternal(amountWei, selectedToken.address))) return;
+      if (!(await ensureInternalFunds(amountWei, selectedToken.address))) return;
       if (!(await ensureGasForTx())) return;
       const result = await depositarLiquidez(amountWei, selectedToken.address);
       if (result.success) refetch();
@@ -916,7 +831,7 @@ export const useHomeHandlers = ({
         ))
       )
         return;
-      if (!(await fundInternalFromExternal(amountWei, selectedToken.address))) return;
+      if (!(await ensureInternalFunds(amountWei, selectedToken.address))) return;
       if (!(await ensureGasForTx())) return;
       try {
         const result = isAltaConfigured()
@@ -976,9 +891,7 @@ export const useHomeHandlers = ({
     )
       return;
     try {
-      await runAsAdmin(async () => {
-        const signer = await getEthersSignerFromProvider(adminProvider as Eip1193Provider);
-        if (!signer) throw new Error('admin');
+      await runAsAdmin(async (signer) => {
         await aportarReservaBote(signer, parsed);
         showNotice(t('ready'), t('reservaAdminPotOk'));
         refetch();
@@ -1043,7 +956,7 @@ export const useHomeHandlers = ({
       return;
     try {
       const amountWei = parseUnits(parsed, selectedToken.decimals).toString();
-      if (!(await fundInternalFromExternal(amountWei, selectedToken.address))) return;
+      if (!(await ensureInternalFunds(amountWei, selectedToken.address))) return;
       if (!(await ensureGasForTx())) return;
       const result = await donarProyecto(amountWei, selectedToken.address);
       if (result.success) {

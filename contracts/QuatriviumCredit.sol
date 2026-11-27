@@ -918,6 +918,7 @@ contract QuatriviumCredit is ReentrancyGuard {
         require(totalDue > pagado, "already paid");
         uint256 restante = totalDue - pagado;
         uint256 principalRestante = principal - (pagado - (interest * pagado) / totalDue);
+        require(principalRestante > 0, "nada que castigar");
 
         uint256 fondo = fondoSeguro[tokenAddress];
         uint256 cubierto = principalRestante <= fondo ? principalRestante : fondo;

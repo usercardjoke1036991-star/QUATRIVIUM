@@ -27,6 +27,8 @@ const needles = [
   'play store',
   'google play',
   'expo-updates',
+  'walletconnect',
+  'reown',
 ];
 
 const skipDir = new Set([

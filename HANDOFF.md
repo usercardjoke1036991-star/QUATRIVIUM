@@ -17,7 +17,7 @@ No reabrirlas. Si un texto del repo viejo las contradice, manda esta lista.
 - Tres admins. La votación es fija: 2 de 3. Espera de 72 h (`TIMELOCK_DELAY`). La propuesta no caduca. Votan `addAdmin`, `removeAdmin` y `pausarPrestamosNuevos`. Nadie pausa solo. La pausa dura 7 días y se levanta sola. Después hay 7 días de descanso (`pausaReposoHasta`) antes de votar otra. Pagos, liquidaciones y Reserva siguen.
 - El pool está cerrado para siempre. `retirarLiquidez` revierte con `"pool locked"`. Ni un admin lo retira.
 - Alta: 4 LUSD de una vez en `QuatriviumAlta.pagarRegistro`: 1 al fundador, 1 al bote de Reserva, 1 apartado para el padrino, 1 de sello a Credit. `pagarVerificacion` deja el 5 % de ese sello en `fondoSeguro` y el 95 % en la liquidez. Sin invitación, `registrarHumanoConPadre(address(0))` cuelga del fundador. El 1 apartado se suelta al pagar el primer L1: a quien invitó si `cobradorListo`, si no al pool. A los 7 días sin ese pago, `vencerPadrinoAlPool` lo manda al pool. Una cuenta no puede nombrarse a sí misma. Una segunda cuenta sí puede nombrar a la primera; el 1 que cobra sale de los 4 que la segunda pagó. El fundador cobra ese 1 LUSD del alta en la misma transacción, más el 15 % del interés (`FUNDADOR_BP = 1500`). Solo el fundador rota su billetera (`proponerFundador` / espera 72 h). No necesita alta ni L1 pagado: el constructor lo marca verificado y el cobro del 15 % no pasa por `cobradorListo`.
-- Fondo de seguro: 5 % de lo que entra al pool (`SEGURO_BP = 500` en `QuatriviumFamaLib`). Solo absorbe el principal de un impago castigado. Nadie lo retira. `collectedFees` no crece: el fee de liquidación se queda en el pool en la misma transacción.
+- Fondo de seguro: 5 % de lo que entra al pool (`SEGURO_BP = 500` en `QuatriviumFamaLib`). Solo absorbe el principal de un impago castigado. Nadie lo retira. `collectedFees` no crece: `liquidate` no cobra fee ni mueve LUSD.
 - Reserva: nivel 10 o más (`NIVEL_MINIMO`), bloqueo 30 días (`LOCK`), tope 12 % anual (`MAX_APY_BP = 1200`) pagado del bote, principal siempre devuelto. Sin owner ni guardianes y sin retiro del bote. Los 3 admins (quórum 2, 72 h) solo votan su propia entrada o salida.
 - El fundador cobra 5 % (menos de 50 LUSD), 8 % (desde 50 y menos de 500) o 12 % (≥500) del rendimiento pagado del bote y del extra de comisión, según el tramo del principal (corteFundadorBp).
 - EIP-7702 (decisión de Jose, 15 nov, 9e6525c): las entradas exigen msg.sender == tx.origin y msg.sender.code.length == 0 (QuatriviumCredit._soloEOA :241, QuatriviumAlta.pagarRegistro :54, QuatriviumFamaCaja :267/:278/:301/:322, QuatriviumReserva.onlyEOA :112); las salidas aceptan a cualquiera y solo mueven lo de msg.sender (QuatriviumCredit.pagarPrestamo :707, QuatriviumReserva.desbloquear :203); la verificación no usa tx.origin (QuatriviumFamaLib.usuarioVerificacion :486, exige cargoDe distinto de cero). Sin chequeo EOA, por diseño, quedan también las de mantenimiento: QuatriviumCredit.marcarMorosoSiVencido :848 (cualquiera, solo si está vencido), QuatriviumCredit.liberarSelloPrimeraSiExpiro :1064 (cualquiera, solo si expiró) y QuatriviumAlta.vencerPadrinoAlPool :90 (exige sello de 1 LUSD y padrino vencido).
@@ -79,9 +79,9 @@ Todas en `cursor/soberania-contratos-8e15`. PR: https://github.com/usercardjoke1
 
 ## 5. Números
 
-Medidos en `cursor/soberania-contratos-8e15` con `allowUnlimitedContractSize: false`. `QuatriviumCredit` en forge (runtime): 22728 bytes, 1848 libres de 24576. En Hardhat (`deployedBytecode`): 22993 bytes, 1583 libres. El harness de prueba: 24198 bytes, 378 libres (forge, runtime: 23955 bytes, 621 libres). Un pago de 40 generaciones: 1250095 de gas, por debajo de 3 000 000.
+Medidos en `cursor/soberania-contratos-8e15` con `allowUnlimitedContractSize: false`. `QuatriviumCredit` en forge (runtime): 22734 bytes, 1842 libres de 24576. En Hardhat (`deployedBytecode`): 22999 bytes, 1577 libres. El harness de prueba: 24204 bytes, 372 libres (forge, runtime: 23961 bytes, 615 libres). Un pago de 40 generaciones: 1250095 de gas, por debajo de 3 000 000.
 
-Hardhat: 496 pruebas en verde. Foundry con `FOUNDRY_PROFILE=ci`: 91 pruebas en verde. Tres invariantes: 256 corridas, 204800 llamadas, 0 reversiones.
+Hardhat: 499 pruebas en verde. Foundry con `FOUNDRY_PROFILE=ci`: 92 pruebas en verde. Tres invariantes: 256 corridas, 204800 llamadas, 0 reversiones.
 
 Slither: 25 resultados, 0 altos, 0 medios, 15 bajos, 10 optimizaciones. `tmp` está en 0.2.7 por `overrides`. `image-size` sigue alto: 2.0.3 rompe el paquete de Android. Expo, Metro, Hardhat y solc no subieron de versión mayor.
 
@@ -91,7 +91,7 @@ I1: si entre una contraseña que no llega a tiempo y su escritura tardía hay ot
 
 Está en `forge-test/QuatriviumFase3.t.sol`, funciones `test_simulacion_5_por_ciento`, `test_simulacion_15_por_ciento` y `test_simulacion_30_por_ciento`. Son 100 préstamos de nivel 1. El nivel 1 es 1 LUSD con `tasaInteresBP` 10000, así que el interés es 1 LUSD (`(monto * tasa) / 10000` en Credit). El fee del test es 500 bp.
 
-El liquidador no devuelve el principal. El fondo de seguro absorbe ese principal y, si no alcanza, baja `totalLiquidity`. El premio (el menor entre el 5 % y el interés) sale del pool. El test lo exige con `assertEq(sistema, esperado)` y `assertEq(totalImpagoCubierto, malos * 1 ether)`. La tabla vieja, en la que el liquidador reponía el principal, ya no vale.
+El liquidador no devuelve el principal. El fondo de seguro absorbe ese principal y, si no alcanza, baja `totalLiquidity`. No hay premio: el castigo no saca LUSD del sistema. El test lo exige con `assertEq(sistema, esperado)` y `assertEq(totalImpagoCubierto, malos * 1 ether)`. La tabla vieja, en la que el liquidador reponía el principal, ya no vale.
 
 `console2.log` imprime además el delta del pool y el del fondo. Esos dos no están fijados con `assertEq`. No los copies de un informe viejo: si hacen falta, salen de `forge test --match-test test_simulacion -vv`.
 
@@ -122,14 +122,14 @@ Orden de prioridad:
 6. **Incompleto a propósito en el código actual:**
    - Nostr no abre un websocket ni ofrece mensaje privado: `prepareNostrPayload` devuelve null. La mora sigue bloqueada.
    - El hash del APK instalado no se calcula en el teléfono. Sin registro, la UI dice «versión no verificada».
-   - Credit mide 22728 bytes, 1848 libres de 24576. Cualquier lógica nueva en ese contrato puede no caber. Preferir un contrato hermano, como ya se hizo con Apk, Leveling y LoanLadder.
+   - Credit mide 22734 bytes, 1842 libres de 24576. Cualquier lógica nueva en ese contrato puede no caber. Preferir un contrato hermano, como ya se hizo con Apk, Leveling y LoanLadder.
    - Para pasar un admin a un Safe: `node scripts/setup-safe-admin.cjs 0xSafe 0xAdminSaliente`, que da 2 pasos por contrato (quitar y luego añadir), en Credit y en Reserva.
 7. La clave que estuvo en el historial (commits `10553d4` y `dc40f15`, archivo `.env.worker.example`) ya fue revocada por Jose. No está en el árbol. No se reescribe la historia y no se copia el valor.
 
 ## 8. Riesgos
 
-- 1848 bytes libres en Credit (22728 de 24576). No añadir funciones ahí sin medir `deployedBytecode`.
-- Hardhat tiene `allowUnlimitedContractSize: false`. El tamaño que cuenta es el `deployedBytecode` del artifact: Credit 22993 bytes, 1583 libres de 24576 (forge, runtime: 22728, 1848 libres).
+- 1842 bytes libres en Credit (22734 de 24576). No añadir funciones ahí sin medir `deployedBytecode`.
+- Hardhat tiene `allowUnlimitedContractSize: false`. El tamaño que cuenta es el `deployedBytecode` del artifact: Credit 22999 bytes, 1577 libres de 24576 (forge, runtime: 22734, 1842 libres).
 - Los `require` de texto se borran del bytecode (`revertStrings: strip`). Los tests no pueden usar `revertedWith("mensaje")` para esos revert. Los errores con nombre (`SequencerFeedRequerido`, `SoloFundador`) sí se distinguen.
 - La pausa de préstamos nuevos exige 2 de 3 y 72 h. Se levanta sola a los 7 días y luego hay 7 de descanso. No frena pagos ni liquidaciones.
 - El pool y el fondo de seguro no tienen retiro. Un error en el reparto no se «arregla» sacando el dinero.

@@ -10,7 +10,7 @@ describe('brand splash and institutional copy', function () {
     expect(app).to.include('BrandSplash');
     expect(app).to.include('BRAND_HOLD_MS');
     expect(app).to.include('<BrandSplash />');
-    expect(app).to.include('<BrandSplash tagline={');
+    expect(app).to.not.include('web3Config');
     expect(app).to.not.include('wordmark={false}');
     expect(app).to.not.match(/if \(!fontsLoaded && !fontWaitOver\) \{\s*return null;/);
     const splash = fs.readFileSync(path.join(root, 'components', 'BrandSplash.tsx'), 'utf8');

@@ -52,11 +52,11 @@ Rama `cursor/soberania-contratos-8e15`. La medición de este apartado es la de e
 
 | Pieza | Bytes | Libres |
 | --- | --- | --- |
-| QuatriviumCredit (forge, runtime) | 22728 | 1848 |
-| QuatriviumCredit (Hardhat, deployedBytecode) | 22993 | 1583 |
-| QuatriviumCreditHarness | 24198 | 378 |
+| QuatriviumCredit (forge, runtime) | 22734 | 1842 |
+| QuatriviumCredit (Hardhat, deployedBytecode) | 22999 | 1577 |
+| QuatriviumCreditHarness | 24204 | 372 |
 
-Un pago de 40 generaciones usó 1250095 de gas (el test lo imprime y exige menos de 3 000 000). Foundry con `FOUNDRY_PROFILE=ci`: 91 pruebas en verde. Los invariantes corrieron 256 veces, 204800 llamadas y 0 reversiones. Hardhat: 496 pruebas en verde.
+Un pago de 40 generaciones usó 1250095 de gas (el test lo imprime y exige menos de 3 000 000). Foundry con `FOUNDRY_PROFILE=ci`: 92 pruebas en verde. Los invariantes corrieron 256 veces, 204800 llamadas y 0 reversiones. Hardhat: 499 pruebas en verde.
 
 Slither, compilación nueva, `fail_on: high`: 25 resultados, 0 altos, 0 medios, 15 bajos, 10 de optimización. Los medios que no eran un fallo llevan `slither-disable-next-line` con el motivo en la misma línea. No se cambió la lógica de `_soloEOA`, Alta ni Reserva. Los 15 bajos, uno por uno:
 
@@ -104,7 +104,7 @@ Un PIN de 6 dígitos solo tiene 1 000 000 de combinaciones. La protección real 
 
 Fecha de la revisión inicial: 10 de noviembre de 2026 (America/Caracas).
 
-Fecha de la revisión de la última medición: 19 de noviembre de 2026, base `36e3996` más la tanda 2. Rama `cursor/soberania-contratos-8e15`. Medición de ahora: Hardhat 496, Foundry 91. Credit en forge (runtime): 22728 bytes, 1848 libres de 24576. Credit en Hardhat (`deployedBytecode`): 22993 bytes, 1583 libres de 24576.
+Fecha de la revisión de la última medición: 19 de noviembre de 2026, base `d7bff24` más la tanda B1 (sin billetera externa y QA-T2-01). Rama `cursor/soberania-contratos-8e15`. Medición de ahora: Hardhat 499, Foundry 92. Credit en forge (runtime): 22734 bytes, 1842 libres de 24576. Credit en Hardhat (`deployedBytecode`): 22999 bytes, 1577 libres de 24576.
 
 La clave del historial (commits `10553d4` y `dc40f15`, archivo `.env.worker.example`) ya fue revocada. No está en el árbol. El valor no se copia y la historia no se reescribe.
 
@@ -670,7 +670,6 @@ Cada archivo seguido de git en esta rama se revisó al menos por nombre, tipo y,
 - `services/deviceClaim.ts` — revisado: sí
 - `services/equippedFrame.ts` — revisado: sí
 - `services/fameLeaderboard.ts` — revisado: sí
-- `services/founderUsdtCharge.ts` — revisado: sí
 - `services/fundsConfirm.ts` — revisado: sí
 - `services/linkedWallet.ts` — revisado: sí
 - `services/movementHistory.ts` — revisado: sí
@@ -751,7 +750,6 @@ Cada archivo seguido de git en esta rama se revisó al menos por nombre, tipo y,
 - `utils/accountEntry.ts` — revisado: sí
 - `utils/adminProposal.ts` — revisado: sí
 - `utils/appDeepLink.ts` — revisado: sí
-- `utils/appKitStorage.ts` — revisado: sí
 - `utils/appNotice.ts` — revisado: sí
 - `utils/biometricStatus.ts` — revisado: sí
 - `utils/copyText.ts` — revisado: sí
@@ -770,7 +768,6 @@ Cada archivo seguido de git en esta rama se revisó al menos por nombre, tipo y,
 - `utils/legalConsent.ts` — revisado: sí
 - `utils/loanPaidMark.ts` — revisado: sí
 - `utils/moraHistory.ts` — revisado: sí
-- `utils/openWalletConnect.ts` — revisado: sí
 - `utils/passwordPolicy.ts` — revisado: sí
 - `utils/pendingDeepLink.ts` — revisado: sí
 - `utils/pickerHold.ts` — revisado: sí
@@ -794,7 +791,6 @@ Cada archivo seguido de git en esta rama se revisó al menos por nombre, tipo y,
 - `utils/unsavedChanges.ts` — revisado: sí
 - `utils/usernamePolicy.ts` — revisado: sí
 - `utils/waitMined.ts` — revisado: sí
-- `utils/walletChain.ts` — revisado: sí
 - `utils/walletVaultPolicy.ts` — revisado: sí
 - `wallet/AppModeContext.tsx` — revisado: sí
 - `wallet/AppWalletContext.tsx` — revisado: sí
@@ -803,4 +799,3 @@ Cada archivo seguido de git en esta rama se revisó al menos por nombre, tipo y,
 - `web/icon.png` — revisado: sí
 - `web/index.html` — revisado: sí
 - `web/invite/index.html` — revisado: sí
-- `web3Config.tsx` — revisado: sí

@@ -4,7 +4,7 @@
 
 Protocolo y app de microcrédito sin colateral en Arbitrum One (chainId 42161) con LUSD `0x93b346b6BC2548dA6A1E7d98E9a421B42541425b`, 18 decimales, paridad 1:1 y sin oráculo de precio. Solidity 0.8.24. App Expo 54 / React Native 0.81 / TypeScript. Paquete `com.quatrivium.sovereign`.
 
-No hay servidor de la empresa. La billetera nace en el teléfono (`services/appWallet.ts`). WalletConnect es opcional. Los RPC públicos están en `constants/rpcConfig.ts`.
+No hay servidor de la empresa. La billetera nace en el teléfono (`services/appWallet.ts`). No hay conexión de billeteras externas: se deposita enviando a la dirección de la app y se retira a la billetera vinculada. Los RPC públicos están en `constants/rpcConfig.ts`.
 
 ## Reglas cerradas
 
@@ -12,7 +12,7 @@ No hay servidor de la empresa. La billetera nace en el teléfono (`services/appW
 - `retirarLiquidez` revierte. Nadie saca el pool.
 - Alta de 4 LUSD en `QuatriviumAlta.pagarRegistro`: 1 al fundador, 1 al bote de Reserva, 1 apartado para quien invitó y 1 de sello a Credit. De ese sello, el 5 % queda en el fondo de seguro y el 95 % en la liquidez. Entrar sin invitación cuelga del fundador. Ese 1 apartado no se queda bloqueado: al pagar el primer nivel 1 va a quien invitó si ya tiene alta y nivel 1, y si no, al pool. A los 7 días sin ese pago, entra al pool. Una misma cuenta no puede ser su propio invitador. El fundador cobra además el 15 % del interés en la misma transacción. Solo él rota su billetera, con 72 h. No necesita alta ni L1.
 - Donar y aportar dan fama visible y no se canjean por LUSD del pool. Solo la fama de intereses pagados se convierte.
-- Fondo de seguro: 5 % de las entradas al pool. Solo paga el premio del impago.
+- Fondo de seguro: 5 % de las entradas al pool. Solo absorbe el principal de un impago castigado.
 - Reserva: nivel ≥ 10, 30 días, tope 12 % anual del bote, principal siempre devuelto. Sin owner ni retiro del bote.
 - El fundador cobra 5 % (menos de 50 LUSD), 8 % (desde 50 y menos de 500) o 12 % (≥500) del rendimiento pagado del bote y del extra de comisión, según el tramo del principal (corteFundadorBp).
 - EIP-7702 (decisión de Jose, 15 nov, 9e6525c): las entradas exigen msg.sender == tx.origin y msg.sender.code.length == 0 (QuatriviumCredit._soloEOA :241, QuatriviumAlta.pagarRegistro :54, QuatriviumFamaCaja :267/:278/:301/:322, QuatriviumReserva.onlyEOA :112); las salidas aceptan a cualquiera y solo mueven lo de msg.sender (QuatriviumCredit.pagarPrestamo :707, QuatriviumReserva.desbloquear :203); la verificación no usa tx.origin (QuatriviumFamaLib.usuarioVerificacion :486, exige cargoDe distinto de cero). Sin chequeo EOA, por diseño, quedan también las de mantenimiento: QuatriviumCredit.marcarMorosoSiVencido :848 (cualquiera, solo si está vencido), QuatriviumCredit.liberarSelloPrimeraSiExpiro :1064 (cualquiera, solo si expiró) y QuatriviumAlta.vencerPadrinoAlPool :90 (exige sello de 1 LUSD y padrino vencido).
@@ -28,7 +28,7 @@ La escalera de 1000 niveles y los porcentajes de arriba no se tocan sin una orde
 
 | Archivo | Rol |
 | --- | --- |
-| `contracts/QuatriviumCredit.sol` | Préstamos, pool, interés, liquidación, admins, sequencer, fondo. Forge (runtime): 22728 bytes, 1848 libres de 24576. Hardhat (`deployedBytecode`): 22993 bytes, 1583 libres. |
+| `contracts/QuatriviumCredit.sol` | Préstamos, pool, interés, liquidación, admins, sequencer, fondo. Forge (runtime): 22734 bytes, 1842 libres de 24576. Hardhat (`deployedBytecode`): 22999 bytes, 1577 libres. |
 | `contracts/QuatriviumAlta.sol` | Alta de 4 LUSD. |
 | `contracts/QuatriviumReserva.sol` | Bloqueos y bote. |
 | `contracts/QuatriviumFamaCaja.sol` | Fama, canje y racha. |
@@ -53,7 +53,7 @@ Despliegue, solo con orden explícita: `CONFIRM_MAINNET=yes npm run deploy:arbit
 
 ## Estado
 
-Rama `cursor/soberania-contratos-8e15`. Hardhat 496, Foundry 91. El mapa de commits está en `HANDOFF.md`.
+Rama `cursor/soberania-contratos-8e15`. Hardhat 499, Foundry 92. El mapa de commits está en `HANDOFF.md`.
 
 Abierto, sin arreglar: dos hallazgos bajos del alta (segunda cuenta, y `soltarPadrino` si el padre viniera vacío). NIP-17/44 sigue sin hacerse: `prepareNostrPayload` en `utils/sovereignSurface.ts` devuelve null. `tmp` quedó en 0.2.7. `image-size` sigue alto: la 2.0.3 rompe el paquete de Android.
 

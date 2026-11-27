@@ -15,7 +15,7 @@ function sleep(ms: number): Promise<void> {
   });
 }
 
-/** Espera el recibo en el RPC de la app. Nunca usa tx.wait() de WalletConnect (se cuelga). */
+/** Espera el recibo en el RPC de la app. Nunca usa tx.wait() (se cuelga). */
 export async function waitMined(tx: MinedTx, timeoutMs = DEFAULT_MS) {
   const hash = typeof tx.hash === 'string' ? tx.hash : '';
   if (!HASH.test(hash)) throw new Error('tx-pending');

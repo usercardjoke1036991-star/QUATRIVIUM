@@ -83,7 +83,6 @@ describe('contenido del APK', function () {
       'babel.config.js',
       'tsconfig.json',
       'polyfills.js',
-      'web3Config.tsx',
       'assets/icon.png',
       'assets/gems/ruby.png',
       'plugins/withQuatriviumAndroidSecurity.js',
@@ -173,7 +172,7 @@ describe('contenido del APK', function () {
 
   it('Ningún console de la app sale sin __DEV__', function () {
     const exts = new Set(['.ts', '.tsx', '.js', '.mjs', '.cjs']);
-    const files = ['App.js', 'index.js', 'polyfills.js', 'web3Config.tsx'].concat(
+    const files = ['App.js', 'index.js', 'polyfills.js'].concat(
       APP_DIRS.filter((dir) => dir !== 'assets').flatMap((dir) =>
         archivos(dir, (rel) => exts.has(path.posix.extname(rel)))
       )

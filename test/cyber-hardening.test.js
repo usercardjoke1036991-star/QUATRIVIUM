@@ -862,7 +862,7 @@ describe('demo credit gates', function () {
     expect(gate).to.include('creditNeedsAccess');
     expect(gate).to.include('isDemoAccount()');
     expect(gate).to.include('isAccessPaymentEnabled');
-    expect(gate).to.include('fundInternalFromExternal');
+    expect(gate).to.include('ensureInternalFunds');
     expect(gate).to.include('mintDemoUsdtTo');
     expect(gate).to.include('internalBal');
     expect(gate).to.match(/internalBal !== null && internalBal >= need/);
@@ -1810,7 +1810,7 @@ describe('account entry — password, email and session', () => {
       path.join(__dirname, '..', 'hooks', 'useHomeHandlers.ts'),
       'utf8'
     );
-    expect(handlers).to.include('ensureExternalWalletOnAppChain');
+    expect(handlers).to.include('ensureInternalFunds');
     expect(handlers).to.include('poolRealOnly');
     expect(handlers).to.include("kind: 'access'");
     expect(handlers).not.to.match(/kind: 'donation'[\s\S]*to: userInfo\.founderAddress/);
@@ -1846,7 +1846,7 @@ describe('account entry — password, email and session', () => {
       path.join(__dirname, '..', 'components', 'TransferWalletsModal.tsx'),
       'utf8'
     );
-    expect(transferUi).to.include('ensureExternalWalletOnAppChain');
+    expect(transferUi).to.include('loadAppWallet');
     expect(roomFromAppUrl('quatrivium-sovereign://room/credit?n=1730000000')).to.equal('credit');
     expect(roomFromAppUrl('quatrivium-sovereign://room/history')).to.equal('history');
     expect(roomFromAppUrl('quatrivium-sovereign://room/network')).to.equal('network');
@@ -2098,7 +2098,7 @@ describe('account entry — password, email and session', () => {
       path.join(__dirname, '..', 'components', 'LinkWalletForm.tsx'),
       'utf8'
     );
-    expect(linker).to.include('connectWallet');
+    expect(linker).to.not.include('signTypedData');
     expect(linker).to.include('linkWalletSkip');
     expect(linker).to.include('allowSkip');
     expect(linker).to.not.include('settingsAdmin');
@@ -2113,7 +2113,7 @@ describe('account entry — password, email and session', () => {
       path.join(__dirname, '..', 'services', 'linkedWallet.ts'),
       'utf8'
     );
-    expect(linked).to.include('saveLinkedExternalWallet');
+    expect(linked).to.include('PROVEN_PREFIX');
     expect(linked).to.include('skipLinkedExternalWallet');
     expect(linked).to.include('loadRequiredExternalWallet');
     function hasLinkedExternalWallet(value) {
@@ -2222,7 +2222,7 @@ describe('account entry — password, email and session', () => {
     expect(settings).to.include("setPanel('admin')");
     expect(settings).to.include('onLongPress');
     const home = fs.readFileSync(path.join(__dirname, '..', 'app', 'index.tsx'), 'utf8');
-    expect(home).to.include('adminInfo.isOwner || adminInfo.isAdmin');
+    expect(home).to.include('userInfo.isOwner || userInfo.isAdmin');
   });
 
   it('lets two founders kick a lost or hacked key', () => {
@@ -2243,7 +2243,7 @@ describe('account entry — password, email and session', () => {
     expect(es.otpDeliveryFailed.length).to.be.below(180);
     expect(es.creditAccessLead.length).to.be.below(120);
     expect(es.linkWalletNeedFunds).to.match(/[Vv]incule una billetera/);
-    expect(es.externalPaysLead).to.match(/vinculada/);
+    expect(es.externalPaysLead).to.match(/billetera de la app/);
     expect(es.appWalletFailed.length).to.be.below(50);
     expect(es.appWalletInTitle).to.equal('Depositar');
     expect(es.yourLpPosition).to.match(/aporte|posici/i);

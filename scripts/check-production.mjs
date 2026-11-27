@@ -141,10 +141,6 @@ function loadEnv(filePath) {
 const env = loadEnv(resolve(root, '.env'));
 
 const get = (key) => String(env[key] || '').trim();
-const set = (key) => {
-  const value = get(key);
-  return Boolean(value) && !/^your_/i.test(value) && !value.includes('_here');
-};
 const https = (key) => /^https:\/\//i.test(get(key));
 
 const admins = get('ADMINS')
@@ -153,14 +149,6 @@ const admins = get('ADMINS')
   .filter((item) => isHexAddress(item) && !isZero(item));
 
 const checks = [
-  {
-    id: 'walletconnect',
-    who: 'code',
-    ok:
-      set('EXPO_PUBLIC_WALLETCONNECT_PROJECT_ID') &&
-      get('EXPO_PUBLIC_WALLETCONNECT_PROJECT_ID').length >= 16,
-    need: 'Project ID de Reown (ya puede estar en .env local; también en eas.json)',
-  },
   {
     id: 'contract',
     who: 'you',

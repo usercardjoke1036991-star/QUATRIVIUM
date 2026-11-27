@@ -47,7 +47,7 @@ export type ReceiptNode = {
   getTransactionReceipt(hash: string): Promise<unknown>;
 };
 
-/** Solo pruebas de WalletConnect: los recibos salen de estos nodos, no de la billetera. */
+/** Solo pruebas: los recibos salen de estos nodos, no de la billetera. */
 function setReceiptNodes(nodes: ReceiptNode[] | null): void {
   receiptNodes = nodes;
 }

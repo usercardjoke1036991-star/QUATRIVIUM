@@ -172,9 +172,5 @@ describe('avisos y fallos de red', function () {
     expect(errors).to.include("['RPC chain mismatch', 'errRpcMismatch']");
     expect(errors).to.include("['wrong-network-demo', 'linkWalletNetworkDemo']");
     expect(errors).to.include("['wrong-network', 'errWrongNetwork']");
-    const wallet = fs.readFileSync(path.join(root, 'utils', 'walletChain.ts'), 'utf8');
-    const home = fs.readFileSync(path.join(root, 'hooks', 'useHomeHandlers.ts'), 'utf8');
-    expect(wallet).to.include('networkFailureError');
-    expect(home).to.include('networkFailureError(');
   });
 });

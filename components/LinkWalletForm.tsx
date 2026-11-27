@@ -1,21 +1,19 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { useAccount, useAppKit, useProvider } from '@reown/appkit-react-native';
-import type { Eip1193Provider } from 'ethers';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useI18n } from '../i18n/LanguageContext';
 import { useTheme } from '../theme/ThemeContext';
-import { formatAddress } from '../utils/formatters';
 import * as linkedWallet from '../services/linkedWallet';
-import { openWalletConnect, withWalletSignTimeout } from '../utils/openWalletConnect';
 import { isDemoMode } from '../constants/rpcConfig';
 import { AppText } from './AppText';
-
 interface LinkWalletFormProps {
   internalWallet: string;
   onLinked: (externalWallet: string) => void | Promise<void>;
   allowSkip?: boolean;
 }
-
+/**
+ * Vincular la billetera de retiro. La prueba por transferencia llega en la tanda B2.
+ * Mientras tanto no se vincula nada nuevo; los vínculos viejos se siguen leyendo.
+ */
 export const LinkWalletForm: React.FC<LinkWalletFormProps> = ({
   internalWallet,
   onLinked,
@@ -23,39 +21,10 @@ export const LinkWalletForm: React.FC<LinkWalletFormProps> = ({
 }) => {
   const { t } = useI18n();
   const { colors } = useTheme();
-  const { open } = useAppKit();
-  const { address, isConnected } = useAccount();
-  const { provider } = useProvider();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const connected = Boolean(isConnected && linkedWallet.hasLinkedExternalWallet(address || ''));
-
-  const submit = async () => {
-    if (!connected || !address) {
-      setError(t('linkWalletNeed'));
-      return;
-    }
-    setBusy(true);
-    setError('');
-    try {
-      const saved = await withWalletSignTimeout(
-        linkedWallet.proveAndSaveLinkedWallet(provider as Eip1193Provider, internalWallet, address),
-        45000
-      );
-      await onLinked(saved);
-    } catch (caught) {
-      const message = String((caught as Error)?.message || '');
-      setError(
-        message.includes('wrong-network')
-          ? t(isDemoMode() ? 'linkWalletNetworkDemo' : 'linkWalletNetworkLive')
-          : t('linkWalletSignNeed')
-      );
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const skip = async () => {
+    if (busy) return;
     setBusy(true);
     setError('');
     try {
@@ -67,54 +36,12 @@ export const LinkWalletForm: React.FC<LinkWalletFormProps> = ({
       setBusy(false);
     }
   };
-
   return (
     <View>
-      <AppText style={[styles.meta, { color: colors.textMuted, marginBottom: 10 }]}>
+      <AppText style={[styles.meta, { color: colors.textMuted }]}>
         {t(isDemoMode() ? 'linkWalletNetworkDemo' : 'linkWalletNetworkLive')}
       </AppText>
-      <TouchableOpacity
-        onPress={() => {
-          setError('');
-          void openWalletConnect(open);
-        }}
-        style={[styles.btn, { backgroundColor: colors.chip }]}
-        accessibilityRole="button"
-        accessibilityLabel={t('connectWallet')}
-      >
-        <AppText style={[styles.btnText, { color: colors.text }]}>{t('connectWallet')}</AppText>
-      </TouchableOpacity>
-      {connected && address ? (
-        <>
-          <AppText style={[styles.meta, { color: colors.text }]}>{formatAddress(address)}</AppText>
-          <AppText style={[styles.meta, { color: colors.textMuted }]}>
-            {t('linkWalletSignNeed')}
-          </AppText>
-        </>
-      ) : null}
       {error ? <AppText style={[styles.error, { color: colors.danger }]}>{error}</AppText> : null}
-      {connected ? (
-        <TouchableOpacity
-          disabled={busy}
-          onPress={() => void submit()}
-          style={[
-            styles.btn,
-            { backgroundColor: connected ? colors.primary : colors.chip, marginTop: 12 },
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={t('linkWalletBind')}
-        >
-          {busy ? (
-            <ActivityIndicator color={colors.onPrimary} />
-          ) : (
-            <AppText
-              style={[styles.btnText, { color: connected ? colors.onPrimary : colors.textMuted }]}
-            >
-              {t('linkWalletBind')}
-            </AppText>
-          )}
-        </TouchableOpacity>
-      ) : null}
       {allowSkip ? (
         <TouchableOpacity
           disabled={busy}
@@ -131,17 +58,7 @@ export const LinkWalletForm: React.FC<LinkWalletFormProps> = ({
     </View>
   );
 };
-
 const styles = StyleSheet.create({
-  btn: {
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  btnText: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
   meta: {
     fontSize: 13,
     textAlign: 'center',

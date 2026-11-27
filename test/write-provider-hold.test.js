@@ -285,7 +285,7 @@ describe('write provider pending hold', function () {
     expect(receipt.status).to.equal(1);
   });
 
-  it('asks our RPCs for a WalletConnect receipt and never the wallet', async function () {
+  it('asks our RPCs for the receipt and never the wallet', async function () {
     let walletCalls = 0;
     const agreed = {
       hash: HASH,

@@ -8,7 +8,7 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "assets" / "wallets"
 
-# URLs oficiales o de kits de marca / listados WalletConnect-TON de cada wallet.
+# URLs oficiales o de kits de marca de cada wallet.
 SOURCES = {
     "metamask": [
         "https://raw.githubusercontent.com/MetaMask/metamask-extension/master/app/images/icon-512.png",

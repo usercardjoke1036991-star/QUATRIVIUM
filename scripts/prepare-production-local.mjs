@@ -125,24 +125,6 @@ if (!env.EXPO_PUBLIC_INVITE_WEB_BASE) {
   done.push('Dominio del portal web de invitaciones y descarga directa de APK');
 }
 
-const wc = env.EXPO_PUBLIC_WALLETCONNECT_PROJECT_ID || '';
-if (wc && wc.length >= 16 && !/^your_/i.test(wc)) {
-  const easPath = resolve(root, 'eas.json');
-  const eas = JSON.parse(readFileSync(easPath, 'utf8'));
-  let easChanged = false;
-  for (const profile of Object.keys(eas.build || {})) {
-    eas.build[profile].env = eas.build[profile].env || {};
-    if (eas.build[profile].env.EXPO_PUBLIC_WALLETCONNECT_PROJECT_ID !== wc) {
-      eas.build[profile].env.EXPO_PUBLIC_WALLETCONNECT_PROJECT_ID = wc;
-      easChanged = true;
-    }
-  }
-  if (easChanged) {
-    writeFileSync(easPath, JSON.stringify(eas, null, 2) + '\n');
-    done.push('WalletConnect escrito en eas.json (va en el APK, no es la clave de deploy)');
-  }
-}
-
 console.log('production:prepare (100% soberano — sin worker ni servidores Web2)');
 for (const line of done) console.log('- ' + line);
 if (!done.length) console.log('- Nada que cambiar');
