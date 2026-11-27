@@ -22,7 +22,7 @@ export function sliceReferralPage<T>(items: T[], page: number, pageSize = REFERR
   return list.slice(start, start + size);
 }
 
-export function visibleReferralPages(current: number, totalPages: number): Array<number | 'gap'> {
+export function visibleReferralPages(current: number, totalPages: number): (number | 'gap')[] {
   if (totalPages <= 0) return [];
   const page = clampReferralPage(current, totalPages);
   if (totalPages <= 11) {
@@ -33,7 +33,7 @@ export function visibleReferralPages(current: number, totalPages: number): Array
     if (next >= 1 && next <= totalPages) picked.add(next);
   }
   const sorted = [...picked].sort((left, right) => left - right);
-  const out: Array<number | 'gap'> = [];
+  const out: (number | 'gap')[] = [];
   let previous = 0;
   for (const value of sorted) {
     if (previous && value - previous > 1) out.push('gap');

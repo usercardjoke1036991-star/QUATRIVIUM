@@ -19,7 +19,6 @@ interface WalletSectionProps {
   selectedToken: Token;
   isLoading: boolean;
   onSent: () => void;
-  onConnectAdmin?: () => void;
 }
 
 export const WalletSection: React.FC<WalletSectionProps> = ({
@@ -29,7 +28,6 @@ export const WalletSection: React.FC<WalletSectionProps> = ({
   selectedToken,
   isLoading,
   onSent,
-  onConnectAdmin,
 }) => {
   const { t } = useI18n();
   const { colors } = useTheme();
@@ -137,13 +135,6 @@ export const WalletSection: React.FC<WalletSectionProps> = ({
           <AppText style={styles.actionText}>{t('appWalletSendTitle')}</AppText>
         </TouchableOpacity>
       </View>
-      {onConnectAdmin ? (
-        <TouchableOpacity onPress={onConnectAdmin} accessibilityRole="button">
-          <AppText style={[styles.hint, { color: colors.textMuted }]}>
-            {t('appWalletAdminConnect')}
-          </AppText>
-        </TouchableOpacity>
-      ) : null}
       <TransferWalletsModal
         visible={transferMode !== null}
         mode={transferMode || 'in'}
@@ -209,12 +200,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-  },
-  hint: {
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: 8,
-    marginBottom: 10,
   },
   warn: {
     fontSize: 13,

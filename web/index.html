@@ -29,8 +29,11 @@
   <script>
     const params = new URLSearchParams(location.search);
     const code = params.get('c') || params.get('code') || '';
-    if (/^[A-Za-z0-9_-]{1,32}$/.test(code)) {
-      location.replace('./invite/index.html?c=' + encodeURIComponent(code));
+    if (/^[A-Za-z0-9]{32}$/.test(code)) {
+      const name = (params.get('n') || params.get('name') || '').trim().slice(0, 24);
+      let next = './invite/index.html?c=' + encodeURIComponent(code);
+      if (name) next += '&n=' + encodeURIComponent(name);
+      location.replace(next);
     }
   </script>
 </body>

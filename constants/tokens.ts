@@ -1,5 +1,5 @@
 import { getUsdtAddress } from './contractConfig';
-import { ARBITRUM_MAINNET } from './bsc';
+import { ARBITRUM_MAINNET } from './arbitrum';
 import { DEPLOYED_TESTNET } from './deployedAddresses';
 import { isDemoMode } from './rpcConfig';
 
@@ -25,14 +25,14 @@ const LUSD_META: Omit<Token, 'address'> = {
 };
 
 /** LUSD es la moneda única en Arbitrum One (sin otras stables secundarias). */
-export function getConfigurableStables(): ConfigurableStable[] {
+export function getConfigurableStables(_demo = isDemoMode()): ConfigurableStable[] {
   return [];
 }
 
-export function getSupportedTokens(): Token[] {
+export function getSupportedTokens(demo = isDemoMode()): Token[] {
   const lusd: Token = {
     ...LUSD_META,
-    address: isDemoMode() ? getUsdtAddress() : ARBITRUM_MAINNET.lusd,
+    address: demo ? getUsdtAddress() : ARBITRUM_MAINNET.lusd,
   };
   return [lusd];
 }

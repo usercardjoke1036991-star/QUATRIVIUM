@@ -20,7 +20,8 @@ interface PoolSupportSectionProps {
   poolOutstanding?: string;
   poolCash?: string;
   lpBalance?: string;
-  walletConnected: boolean;
+  moneyUnconfirmed?: boolean;
+  walletReady: boolean;
   paused?: boolean;
   onDepositPool: (amount: string) => void;
 }
@@ -33,7 +34,8 @@ export const PoolSupportSection: React.FC<PoolSupportSectionProps> = ({
   poolOutstanding,
   poolCash,
   lpBalance,
-  walletConnected,
+  moneyUnconfirmed = false,
+  walletReady,
   paused = false,
   onDepositPool,
 }) => {
@@ -45,7 +47,7 @@ export const PoolSupportSection: React.FC<PoolSupportSectionProps> = ({
   const { mode } = useAppMode();
   const allowDeposit = mode !== 'demo';
   const contractReady = isContractConfigured();
-  const blocked = isLoading || !walletConnected || paused || !contractReady;
+  const blocked = isLoading || !walletReady || paused || !contractReady;
   const lpValue = Number.parseFloat(lpBalance || '0');
   const showNav = contractReady;
 
@@ -77,14 +79,16 @@ export const PoolSupportSection: React.FC<PoolSupportSectionProps> = ({
               },
             ]}
           >
-            {t('poolDestination', { amount: `${poolBalance} ${tokenSymbol}` })}
+            {moneyUnconfirmed
+              ? t('rpcMoneyUnconfirmed')
+              : t('poolDestination', { amount: `${poolBalance} ${tokenSymbol}` })}
           </AppText>
         ) : !contractReady ? (
           <AppText style={[styles.warn, { color: colors.warnText }]}>
             {t('liveCreditNotReady')}
           </AppText>
         ) : null}
-        {showNav && poolCash && poolOutstanding ? (
+        {showNav && poolCash && poolOutstanding && !moneyUnconfirmed ? (
           <AppText style={[styles.locked, { color: colors.textMuted }]}>
             {t('poolNavExplain', {
               cash: `${poolCash} ${tokenSymbol}`,
@@ -126,12 +130,12 @@ export const PoolSupportSection: React.FC<PoolSupportSectionProps> = ({
               <AppText style={[styles.locked, { color: colors.textMuted }]}>
                 {t('externalPaysLead')}
               </AppText>
-              {!walletConnected && (
+              {!walletReady && (
                 <AppText style={[styles.warn, { color: colors.warnText }]}>
                   {t('connectFirst')}
                 </AppText>
               )}
-              {!tokenSupported && walletConnected && (
+              {!tokenSupported && walletReady && (
                 <AppText style={[styles.warn, { color: colors.warnText }]}>
                   {t('tokenNotEnabled')}
                 </AppText>

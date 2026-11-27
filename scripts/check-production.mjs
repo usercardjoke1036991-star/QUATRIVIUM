@@ -8,7 +8,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 
-const { isHexAddress, isZero } = createRequire(import.meta.url)('./bscNetworks.cjs');
+const { isHexAddress, isZero } = createRequire(import.meta.url)('./arbitrumNetworks.cjs');
 
 const root = resolve(process.cwd());
 const strict = process.argv.includes('--strict');
@@ -110,7 +110,9 @@ function runRepoCi() {
     process.exit(1);
   }
   console.log('OK  eas.json production: APP_ENV=production, chain 42161 (Arbitrum One)');
-  console.log('OK  LUSD (0x93b346b6BC2548dA6A1E7d98E9a421B42541425b) y contratos alineados con el repo');
+  console.log(
+    'OK  LUSD (0x93b346b6BC2548dA6A1E7d98E9a421B42541425b) y contratos alineados con el repo'
+  );
   console.log('OK  Modo 100% soberano (sin servidores Web2, SMS ni attester)');
   process.exit(0);
 }
@@ -139,10 +141,6 @@ function loadEnv(filePath) {
 const env = loadEnv(resolve(root, '.env'));
 
 const get = (key) => String(env[key] || '').trim();
-const set = (key) => {
-  const value = get(key);
-  return Boolean(value) && !/^your_/i.test(value) && !value.includes('_here');
-};
 const https = (key) => /^https:\/\//i.test(get(key));
 
 const admins = get('ADMINS')
@@ -151,14 +149,6 @@ const admins = get('ADMINS')
   .filter((item) => isHexAddress(item) && !isZero(item));
 
 const checks = [
-  {
-    id: 'walletconnect',
-    who: 'code',
-    ok:
-      set('EXPO_PUBLIC_WALLETCONNECT_PROJECT_ID') &&
-      get('EXPO_PUBLIC_WALLETCONNECT_PROJECT_ID').length >= 16,
-    need: 'Project ID de Reown (ya puede estar en .env local; también en eas.json)',
-  },
   {
     id: 'contract',
     who: 'you',
@@ -211,11 +201,11 @@ const checks = [
     id: 'rpc',
     who: 'code',
     ok:
+      https('ARBITRUM_ONE_RPC_URL') ||
       https('ARBITRUM_MAINNET_RPC_URL') ||
-      https('EXPO_PUBLIC_ARBITRUM_RPC_URL') ||
-      https('BSC_MAINNET_RPC_URL') ||
-      https('EXPO_PUBLIC_BSC_RPC_URL_PRIMARY'),
-    need: 'RPC HTTPS para Arbitrum One en ARBITRUM_MAINNET_RPC_URL (o usa el pool público por defecto)',
+      https('EXPO_PUBLIC_ARBITRUM_RPC_URL_PRIMARY') ||
+      https('EXPO_PUBLIC_ARBITRUM_RPC_URL'),
+    need: 'RPC HTTPS para Arbitrum One en ARBITRUM_ONE_RPC_URL (o usa el pool público por defecto)',
   },
   {
     id: 'invite',

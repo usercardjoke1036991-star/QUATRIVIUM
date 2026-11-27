@@ -1,14 +1,16 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getAddress, isAddress, type Eip1193Provider } from 'ethers';
+import { getAddress, isAddress } from 'ethers';
 import { storeSlot } from '../utils/storeSlot';
-import { signBindExternalWallet } from './walletAuth';
-import { getEthersSignerFromProvider } from '../web3Config';
-import { ensureExternalWalletOnAppChain } from '../utils/walletChain';
 import { NETWORK_CONFIG } from '../constants/rpcConfig';
+import type { LinkProof } from './linkChallenge';
 
 const PREFIX = `${storeSlot(['quatrivium', 'linkedExternal', 'v1'])}:`;
 export const WALLET_LINK_SKIPPED = 'skipped';
+/** Vínculos viejos, probados con firma EIP-712 desde la billetera externa. Se siguen leyendo. */
 const PROVEN_PREFIX = 'proven:';
+/** Vínculos nuevos: `transfer:<dirección>:<hash>` de la transferencia de prueba que vieron dos RPC. */
+const TRANSFER_PREFIX = 'transfer:';
+const TX_HASH = /^0x[0-9a-fA-F]{64}$/;
 
 export function linkedWalletStorageKey(
   internalWallet: string,
@@ -35,8 +37,16 @@ export async function loadLinkedExternalWallet(internalWallet: string): Promise<
       (await AsyncStorage.getItem(linkedWalletStorageKey(internalWallet))) || ''
     ).trim();
     if (stored === WALLET_LINK_SKIPPED) return WALLET_LINK_SKIPPED;
-    if (!stored.startsWith(PROVEN_PREFIX)) return '';
-    const address = stored.slice(PROVEN_PREFIX.length);
+    let address = '';
+    if (stored.startsWith(PROVEN_PREFIX)) {
+      address = stored.slice(PROVEN_PREFIX.length);
+    } else if (stored.startsWith(TRANSFER_PREFIX)) {
+      const [candidate, txHash] = stored.slice(TRANSFER_PREFIX.length).split(':');
+      if (!TX_HASH.test(String(txHash || ''))) return '';
+      address = candidate;
+    } else {
+      return '';
+    }
     if (!hasLinkedExternalWallet(address)) return '';
     if (getAddress(address).toLowerCase() === getAddress(internalWallet).toLowerCase()) return '';
     return getAddress(address);
@@ -45,37 +55,24 @@ export async function loadLinkedExternalWallet(internalWallet: string): Promise<
   }
 }
 
+/** Solo guarda con la prueba que devolvió checkLinkChallenge, de esta red y para otra dirección. */
 export async function saveLinkedExternalWallet(
   internalWallet: string,
-  externalWallet: string
+  proof: LinkProof
 ): Promise<string> {
-  if (!internalWallet || !hasLinkedExternalWallet(externalWallet)) {
+  if (!isAddress(internalWallet) || !proof || !hasLinkedExternalWallet(proof.external)) {
     throw new Error('wallet');
   }
-  const address = getAddress(externalWallet);
-  if (getAddress(internalWallet).toLowerCase() === address.toLowerCase()) {
-    throw new Error('wallet');
+  if (proof.chainId !== NETWORK_CONFIG.chainId || !TX_HASH.test(String(proof.txHash || ''))) {
+    throw new Error('proof');
   }
-  await AsyncStorage.setItem(linkedWalletStorageKey(internalWallet), `${PROVEN_PREFIX}${address}`);
+  const address = getAddress(proof.external);
+  if (address === getAddress(internalWallet)) throw new Error('wallet');
+  await AsyncStorage.setItem(
+    linkedWalletStorageKey(internalWallet),
+    `${TRANSFER_PREFIX}${address}:${proof.txHash.toLowerCase()}`
+  );
   return address;
-}
-
-/** Pide EIP-712 en la billetera externa y solo entonces guarda la address. */
-export async function proveAndSaveLinkedWallet(
-  eip1193: Eip1193Provider | null | undefined,
-  internalWallet: string,
-  externalWallet: string
-): Promise<string> {
-  if (!eip1193) throw new Error('signer');
-  await ensureExternalWalletOnAppChain(eip1193);
-  const signer = await getEthersSignerFromProvider(eip1193);
-  if (!signer) throw new Error('signer');
-  const from = getAddress(await signer.getAddress());
-  const external = getAddress(externalWallet);
-  if (from !== external) throw new Error('wallet');
-  if (from.toLowerCase() === getAddress(internalWallet).toLowerCase()) throw new Error('wallet');
-  await signBindExternalWallet(signer, internalWallet, external);
-  return saveLinkedExternalWallet(internalWallet, external);
 }
 
 export async function skipLinkedExternalWallet(internalWallet: string): Promise<string> {

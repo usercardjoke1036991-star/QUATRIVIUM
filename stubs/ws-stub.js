@@ -1,7 +1,7 @@
 // ws es una librería WebSocket para Node.js.
 // En React Native existe un WebSocket nativo global — lo usamos como stub.
-// WalletConnect/Reown detecta React Native y usa el nativo, pero
-// al importar 'ws' explícitamente, Metro necesita resolver el módulo.
+// ethers importa 'ws' en providers/ws.js; la app no abre WebSocket,
+// pero Metro necesita resolver el módulo.
 
 // Exportar el WebSocket nativo de React Native como si fuera el módulo ws.
 const WebSocketClass = global.WebSocket || class WebSocket {};

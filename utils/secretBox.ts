@@ -41,7 +41,7 @@ export function hmacSha256(key: BytesLike, data: BytesLike): Uint8Array {
 }
 
 export function deriveWrapKey(secret: string, salt: string, rounds: number): string {
-  const n = Math.max(1, Math.min(rounds, 20_000));
+  const n = Math.max(1, Math.floor(rounds));
   let digest = sha256(toUtf8Bytes(`quatrivium.wrap.v1:${salt}:${secret}`));
   for (let i = 1; i < n; i += 1) {
     digest = sha256(concat([getBytes(digest), toUtf8Bytes(`:${i}`)]));
@@ -55,7 +55,7 @@ export async function deriveWrapKeyAsync(
   salt: string,
   rounds: number
 ): Promise<string> {
-  const n = Math.max(1, Math.min(rounds, 20_000));
+  const n = Math.max(1, Math.floor(rounds));
   let digest = sha256(toUtf8Bytes(`quatrivium.wrap.v1:${salt}:${secret}`));
   for (let i = 1; i < n; i += 1) {
     digest = sha256(concat([getBytes(digest), toUtf8Bytes(`:${i}`)]));

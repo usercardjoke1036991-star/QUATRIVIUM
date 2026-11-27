@@ -306,8 +306,13 @@ export const UserMetrics: React.FC<UserMetricsProps> = ({
             </AppText>
           </View>
           <AppText style={[styles.loanLine, { color: colors.text }]}>
-            {userInfo.activeLoan.totalDueLabel}
+            {userInfo.moneyUnconfirmed ? '—' : userInfo.activeLoan.totalDueLabel}
           </AppText>
+          {userInfo.moneyUnconfirmed ? (
+            <AppText style={[styles.loanMeta, { color: colors.textMuted }]}>
+              {t('rpcMoneyUnconfirmed')}
+            </AppText>
+          ) : null}
           <AppText style={[styles.loanMeta, { color: colors.textMuted }]}>
             {t('due')}:{' '}
             {formatDueDate(userInfo.activeLoan.proximaCuota || userInfo.activeLoan.vencimiento)}

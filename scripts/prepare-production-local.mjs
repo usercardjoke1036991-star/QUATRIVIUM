@@ -73,13 +73,9 @@ function upsert(filePath, key, value) {
 const env = loadMap(envPath);
 const done = [];
 
-if (
-  env.EXPO_PUBLIC_CHAIN_ID &&
-  env.EXPO_PUBLIC_CHAIN_ID !== '421614' &&
-  env.EXPO_PUBLIC_CHAIN_ID !== '97'
-) {
+if (env.EXPO_PUBLIC_CHAIN_ID && env.EXPO_PUBLIC_CHAIN_ID !== '421614') {
   console.error(
-    'Abortado: EXPO_PUBLIC_CHAIN_ID local no es de testnet (421614 / 97). No se toca el .env.'
+    'Abortado: EXPO_PUBLIC_CHAIN_ID local no es Arbitrum Sepolia (421614). No se toca el .env.'
   );
   process.exit(1);
 }
@@ -127,24 +123,6 @@ if (!env.FEE_COLLECTOR && env.EXPO_PUBLIC_FEE_COLLECTOR) {
 if (!env.EXPO_PUBLIC_INVITE_WEB_BASE) {
   upsert(envPath, 'EXPO_PUBLIC_INVITE_WEB_BASE', INVITE);
   done.push('Dominio del portal web de invitaciones y descarga directa de APK');
-}
-
-const wc = env.EXPO_PUBLIC_WALLETCONNECT_PROJECT_ID || '';
-if (wc && wc.length >= 16 && !/^your_/i.test(wc)) {
-  const easPath = resolve(root, 'eas.json');
-  const eas = JSON.parse(readFileSync(easPath, 'utf8'));
-  let easChanged = false;
-  for (const profile of Object.keys(eas.build || {})) {
-    eas.build[profile].env = eas.build[profile].env || {};
-    if (eas.build[profile].env.EXPO_PUBLIC_WALLETCONNECT_PROJECT_ID !== wc) {
-      eas.build[profile].env.EXPO_PUBLIC_WALLETCONNECT_PROJECT_ID = wc;
-      easChanged = true;
-    }
-  }
-  if (easChanged) {
-    writeFileSync(easPath, JSON.stringify(eas, null, 2) + '\n');
-    done.push('WalletConnect escrito en eas.json (va en el APK, no es la clave de deploy)');
-  }
 }
 
 console.log('production:prepare (100% soberano — sin worker ni servidores Web2)');

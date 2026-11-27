@@ -31,8 +31,10 @@ function upsertEnvKey(filePath, key, value) {
 async function main() {
   const [deployer] = await ethers.getSigners();
   const network = await ethers.provider.getNetwork();
-  if (Number(network.chainId) !== 97) {
-    throw new Error(`seed-testnet solo corre en chain 97, actual=${Number(network.chainId)}`);
+  if (Number(network.chainId) !== 421614) {
+    throw new Error(
+      `seed-testnet solo corre en Arbitrum Sepolia (421614), actual=${Number(network.chainId)}`
+    );
   }
 
   const Token = await ethers.getContractFactory('ERC20Mock');

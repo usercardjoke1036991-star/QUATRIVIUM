@@ -7,8 +7,9 @@ describe('QuatriviumCredit - Sovereign Pool & Zero Kill Switches', function () {
     const { token, contract, owner, tokenAddr } = await deployProtocol();
     await seedPool(token, contract, owner, '1000');
 
-    await expect(contract.connect(owner).retirarLiquidez(tokenAddr, ethers.parseUnits('600', 18)))
-      .to.be.reverted;
+    await expect(
+      contract.connect(owner).retirarLiquidez(tokenAddr, ethers.parseUnits('600', 18))
+    ).to.be.revertedWithoutReason();
 
     expect(contract.interface.hasFunction('pausarContrato')).to.equal(false);
     expect(contract.interface.hasFunction('despausarContrato')).to.equal(false);

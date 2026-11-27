@@ -115,7 +115,7 @@ for (const lang of langs) {
       console.error(`${lang}.${key} still reads as English`);
       failed = true;
     }
-    if (/EXPO_PUBLIC_|CONFIRM_MAINNET|PRIVATE_KEY|TEXTBELT/.test(String(value || ''))) {
+    if (/EXPO_PUBLIC_|CONFIRM_MAINNET|PRIVATE_KEY/.test(String(value || ''))) {
       console.error(`${lang}.${key} leaks internal token`);
       failed = true;
     }

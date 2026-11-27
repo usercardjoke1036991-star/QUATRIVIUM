@@ -2,7 +2,13 @@ import { isPasswordSet, isPinSet } from './appLock';
 import { isAuthenticatorEnabled } from './authenticator';
 import { getAuthMethods, isAuthEnabled, isMethodReady, type AuthMethod } from './authPrefs';
 
-export type FundsConfirmPurpose = 'transfer' | 'loanRequest' | 'loanPay' | 'security' | 'movement';
+export type FundsConfirmPurpose =
+  | 'transfer'
+  | 'loanRequest'
+  | 'loanPay'
+  | 'security'
+  | 'movement'
+  | 'admin';
 export type LoanConfirmKind = 'loanRequest' | 'loanPay';
 
 export async function listSecurityConfirmMethods(): Promise<AuthMethod[]> {

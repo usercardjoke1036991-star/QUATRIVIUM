@@ -4,25 +4,12 @@
  * Cada handler valida precondiciones y delega al hook useWeb3Transactions.
  */
 import { useRef, useState } from 'react';
-import {
-  Contract,
-  formatUnits,
-  parseEther,
-  parseUnits,
-  type Eip1193Provider,
-  type Signer,
-} from 'ethers';
+import { Contract, Interface, parseEther, parseUnits, type Signer } from 'ethers';
 import { Alert, Linking } from 'react-native';
-import { getEthersSignerFromProvider } from '../web3Config';
-import { ERC20_ABI } from '../constants/contractConfig';
+import { CONTRACT_ABI, ERC20_ABI } from '../constants/contractConfig';
 import { getTokenMeta, isOfficialWorldToken } from '../constants/tokens';
 import { setWalletSigner, QuatriviumCreditService } from '../services/quatriviumCreditService';
-import {
-  aportarReservaBote,
-  aplicarRetiroReserva,
-  proponerRetiroReserva,
-  reservaErrorKey,
-} from '../services/reservaService';
+import { aportarReservaBote, reservaErrorKey } from '../services/reservaService';
 import { recordMovement } from '../services/movementHistory';
 import { useWeb3Transactions } from './useWeb3Transactions';
 import { lockSponsorOnce } from '../services/sponsorLock';
@@ -34,32 +21,73 @@ import {
   isDemoMode,
   isDonationEnabled,
   isDonationVisible,
+  getContractAddress,
 } from '../constants/rpcConfig';
 import { showNotice } from '../utils/appNotice';
-import { isAltaConfigured } from '../constants/altaConfig';
+import { ALTA_ABI, getAltaAddress, isAltaConfigured } from '../constants/altaConfig';
 import {
   accessPayUsdt,
   creditNeedsAccess,
   creditNeedsPhrase,
   hasCreditAccess,
 } from '../utils/creditGates';
-import { enviarToken, isPhraseBackedUp } from '../services/appWallet';
-import { loadRequiredExternalWallet } from '../services/linkedWallet';
-import { ensureExternalWalletOnAppChain } from '../utils/walletChain';
-import { openWalletConnect } from '../utils/openWalletConnect';
+import { isPhraseBackedUp } from '../services/appWallet';
+import { copyText } from '../utils/copyText';
 import { esperaParaVolverAPedir } from '../utils/creditCooldown';
 import { markLoanFullyPaid } from '../utils/loanPaidMark';
 import { formatCooldown, formatUSD, parsePositiveDecimal } from '../utils/formatters';
 import { milestoneBonusUsd } from '../constants/loanTiers';
 import { FAMA_CANJE_POR_USDT, usdtFromFama } from '../constants/fama';
+import { FAMA_ABI } from '../constants/famaConfig';
 import { useI18n } from '../i18n/LanguageContext';
-import { humanizeTxError, networkFailureError } from '../utils/txErrors';
+import { humanizeTxError } from '../utils/txErrors';
 import type { FundsConfirmPurpose } from '../services/fundsConfirm';
+import { approveFollows, fundsTx, quoteNetworkFee } from '../utils/fundsConfirmGate';
+import { getReservaAddress, RESERVA_ABI } from '../constants/reservaConfig';
+import { getRealDonationWallet } from '../constants/deployedAddresses';
 import type { LoanTier, UserInfo } from './useWeb3Balances';
 import type { Token } from '../constants/tokens';
 
 const ARBITRUM_TESTNET_FAUCET = 'https://faucet.quicknode.com/arbitrum/sepolia';
 const MIN_GAS_WEI = parseEther('0.0001');
+
+async function quotedFunds(
+  amount: string,
+  destination: string,
+  call?: { to: string; abi: string[]; method: string; args?: unknown[] },
+  from?: string | null,
+  approve?: { token: string; spender: string; amount: bigint } | null
+) {
+  let fee = 'no disponible';
+  const provider = getProviderWithFallback();
+  try {
+    const data = call
+      ? new Interface(call.abi).encodeFunctionData(call.method, call.args ?? [])
+      : '0x';
+    fee = await quoteNetworkFee(provider, { from, to: call?.to || destination, data });
+  } catch {
+    fee = 'no disponible';
+  }
+  const twoSignatures =
+    approve && from
+      ? await approveFollows(async () => {
+          const token = new Contract(approve.token, ERC20_ABI, provider);
+          return BigInt(await token.allowance(from, approve.spender));
+        }, approve.amount)
+      : false;
+  return { ...fundsTx(amount, destination, fee), twoSignatures };
+}
+
+async function famaContract(): Promise<string | null> {
+  try {
+    const credit = new Contract(getContractAddress(), CONTRACT_ABI, getProviderWithFallback());
+    const addr = String(await credit.famaHermano());
+    if (!/^0x[a-fA-F0-9]{40}$/.test(addr) || /^0x0{40}$/i.test(addr)) return null;
+    return addr;
+  } catch {
+    return null;
+  }
+}
 
 async function readOnChainEth(address: string): Promise<bigint | null> {
   try {
@@ -84,11 +112,10 @@ export interface HomeHandlersParams {
   balances: { tokenBalance: string; bnbBalance: string };
   selectedToken: Token;
   appSigner: Signer | null | undefined;
-  adminConnected: boolean;
-  adminProvider: unknown;
-  adminAddress?: string;
-  openExternalWallet?: () => void;
-  confirmFunds: (purpose?: FundsConfirmPurpose) => Promise<boolean>;
+  confirmFunds: (
+    purpose?: FundsConfirmPurpose,
+    details?: ReturnType<typeof fundsTx>
+  ) => Promise<boolean>;
   refetch: () => void;
   clearPendingInvite: () => Promise<void>;
   loanReadsReady?: boolean;
@@ -100,10 +127,6 @@ export const useHomeHandlers = ({
   balances,
   selectedToken,
   appSigner,
-  adminConnected,
-  adminProvider,
-  adminAddress,
-  openExternalWallet,
   confirmFunds,
   refetch,
   clearPendingInvite,
@@ -126,57 +149,27 @@ export const useHomeHandlers = ({
     pagarPrestamo,
     pagarCuotas,
     depositarLiquidez,
-    retirarComisiones,
-    retirarComisionesToken,
     cancelAdminAction,
     executeAdminAction,
     confirmAdminAction,
     proposeAddAdmin,
     proposeRemoveAdmin,
-    proposeFeeCollector,
-    proposeRequiredConfirmations,
-    proposeSetTokenConfig,
     proposeFundador,
-    proposeOwner,
     liquidarDeudor,
     marcarMorosoSiVencido,
   } = useWeb3Transactions();
 
-  /** Ejecuta una acción admin cambiando temporalmente el signer al de MetaMask/WalletConnect. */
-  const runAsAdmin = async (fn: () => Promise<void>) => {
+  /** Ejecuta una acción admin con la billetera de la app. Una Safe firma fuera de la app. */
+  const runAsAdmin = async (fn: (signer: Signer) => Promise<void>) => {
     const appIsSeat = Boolean(
       userInfo.isAdmin || userInfo.isOwner || userInfo.referral?.isFundador
     );
-    const useAppSigner =
-      appIsSeat && Boolean(appSigner && walletAddress) && (!adminConnected || !adminProvider);
-    if (!useAppSigner && (!adminConnected || !adminProvider)) {
+    if (!appIsSeat || !appSigner || !walletAddress) {
       Alert.alert(t('admin'), t('appWalletAdminConnect'));
       return;
     }
     try {
-      let signer = appSigner;
-      let adminWallet = String(walletAddress || '');
-      if (!useAppSigner) {
-        try {
-          await Promise.race([
-            ensureExternalWalletOnAppChain(adminProvider as Eip1193Provider),
-            new Promise<never>((_, reject) => {
-              setTimeout(
-                () => reject(networkFailureError(isDemoAccount() || isDemoMode())),
-                25_000
-              );
-            }),
-          ]);
-        } catch (error) {
-          Alert.alert(t('connect'), humanizeTxError(error));
-          return;
-        }
-        signer = await getEthersSignerFromProvider(adminProvider as Eip1193Provider);
-        if (!signer) throw new Error('admin');
-        adminWallet = await signer.getAddress();
-      }
-      if (!signer || !adminWallet) throw new Error('admin');
-      const adminEth = await readOnChainEth(adminWallet);
+      const adminEth = await readOnChainEth(walletAddress);
       if (adminEth === null || adminEth < MIN_GAS_WEI) {
         if (isDemoAccount() || isDemoMode()) {
           Alert.alert(t('errNeedGas'), t('errNeedGasAdmin'), [
@@ -188,12 +181,12 @@ export const useHomeHandlers = ({
         }
         return;
       }
-      setWalletSigner(signer);
-      await fn();
+      setWalletSigner(appSigner);
+      await fn(appSigner);
     } catch (error) {
       Alert.alert(t('admin'), humanizeTxError(error));
     } finally {
-      if (appSigner) setWalletSigner(appSigner);
+      setWalletSigner(appSigner);
     }
   };
 
@@ -228,88 +221,45 @@ export const useHomeHandlers = ({
     return false;
   };
 
-  const askToLinkExternal = (message: string) => {
-    showNotice(t('linkWalletTitle'), message, [
-      { text: t('cancel'), style: 'cancel' },
-      {
-        text: t('connectWallet'),
-        onPress: () => void openWalletConnect(() => openExternalWallet?.()),
-      },
-    ]);
-  };
-
-  const requireLinkedExternal = async (): Promise<string> => {
-    if (!walletAddress) {
-      Alert.alert(t('connect'), t('appWalletNotReady'));
-      return '';
-    }
-    const linked = await loadRequiredExternalWallet(walletAddress);
-    if (!linked) {
-      askToLinkExternal(t('linkWalletNeedFunds'));
-      return '';
-    }
-    if (!adminConnected || !adminProvider) {
-      askToLinkExternal(t('linkWalletNeed'));
-      return '';
-    }
-    if (String(adminAddress || '').toLowerCase() !== linked.toLowerCase()) {
-      askToLinkExternal(t('linkWalletMismatch'));
-      return '';
-    }
-    return linked;
-  };
-
-  const fundInternalFromExternal = async (
-    amountWei: string,
-    tokenAddress: string
-  ): Promise<boolean> => {
+  /** El pago sale de la billetera de la app. Si no alcanza, se explica cómo recargarla. */
+  const ensureInternalFunds = async (amountWei: string, tokenAddress: string): Promise<boolean> => {
     if (!walletAddress) return false;
     const need = BigInt(amountWei);
     if (need <= 0n) return false;
-    const internalBal = await tokenBalanceOf(tokenAddress, walletAddress);
+    let internalBal = await tokenBalanceOf(tokenAddress, walletAddress);
     if (internalBal !== null && internalBal >= need) {
       return true;
     }
-    const linked = await requireLinkedExternal();
-    if (!linked || !adminProvider) return false;
-    try {
-      await ensureExternalWalletOnAppChain(adminProvider as Eip1193Provider);
-    } catch (error) {
-      Alert.alert(t('connect'), humanizeTxError(error));
-      return false;
-    }
-    const signer = await getEthersSignerFromProvider(adminProvider as Eip1193Provider);
-    if (!signer) {
-      Alert.alert(t('connect'), t('appWalletNotReady'));
-      return false;
-    }
     if (isDemoAccount()) {
       try {
-        await QuatriviumCreditService.mintDemoUsdtTo(tokenAddress, linked, amountWei);
+        await QuatriviumCreditService.mintDemoUsdtTo(tokenAddress, walletAddress, amountWei);
+        internalBal = await tokenBalanceOf(tokenAddress, walletAddress);
+        if (internalBal !== null && internalBal >= need) return true;
       } catch {
-        // Si no hay minteo, se intenta con el saldo de la billetera vinculada.
+        // Sin minteo de prueba se pide recargar, igual que en Real.
       }
     }
-    const extBal = await tokenBalanceOf(tokenAddress, linked);
-    if (extBal !== null && extBal < need) {
-      Alert.alert(
-        t('amountExceedsBalance'),
-        t('poolNeedInternalFunds', { symbol: selectedToken.symbol })
-      );
+    if (internalBal === null) {
+      showNotice(t('error'), t('appWalletBalanceUnread'));
       return false;
     }
-    const extEth = await readOnChainEth(linked);
-    if (extEth !== null && extEth < MIN_GAS_WEI) {
-      showNotice(t('errNeedGasExternal'), t('errNeedGasExternal'));
-      return false;
-    }
-    try {
-      await enviarToken(signer, tokenAddress, walletAddress, amountWei, true);
-      return true;
-    } catch (error) {
-      Alert.alert(t('error'), humanizeTxError(error));
-      return false;
-    }
+    const address = walletAddress;
+    showNotice(
+      t('amountExceedsBalance'),
+      t('poolNeedInternalFunds', { symbol: selectedToken.symbol }),
+      [
+        { text: t('cancel'), style: 'cancel' },
+        {
+          text: t('copyAddress'),
+          onPress: () =>
+            void copyText(address).then((result) => {
+              if (result === 'copied') showNotice(t('ready'), t('addressCopied'));
+              else if (result === 'failed') showNotice(t('wallet'), address);
+            }),
+        },
+      ]
+    );
+    return false;
   };
 
   const handleRegistrarHumano = async () => {
@@ -387,7 +337,28 @@ export const useHomeHandlers = ({
       Alert.alert(t('token'), t('tokenNotEnabledAlert'));
       return;
     }
-    if (!(await confirmFunds('loanRequest'))) return;
+    if (
+      !(await confirmFunds(
+        'loanRequest',
+        await quotedFunds(
+          String(tier.usdAmount),
+          getContractAddress(),
+          {
+            to: getContractAddress(),
+            abi: CONTRACT_ABI,
+            method: 'solicitarPrestamo',
+            args: [selectedToken.address, tier.id],
+          },
+          walletAddress,
+          {
+            token: selectedToken.address,
+            spender: getContractAddress(),
+            amount: parseUnits(String(tier.usdAmount), 18),
+          }
+        )
+      ))
+    )
+      return;
     if (!(await ensureGasForTx())) return;
     const result = await solicitarPrestamo(selectedToken.address, tier.id);
     if (!result.success) {
@@ -475,7 +446,22 @@ export const useHomeHandlers = ({
       );
       return;
     }
-    if (!(await confirmFunds('movement'))) return;
+    const canjeLusd = String(fama / 250);
+    const famaAddr = await famaContract();
+    if (
+      !(await confirmFunds(
+        'movement',
+        await quotedFunds(
+          canjeLusd,
+          walletAddress,
+          famaAddr
+            ? { to: famaAddr, abi: FAMA_ABI, method: 'canjearFama', args: [fama] }
+            : undefined,
+          walletAddress
+        )
+      ))
+    )
+      return;
     if (!(await ensureGasForTx())) return;
     const result = await canjearFama(fama);
     if (result.success) {
@@ -521,7 +507,21 @@ export const useHomeHandlers = ({
       );
       return;
     }
-    if (!(await confirmFunds('movement'))) return;
+    const famaRed = await famaContract();
+    if (
+      !(await confirmFunds(
+        'movement',
+        await quotedFunds(
+          String(fama / 250),
+          walletAddress,
+          famaRed
+            ? { to: famaRed, abi: FAMA_ABI, method: 'canjearFamaRed', args: [fama] }
+            : undefined,
+          walletAddress
+        )
+      ))
+    )
+      return;
     if (!(await ensureGasForTx())) return;
     const result = await canjearFamaRed(fama);
     if (result.success) {
@@ -560,7 +560,19 @@ export const useHomeHandlers = ({
       Alert.alert(t('rachaTitle'), t('rachaNothing'));
       return;
     }
-    if (!(await confirmFunds('movement'))) return;
+    const rachaAddr = await famaContract();
+    if (
+      !(await confirmFunds(
+        'movement',
+        await quotedFunds(
+          String(userInfo.racha.bonoPendienteUsd),
+          walletAddress,
+          rachaAddr ? { to: rachaAddr, abi: FAMA_ABI, method: 'cobrarBonoRacha' } : undefined,
+          walletAddress
+        )
+      ))
+    )
+      return;
     if (!(await ensureGasForTx())) return;
     const result = await cobrarBonoRacha();
     if (result.success) {
@@ -588,7 +600,33 @@ export const useHomeHandlers = ({
       Alert.alert(t('noDebt'), t('noActiveLoan'));
       return;
     }
-    if (!(await confirmFunds('loanPay'))) return;
+    if (
+      !(await confirmFunds(
+        'loanPay',
+        await quotedFunds(
+          userInfo.activeLoan.remainingLabel || userInfo.activeLoan.totalDueLabel,
+          getContractAddress(),
+          {
+            to: getContractAddress(),
+            abi: CONTRACT_ABI,
+            method: 'pagarPrestamo',
+            args: [
+              userInfo.activeLoan.token,
+              userInfo.activeLoan.remainingWei || userInfo.activeLoan.totalDueWei,
+            ],
+          },
+          walletAddress,
+          {
+            token: userInfo.activeLoan.token,
+            spender: getContractAddress(),
+            amount: BigInt(
+              userInfo.activeLoan.remainingWei || userInfo.activeLoan.totalDueWei || '0'
+            ),
+          }
+        )
+      ))
+    )
+      return;
     if (!(await ensureGasForTx())) return;
 
     const loanToken = userInfo.activeLoan.token;
@@ -614,17 +652,20 @@ export const useHomeHandlers = ({
       if (isDemoAccount() || !walletAddress) return true;
       const meta = getTokenMeta(loanToken) || selectedToken;
       const raw = await tokenBalanceOf(loanToken, walletAddress);
-      let available: number;
-      if (raw !== null) {
-        available = Number(formatUnits(raw, meta.decimals));
-      } else if (loanToken.toLowerCase() === selectedToken.address.toLowerCase()) {
-        available = Number(balances.tokenBalance);
-      } else {
+      let available: bigint | null = raw;
+      if (available === null && loanToken.toLowerCase() === selectedToken.address.toLowerCase()) {
+        try {
+          available = parseUnits(balances.tokenBalance || '0', meta.decimals);
+        } catch {
+          available = null;
+        }
+      }
+      if (available === null) {
         Alert.alert(t('error'), t('errRpcNoContract'));
         return false;
       }
-      const needed = Number(formatUnits(amountWei, meta.decimals));
-      if (needed > available + 1e-8) {
+      const needed = BigInt(amountWei);
+      if (needed > available) {
         Alert.alert(t('amount'), t('amountExceedsBalance'));
         return false;
       }
@@ -692,10 +733,31 @@ export const useHomeHandlers = ({
       Alert.alert(t('amount'), t('amountGreaterZero'));
       return;
     }
-    if (!(await confirmFunds('movement'))) return;
+    if (
+      !(await confirmFunds(
+        'movement',
+        await quotedFunds(
+          parsed,
+          getContractAddress(),
+          {
+            to: getContractAddress(),
+            abi: CONTRACT_ABI,
+            method: 'depositarLiquidez',
+            args: [selectedToken.address, parseUnits(parsed, selectedToken.decimals)],
+          },
+          walletAddress,
+          {
+            token: selectedToken.address,
+            spender: getContractAddress(),
+            amount: parseUnits(parsed, selectedToken.decimals),
+          }
+        )
+      ))
+    )
+      return;
     try {
       const amountWei = parseUnits(parsed, selectedToken.decimals).toString();
-      if (!(await fundInternalFromExternal(amountWei, selectedToken.address))) return;
+      if (!(await ensureInternalFunds(amountWei, selectedToken.address))) return;
       if (!(await ensureGasForTx())) return;
       const result = await depositarLiquidez(amountWei, selectedToken.address);
       if (result.success) refetch();
@@ -746,8 +808,30 @@ export const useHomeHandlers = ({
       }
       const amount = String(accessPayUsdt());
       const amountWei = parseUnits(amount, selectedToken.decimals).toString();
-      if (!(await confirmFunds('movement'))) return;
-      if (!(await fundInternalFromExternal(amountWei, selectedToken.address))) return;
+      const accessTo = isAltaConfigured() ? getAltaAddress() : getContractAddress();
+      if (
+        !(await confirmFunds(
+          'movement',
+          await quotedFunds(
+            amount,
+            accessTo,
+            {
+              to: accessTo,
+              abi: isAltaConfigured() ? ALTA_ABI : CONTRACT_ABI,
+              method: isAltaConfigured() ? 'pagarRegistro' : 'pagarVerificacion',
+              args: isAltaConfigured() ? [] : [selectedToken.address, amountWei],
+            },
+            walletAddress,
+            {
+              token: selectedToken.address,
+              spender: isAltaConfigured() ? getAltaAddress() : getContractAddress(),
+              amount: isAltaConfigured() ? 4n * 10n ** 18n : BigInt(amountWei),
+            }
+          )
+        ))
+      )
+        return;
+      if (!(await ensureInternalFunds(amountWei, selectedToken.address))) return;
       if (!(await ensureGasForTx())) return;
       try {
         const result = isAltaConfigured()
@@ -784,48 +868,32 @@ export const useHomeHandlers = ({
       Alert.alert(t('amount'), t('amountGreaterZero'));
       return;
     }
-    if (!(await confirmFunds('movement'))) return;
+    if (
+      !(await confirmFunds(
+        'movement',
+        await quotedFunds(
+          parsed,
+          getReservaAddress(),
+          {
+            to: getReservaAddress(),
+            abi: RESERVA_ABI,
+            method: 'aportarBote',
+            args: [parseUnits(parsed, 18)],
+          },
+          walletAddress,
+          {
+            token: selectedToken.address,
+            spender: getReservaAddress(),
+            amount: parseUnits(parsed, 18),
+          }
+        )
+      ))
+    )
+      return;
     try {
-      await runAsAdmin(async () => {
-        const signer = await getEthersSignerFromProvider(adminProvider as Eip1193Provider);
-        if (!signer) throw new Error('admin');
+      await runAsAdmin(async (signer) => {
         await aportarReservaBote(signer, parsed);
         showNotice(t('ready'), t('reservaAdminPotOk'));
-        refetch();
-      });
-    } catch (error) {
-      Alert.alert(t('error'), t(reservaErrorKey(error)));
-    }
-  };
-
-  const handleProponerRetiroReserva = async (amountHuman: string, destino: string) => {
-    const parsed = parsePositiveDecimal(amountHuman);
-    if (!parsed) {
-      Alert.alert(t('amount'), t('amountGreaterZero'));
-      return;
-    }
-    if (!(await confirmFunds('movement'))) return;
-    try {
-      await runAsAdmin(async () => {
-        const signer = await getEthersSignerFromProvider(adminProvider as Eip1193Provider);
-        if (!signer) throw new Error('admin');
-        await proponerRetiroReserva(signer, destino, parsed);
-        showNotice(t('ready'), t('reservaRetiroProposed'));
-        refetch();
-      });
-    } catch (error) {
-      Alert.alert(t('error'), t(reservaErrorKey(error)));
-    }
-  };
-
-  const handleAplicarRetiroReserva = async () => {
-    if (!(await confirmFunds('movement'))) return;
-    try {
-      await runAsAdmin(async () => {
-        const signer = await getEthersSignerFromProvider(adminProvider as Eip1193Provider);
-        if (!signer) throw new Error('admin');
-        await aplicarRetiroReserva(signer);
-        showNotice(t('ready'), t('reservaRetiroDone'));
         refetch();
       });
     } catch (error) {
@@ -864,10 +932,31 @@ export const useHomeHandlers = ({
       Alert.alert(t('amount'), t('amountGreaterZero'));
       return;
     }
-    if (!(await confirmFunds('movement'))) return;
+    if (
+      !(await confirmFunds(
+        'movement',
+        await quotedFunds(
+          parsed,
+          getRealDonationWallet() || userInfo.founderAddress,
+          {
+            to: getContractAddress(),
+            abi: CONTRACT_ABI,
+            method: 'donar',
+            args: [selectedToken.address, parseUnits(parsed, selectedToken.decimals)],
+          },
+          walletAddress,
+          {
+            token: selectedToken.address,
+            spender: getContractAddress(),
+            amount: parseUnits(parsed, selectedToken.decimals),
+          }
+        )
+      ))
+    )
+      return;
     try {
       const amountWei = parseUnits(parsed, selectedToken.decimals).toString();
-      if (!(await fundInternalFromExternal(amountWei, selectedToken.address))) return;
+      if (!(await ensureInternalFunds(amountWei, selectedToken.address))) return;
       if (!(await ensureGasForTx())) return;
       const result = await donarProyecto(amountWei, selectedToken.address);
       if (result.success) {
@@ -885,20 +974,6 @@ export const useHomeHandlers = ({
     } catch {
       Alert.alert(t('amount'), t('invalidAmount'));
     }
-  };
-
-  const handleRetirarComisiones = async () => {
-    await runAsAdmin(async () => {
-      const result = await retirarComisiones();
-      if (result.success) refetch();
-    });
-  };
-
-  const handleRetirarComisionesToken = async () => {
-    await runAsAdmin(async () => {
-      const result = await retirarComisionesToken(selectedToken.address);
-      if (result.success) refetch();
-    });
   };
 
   const handleExecuteProposal = async (id: number) => {
@@ -929,37 +1004,9 @@ export const useHomeHandlers = ({
     });
   };
 
-  const handleProposeFeeCollector = async (address: string) => {
-    await runAsAdmin(async () => {
-      const result = await proposeFeeCollector(address);
-      if (result.success) refetch();
-    });
-  };
-
-  const handleProposeConfirmations = async (required: number) => {
-    await runAsAdmin(async () => {
-      const result = await proposeRequiredConfirmations(required);
-      if (result.success) refetch();
-    });
-  };
-
   const handleProposeFundador = async (address: string) => {
     await runAsAdmin(async () => {
       const result = await proposeFundador(address);
-      if (result.success) refetch();
-    });
-  };
-
-  const handleProposeOwner = async (address: string) => {
-    await runAsAdmin(async () => {
-      const result = await proposeOwner(address);
-      if (result.success) refetch();
-    });
-  };
-
-  const handleProposeSetTokenConfig = async (token: string, feed: string, enabled: boolean) => {
-    await runAsAdmin(async () => {
-      const result = await proposeSetTokenConfig(token, feed, enabled);
       if (result.success) refetch();
     });
   };
@@ -1010,19 +1057,11 @@ export const useHomeHandlers = ({
     handlePagarAcceso: track(handlePagarAcceso),
     handleDonar: track(handleDonar),
     handleAportarReserva: track(handleAportarReserva),
-    handleProponerRetiroReserva: track(handleProponerRetiroReserva),
-    handleAplicarRetiroReserva: track(handleAplicarRetiroReserva),
-    handleRetirarComisiones: track(handleRetirarComisiones),
-    handleRetirarComisionesToken: track(handleRetirarComisionesToken),
     handleExecuteProposal,
     handleConfirmProposal,
     handleProposeAddAdmin,
     handleProposeRemoveAdmin,
-    handleProposeFeeCollector,
-    handleProposeConfirmations,
     handleProposeFundador,
-    handleProposeOwner,
-    handleProposeSetTokenConfig,
     handleCancelProposal,
     handleLiquidarDeudor,
     handleMarcarMorosoSiVencido,

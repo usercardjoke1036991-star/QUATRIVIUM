@@ -37,6 +37,7 @@ contract ReservaHandler is Test {
         (, , bool activa,) = reserva.posiciones(actor);
         if (activa) return;
         amount = uint96(bound(amount, 1 ether, 200 ether));
+        if (token.balanceOf(actor) < amount) token.mint(actor, amount);
         vm.prank(actor, actor);
         reserva.bloquear(amount);
         ghostLocked += amount;
@@ -44,6 +45,7 @@ contract ReservaHandler is Test {
 
     function aportar(uint96 amount) public {
         amount = uint96(bound(amount, 1 ether, 50 ether));
+        if (token.balanceOf(founder) < amount) token.mint(founder, amount);
         vm.prank(founder, founder);
         reserva.aportarBote(amount);
     }
@@ -70,7 +72,12 @@ contract QuatriviumReservaForgeTest is Test {
         token = new ERC20Mock();
         CreditViewMock credit = new CreditViewMock();
         address founder = makeAddr("reserva-founder");
-        reserva = new QuatriviumReserva(address(token), founder, address(credit), address(credit));
+        address[] memory radmins = new address[](3);
+        radmins[0] = founder;
+        radmins[1] = address(0xB0B);
+        radmins[2] = address(0xB0C);
+        credit.setFundador(founder);
+        reserva = new QuatriviumReserva(address(token), founder, address(credit), address(credit), address(1), radmins);
         handler = new ReservaHandler(reserva, token, founder, credit);
         targetContract(address(handler));
     }
@@ -89,16 +96,23 @@ contract QuatriviumReservaForgeTest is Test {
         address locker = makeAddr("reserva-locker");
         address founder = makeAddr("reserva-founder-pay");
         CreditViewMock credit = new CreditViewMock();
-        QuatriviumReserva local = new QuatriviumReserva(address(token), founder, address(credit), address(credit));
+        address[] memory localAdmins = new address[](3);
+        localAdmins[0] = founder;
+        localAdmins[1] = locker;
+        localAdmins[2] = address(1);
+        credit.setFundador(founder);
+        QuatriviumReserva local = new QuatriviumReserva(address(token), founder, address(credit), address(credit), address(1), localAdmins);
         credit.setNivel(locker, 10);
         credit.setPayToken(address(token));
         token.mint(address(credit), 50 ether);
-        token.mint(address(this), 200 ether);
+        address pot = makeAddr("reserva-pot");
+        token.mint(pot, 200 ether);
         token.mint(locker, 200 ether);
+        vm.prank(pot, pot);
         token.approve(address(local), type(uint256).max);
         vm.prank(locker, locker);
         token.approve(address(local), type(uint256).max);
-        vm.prank(address(this), address(this));
+        vm.prank(pot, pot);
         local.aportarBote(20 ether);
         vm.prank(locker, locker);
         local.bloquear(100 ether);

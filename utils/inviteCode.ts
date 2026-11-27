@@ -1,6 +1,6 @@
 import { getAddress, isAddress } from 'ethers';
-import * as Linking from 'expo-linking';
-import { INVITE_APP_SCHEME, INVITE_WEB_BASE } from '../constants/appLinks';
+import { INVITE_APP_SCHEME, INVITE_WEB_BASE, PUBLIC_APP_HOST } from '../constants/appLinks';
+import { parseLinkingUrl } from './parseLinkingUrl';
 import { stripUnsafeText } from './sanitize';
 import { storeSlot } from './storeSlot';
 
@@ -115,9 +115,36 @@ function extractFromReferrer(raw: string): string | null {
   return extractInviteFromText(value);
 }
 
+function inviteHostOk(host: string): boolean {
+  if (host === PUBLIC_APP_HOST) return true;
+  if (!INVITE_WEB_BASE) return false;
+  try {
+    return new URL(INVITE_WEB_BASE).hostname.toLowerCase() === host;
+  } catch {
+    return false;
+  }
+}
+
+/** Solo el esquema de esta app, o el HTTPS de la página /invite. */
+export function isInviteLink(url: string): boolean {
+  try {
+    const parsed = parseLinkingUrl(url);
+    const scheme = String(parsed.scheme || '').toLowerCase();
+    const host = String(parsed.hostname || '').toLowerCase();
+    const path = `${parsed.path ?? ''}`.replace(/^\/+/, '').toLowerCase();
+    const head = path.split('/').filter(Boolean)[0] || '';
+    if (scheme === INVITE_APP_SCHEME) return host === 'invite' || head === 'invite';
+    if (scheme === 'https' && inviteHostOk(host)) return head === 'invite';
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 export function extractInviteFromUrl(url: string): string | null {
   try {
-    const parsed = Linking.parse(url);
+    if (!isInviteLink(url)) return null;
+    const parsed = parseLinkingUrl(url);
     const query = parsed.queryParams ?? {};
     const fromReferrer = extractFromReferrer(String(query.referrer ?? ''));
     if (fromReferrer) return fromReferrer;
@@ -139,12 +166,13 @@ export function extractInviteFromUrl(url: string): string | null {
   } catch {
     // ignore
   }
-  return extractInviteFromText(url);
+  return null;
 }
 
 export function extractInviteNameFromUrl(url: string): string {
   try {
-    const parsed = Linking.parse(url);
+    if (!isInviteLink(url)) return '';
+    const parsed = parseLinkingUrl(url);
     const query = parsed.queryParams ?? {};
     const fromQuery = String(query.n ?? query.name ?? '').trim();
     if (fromQuery) return stripUnsafeText(fromQuery, 24);
@@ -167,10 +195,14 @@ export function parseInviteInput(raw?: string): string | null | '' {
 
   if (isAddress(trimmed)) return getAddress(trimmed);
 
-  const fromUrl = String(trimmed).includes('://') ? extractInviteFromUrl(String(trimmed)) : null;
-  if (fromUrl) return inviteCodeToAddress(fromUrl);
+  const text = String(trimmed);
+  if (text.includes('://')) {
+    if (!isInviteLink(text)) return null;
+    const fromUrl = extractInviteFromUrl(text);
+    return fromUrl ? inviteCodeToAddress(fromUrl) : null;
+  }
 
-  const fromText = extractInviteFromText(trimmed);
+  const fromText = extractInviteFromText(text);
   if (fromText) return inviteCodeToAddress(fromText);
 
   return null;

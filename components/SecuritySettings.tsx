@@ -1,11 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-  Alert,
-  AppState,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, AppState, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useI18n } from '../i18n/LanguageContext';
 import { useTheme } from '../theme/ThemeContext';
 import { AppIcon, type IconName } from './icons';
@@ -23,6 +17,7 @@ import { BiometricLockSection } from './BiometricLockSection';
 import { AuthMethodPicker } from './AuthMethodPicker';
 import { AuthenticatorSetup } from './AuthenticatorSetup';
 import { isAuthenticatorEnabled } from '../services/authenticator';
+import { settingsPasswordError } from '../utils/lockFailureCopy';
 import {
   loadAuthPrefs,
   type AuthMethod,
@@ -42,13 +37,7 @@ import type { TranslationKey } from '../i18n/translations';
 import { AppText } from './AppText';
 
 type RowStatus = 'done' | 'todo' | 'warn';
-type Panel =
-  | 'menu'
-  | 'pin'
-  | 'fingerprint'
-  | 'phrase'
-  | 'methods'
-  | 'authenticator';
+type Panel = 'menu' | 'pin' | 'fingerprint' | 'phrase' | 'methods' | 'authenticator';
 
 export const SecuritySettings: React.FC = () => {
   const { t } = useI18n();
@@ -77,25 +66,17 @@ export const SecuritySettings: React.FC = () => {
   });
 
   const refreshPhrase = async () => {
-    const [
-      exists,
-      ack,
-      pin,
-      password,
-      bioStatus,
-      bioEnabled,
-      authenticator,
-      prefs,
-    ] = await Promise.all([
-      hasSecretPhrase(),
-      isPhraseBackedUp(),
-      isPinSet(),
-      isPasswordSet(),
-      getBiometricStatus(),
-      isBiometricEnabled(),
-      isAuthenticatorEnabled(),
-      loadAuthPrefs(),
-    ]);
+    const [exists, ack, pin, password, bioStatus, bioEnabled, authenticator, prefs] =
+      await Promise.all([
+        hasSecretPhrase(),
+        isPhraseBackedUp(),
+        isPinSet(),
+        isPasswordSet(),
+        getBiometricStatus(),
+        isBiometricEnabled(),
+        isAuthenticatorEnabled(),
+        loadAuthPrefs(),
+      ]);
     setHasPhrase(exists);
     setBackedUp(ack);
     setPinSet(pin);
@@ -133,7 +114,7 @@ export const SecuritySettings: React.FC = () => {
     if (passwordSet) {
       const checked = await checkPassword(revealPassword);
       if (!checked.ok) {
-        Alert.alert(t('error'), t('lockPasswordWrong'));
+        Alert.alert(t('error'), settingsPasswordError(checked, t));
         return;
       }
     } else if (pinSet) {

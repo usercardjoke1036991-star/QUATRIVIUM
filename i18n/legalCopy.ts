@@ -37,7 +37,7 @@ const es: LegalDoc = {
   terms: sections(
     [
       'Naturaleza del servicio',
-      'Quatrivium Finance pone a su disposición crédito en LUSD sobre una red pública, con mil niveles que avanzan si paga a tiempo. Puede invitar, percibir comisiones de red y reclamar bonos al cumplir hitos. Cada monto, plazo e interés se muestran en la aplicación antes de confirmar. No hay compras dentro de Google Play: el valor se mueve en la red. No somos un banco ni un producto de depósito.',
+      'Quatrivium Finance pone a su disposición crédito en LUSD sobre una red pública, con mil niveles que avanzan si paga a tiempo. Puede invitar, percibir comisiones de red y reclamar bonos al cumplir hitos. Cada monto, plazo e interés se muestran en la aplicación antes de confirmar. No hay compras dentro de la aplicación: el valor se mueve en la red. No somos un banco ni un producto de depósito.',
     ],
     [
       'Cómo opera el crédito',
@@ -76,7 +76,7 @@ const en: LegalDoc = {
   terms: sections(
     [
       'Nature of the service',
-      'Quatrivium Finance provides LUSD credit on a public network, across one thousand levels that advance when you pay on time. You may invite others, receive network commissions and claim bonuses at milestones. Amount, term and interest are shown in the app before you confirm. There are no Google Play in-app purchases: value moves on the network. We are not a bank and this is not a deposit product.',
+      'Quatrivium Finance provides LUSD credit on a public network, across one thousand levels that advance when you pay on time. You may invite others, receive network commissions and claim bonuses at milestones. Amount, term and interest are shown in the app before you confirm. There are no la aplicación in-app purchases: value moves on the network. We are not a bank and this is not a deposit product.',
     ],
     [
       'How credit operates',
@@ -118,7 +118,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     terms: sections(
       [
         '您将获得',
-        '无抵押信贷，一千个等级随按时还款提升。可邀请并获得网络奖励，达成里程碑可领取奖金。金额、期限与利息在签署前于应用内展示。没有 Google Play 内购：资金在网络上流动。',
+        '无抵押信贷，一千个等级随按时还款提升。可邀请并获得网络奖励，达成里程碑可领取奖金。金额、期限与利息在签署前于应用内展示。没有 la aplicación 内购：资金在网络上流动。',
       ],
       [
         '信贷如何运作',
@@ -156,7 +156,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     terms: sections(
       [
         'आपको क्या मिलता है',
-        'बिना गारंटी ऋण, एक हज़ार स्तर समय पर चुकाने से बढ़ते हैं। आमंत्रण पर नेटवर्क पुरस्कार और पड़ाव पूरे करने पर बोनस। राशि, अवधि और ब्याज हस्ताक्षर से पहले ऐप में दिखते हैं। Google Play में खरीदारी नहीं: धन नेटवर्क पर चलता है।',
+        'बिना गारंटी ऋण, एक हज़ार स्तर समय पर चुकाने से बढ़ते हैं। आमंत्रण पर नेटवर्क पुरस्कार और पड़ाव पूरे करने पर बोनस। राशि, अवधि और ब्याज हस्ताक्षर से पहले ऐप में दिखते हैं। la aplicación में खरीदारी नहीं: धन नेटवर्क पर चलता है।',
       ],
       [
         'ऋण कैसे चलता है',
@@ -194,7 +194,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     terms: sections(
       [
         'ماذا تحصل',
-        'ائتمان بلا ضمان، ألف مستوى تنمو بالسداد في موعده. يمكنك الدعوة ومكافآت الشبكة والمكافآت عند الإنجاز. المبلغ والأجل والفائدة تظهر في التطبيق قبل التوقيع. لا مشتريات داخل Google Play: الأموال تتحرك على الشبكة.',
+        'ائتمان بلا ضمان، ألف مستوى تنمو بالسداد في موعده. يمكنك الدعوة ومكافآت الشبكة والمكافآت عند الإنجاز. المبلغ والأجل والفائدة تظهر في التطبيق قبل التوقيع. لا مشتريات داخل la aplicación: الأموال تتحرك على الشبكة.',
       ],
       [
         'كيف يعمل الائتمان',
@@ -232,7 +232,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     terms: sections(
       [
         'আপনি যা পান',
-        'জামানত ছাড়া ঋণ, হাজার স্তর সময়মতো শোধে বাড়ে। আমন্ত্রণে নেটওয়ার্ক পুরস্কার, মাইলফলকে বোনাস। পরিমাণ, মেয়াদ ও সুদ স্বাক্ষরের আগে অ্যাপে দেখা যায়। Google Play কেনা নেই: অর্থ নেটওয়ার্কে চলে।',
+        'জামানত ছাড়া ঋণ, হাজার স্তর সময়মতো শোধে বাড়ে। আমন্ত্রণে নেটওয়ার্ক পুরস্কার, মাইলফলকে বোনাস। পরিমাণ, মেয়াদ ও সুদ স্বাক্ষরের আগে অ্যাপে দেখা যায়। la aplicación কেনা নেই: অর্থ নেটওয়ার্কে চলে।',
       ],
       [
         'ঋণ কীভাবে চলে',
@@ -270,7 +270,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     terms: sections(
       [
         'O que obtém',
-        'Crédito sem aval, mil níveis que crescem se pagar a tempo. Pode convidar e receber recompensas de rede, e bónus ao cumprir marcos. Montante, prazo e juro aparecem na aplicação antes de assinar. Não há compras na Google Play: o dinheiro move-se na rede.',
+        'Crédito sem aval, mil níveis que crescem se pagar a tempo. Pode convidar e receber recompensas de rede, e bónus ao cumprir marcos. Montante, prazo e juro aparecem na aplicação antes de assinar. Não há compras na la aplicación: o dinheiro move-se na rede.',
       ],
       [
         'Como opera o crédito',
@@ -308,7 +308,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     terms: sections(
       [
         'Что вы получаете',
-        'Кредит без залога, тысяча уровней, растущих при своевременной оплате. Можно приглашать и получать сетевые вознаграждения, бонусы за этапы. Сумма, срок и процент показаны в приложении до подписи. Покупок в Google Play нет: средства движутся в сети.',
+        'Кредит без залога, тысяча уровней, растущих при своевременной оплате. Можно приглашать и получать сетевые вознаграждения, бонусы за этапы. Сумма, срок и процент показаны в приложении до подписи. Покупок в la aplicación нет: средства движутся в сети.',
       ],
       [
         'Как работает кредит',
@@ -346,7 +346,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     terms: sections(
       [
         'آپ کیا پاتے ہیں',
-        'بغیر ضمانت قرض، ہزار درجے وقت پر ادائیگی سے بڑھتے ہیں۔ دعوت پر نیٹ ورک انعام، سنگ میل پر بونس۔ رقم، مدت اور سود دستخط سے پہلے ایپ میں دکھتے ہیں۔ Google Play خرید نہیں: رقم نیٹ ورک پر چلتی ہے۔',
+        'بغیر ضمانت قرض، ہزار درجے وقت پر ادائیگی سے بڑھتے ہیں۔ دعوت پر نیٹ ورک انعام، سنگ میل پر بونس۔ رقم، مدت اور سود دستخط سے پہلے ایپ میں دکھتے ہیں۔ la aplicación خرید نہیں: رقم نیٹ ورک پر چلتی ہے۔',
       ],
       [
         'قرض کیسے چلتا ہے',
@@ -384,7 +384,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     terms: sections(
       [
         'Yang Anda peroleh',
-        'Kredit tanpa jaminan, seribu tingkat yang naik jika membayar tepat waktu. Anda dapat mengundang dan menerima imbalan jaringan, serta bonus saat mencapai tonggak. Jumlah, jangka, dan bunga tampil di aplikasi sebelum menandatangani. Tidak ada pembelian Google Play: dana bergerak di jaringan.',
+        'Kredit tanpa jaminan, seribu tingkat yang naik jika membayar tepat waktu. Anda dapat mengundang dan menerima imbalan jaringan, serta bonus saat mencapai tonggak. Jumlah, jangka, dan bunga tampil di aplikasi sebelum menandatangani. Tidak ada pembelian la aplicación: dana bergerak di jaringan.',
       ],
       [
         'Cara kredit beroperasi',
@@ -422,7 +422,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     terms: sections(
       [
         'Ce que vous obtenez',
-        'Un crédit sans aval, mille niveaux qui grandissent si vous payez à temps. Vous pouvez inviter et recevoir des récompenses de réseau, et des bonus aux jalons. Montant, durée et intérêt apparaissent dans l’application avant signature. Pas d’achats Google Play : les fonds circulent sur le réseau.',
+        'Un crédit sans aval, mille niveaux qui grandissent si vous payez à temps. Vous pouvez inviter et recevoir des récompenses de réseau, et des bonus aux jalons. Montant, durée et intérêt apparaissent dans l’application avant signature. Pas d’achats la aplicación : les fonds circulent sur le réseau.',
       ],
       [
         'Comment le crédit opère',
@@ -460,7 +460,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     terms: sections(
       [
         '得られるもの',
-        '担保なしの与信、期限内返済で伸びる千の等級。招待によるネットワーク報酬と節目のボーナス。金額・期限・利息は署名前にアプリで示します。Google Play 内課金はありません。資金はネットワーク上で動きます。',
+        '担保なしの与信、期限内返済で伸びる千の等級。招待によるネットワーク報酬と節目のボーナス。金額・期限・利息は署名前にアプリで示します。la aplicación 内課金はありません。資金はネットワーク上で動きます。',
       ],
       [
         '与信の運営',
@@ -498,7 +498,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     terms: sections(
       [
         'Was Sie erhalten',
-        'Kredit ohne Sicherheit, tausend Stufen, die bei pünktlicher Zahlung wachsen. Einladungen bringen Netzprämien, Meilensteine bringen Boni. Betrag, Laufzeit und Zins stehen vor der Unterschrift in der App. Keine Käufe über Google Play: Mittel bewegen sich im Netz.',
+        'Kredit ohne Sicherheit, tausend Stufen, die bei pünktlicher Zahlung wachsen. Einladungen bringen Netzprämien, Meilensteine bringen Boni. Betrag, Laufzeit und Zins stehen vor der Unterschrift in der App. Keine Käufe über la aplicación: Mittel bewegen sich im Netz.',
       ],
       [
         'Wie der Kredit läuft',
@@ -536,7 +536,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     terms: sections(
       [
         '받는 것',
-        '담보 없는 신용, 제때 갚으면 오르는 천 개 등급. 초대로 네트워크 보상, 이정표 보너스. 금액, 기간, 이자는 서명 전 앱에 표시됩니다. Google Play 인앱 구매는 없습니다. 자금은 네트워크에서 움직입니다.',
+        '담보 없는 신용, 제때 갚으면 오르는 천 개 등급. 초대로 네트워크 보상, 이정표 보너스. 금액, 기간, 이자는 서명 전 앱에 표시됩니다. la aplicación 인앱 구매는 없습니다. 자금은 네트워크에서 움직입니다.',
       ],
       [
         '신용이 운영되는 방식',
@@ -574,7 +574,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     terms: sections(
       [
         'Ne elde edersiniz',
-        'Teminatsız kredi, zamanında ödeyince yükselen bin düzey. Davetle ağ ödülleri, eşiklerde bonus. Tutar, vade ve faiz imzadan önce uygulamada görünür. Google Play içi satın alma yoktur: fonlar ağda hareket eder.',
+        'Teminatsız kredi, zamanında ödeyince yükselen bin düzey. Davetle ağ ödülleri, eşiklerde bonus. Tutar, vade ve faiz imzadan önce uygulamada görünür. la aplicación içi satın alma yoktur: fonlar ağda hareket eder.',
       ],
       [
         'Kredi nasıl işler',
@@ -612,7 +612,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     terms: sections(
       [
         'Bạn nhận được gì',
-        'Tín dụng không thế chấp, một nghìn cấp tăng khi trả đúng hạn. Có thể mời và nhận thưởng mạng, nhận thưởng mốc. Số tiền, kỳ hạn và lãi hiện trong ứng dụng trước khi ký. Không mua trong Google Play: tiền chuyển trên mạng.',
+        'Tín dụng không thế chấp, một nghìn cấp tăng khi trả đúng hạn. Có thể mời và nhận thưởng mạng, nhận thưởng mốc. Số tiền, kỳ hạn và lãi hiện trong ứng dụng trước khi ký. Không mua trong la aplicación: tiền chuyển trên mạng.',
       ],
       [
         'Tín dụng vận hành thế nào',
@@ -650,7 +650,7 @@ export const legalCopy: Record<Lang, LegalDoc> = {
     terms: sections(
       [
         'Cosa ottiene',
-        'Credito senza garanzia, mille livelli che crescono se paga in tempo. Può invitare e ricevere ricompense di rete, e bonus al raggiungimento delle tappe. Importo, durata e interesse appaiono nell’app prima della firma. Non ci sono acquisti su Google Play: i fondi si muovono sulla rete.',
+        'Credito senza garanzia, mille livelli che crescono se paga in tempo. Può invitare e ricevere ricompense di rete, e bonus al raggiungimento delle tappe. Importo, durata e interesse appaiono nell’app prima della firma. Non ci sono acquisti su la aplicación: i fondi si muovono sulla rete.',
       ],
       [
         'Come opera il credito',

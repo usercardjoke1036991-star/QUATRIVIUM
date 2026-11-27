@@ -29,7 +29,7 @@ ignore:
         expires: 2027-09-28T00:00:00.000Z
   SNYK-JS-NODEFORGE-19635204:
     - '*':
-        reason: node-forge via expo-updates 29 / Expo 54; sin parche compatible
+        reason: node-forge via Expo 54; sin parche compatible
         expires: 2027-09-28T00:00:00.000Z
   SNYK-JS-INFLIGHT-6095116:
     - '*':
@@ -39,10 +39,6 @@ ignore:
     - '*':
         reason: uuid 7 via expo-constants 18 / Expo 54; el fix pide Expo 55
         expires: 2027-09-29T00:00:00.000Z
-  javascript/HttpToHttps:
-    - 'scripts/notify-worker.mjs':
-        reason: HTTP solo en el puerto privado; TLS lo termina Render/Caddy
-        expires: 2027-10-02T00:00:00.000Z
   javascript/PT:
     - 'scripts/scan-mobile.mjs':
         reason: CLI local de MobSF; solo lee .apk/.aab/.ipa dentro del repo

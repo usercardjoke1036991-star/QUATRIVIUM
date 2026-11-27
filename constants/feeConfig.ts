@@ -1,8 +1,4 @@
-import { Contract, type Signer } from 'ethers';
-import { getContractAddress } from './contractConfig';
-import { isHexAddress } from '../utils/sanitize';
-
-const ZERO = '0x0000000000000000000000000000000000000000';
+import { type Signer } from 'ethers';
 
 export async function estimateNetworkGasWei(
   signer: Signer,
@@ -16,21 +12,6 @@ export async function estimateNetworkGasWei(
   return gasPrice * gasLimit;
 }
 
-export async function resolveFeeCollector(signer: Signer): Promise<string> {
-  try {
-    const contract = new Contract(
-      getContractAddress(),
-      ['function feeCollector() view returns (address)'],
-      signer
-    );
-    const address = String(await contract.feeCollector()).toLowerCase();
-    if (isHexAddress(address) && address !== ZERO) return address;
-  } catch {
-    // fallback to env only if the contract cannot be read
-  }
-  const fromEnv = (process.env.EXPO_PUBLIC_FEE_COLLECTOR || '').toLowerCase();
-  if (isHexAddress(fromEnv) && fromEnv !== ZERO) {
-    return fromEnv;
-  }
+export async function resolveFeeCollector(_signer: Signer): Promise<string> {
   return '';
 }

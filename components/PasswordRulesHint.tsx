@@ -13,7 +13,7 @@ export function PasswordRulesHint({ value }: PasswordRulesHintProps) {
   const { t } = useI18n();
   const { colors } = useTheme();
   const flags = passwordRuleFlags(value);
-  const rows: Array<{ ok: boolean; label: string; info?: boolean }> = [
+  const rows: { ok: boolean; label: string; info?: boolean }[] = [
     { ok: flags.min, label: t('passwordRuleMin') },
     { ok: true, label: t('passwordRuleMax'), info: true },
     { ok: flags.upper, label: t('passwordRuleUpper') },

@@ -7,7 +7,6 @@ import { LOCKED_DEEP_LINK_ROOMS, parseAppDeepLink } from '../utils/appDeepLink';
 import { getWalletWrapKey } from '../services/walletSession';
 import { rankingVisible } from '../utils/fameRankings';
 import { rememberAppUrl, takePendingAppUrl } from '../utils/pendingDeepLink';
-import { AppKit, useAccount, useAppKit, useProvider } from '@reown/appkit-react-native';
 import { parseUnits } from 'ethers';
 import { setWalletSigner } from '../services/quatriviumCreditService';
 import { useWeb3Balances } from '../hooks/useWeb3Balances';
@@ -23,6 +22,8 @@ import { FameLeaderboard } from '../components/FameLeaderboard';
 import { LoanTierCard } from '../components/LoanTierCard';
 import { LockedLoanCatalog } from '../components/LockedLoanCatalog';
 import { AdminPanel } from '../components/AdminPanel';
+import { AdminStatusReadout } from '../components/AdminStatusReadout';
+import { ApkIntegrityNote } from '../components/ApkIntegrityNote';
 import { ActivateCreditSection } from '../components/ActivateCreditSection';
 import { AccountWorldCard } from '../components/AccountWorldCard';
 import { AccountOnboarding } from '../components/AccountOnboarding';
@@ -50,7 +51,7 @@ import { MovementHistory } from '../components/MovementHistory';
 import { GraceMoraClock } from '../components/GraceMoraClock';
 import { APP_DISPLAY_NAME } from '../constants/brand';
 import { RESERVA_MIN_LEVEL } from '../constants/reserva';
-import { getConfigurableStables, getSupportedTokens } from '../constants/tokens';
+import { getSupportedTokens } from '../constants/tokens';
 import { isAltaConfigured } from '../constants/altaConfig';
 import {
   isAccessPaymentEnabled,
@@ -94,14 +95,10 @@ function HomeScreenWithHooks() {
     failed: walletFailed,
     retry: retryWallet,
   } = useAppWallet();
-  const { address: adminAddress, isConnected: adminConnected } = useAccount();
-  const { provider: adminProvider } = useProvider();
-  const { open: openExternalWallet } = useAppKit();
 
   const { mode } = useAppMode();
   const { confirmFunds } = useFundsConfirm();
-  const tokens = useMemo(() => getSupportedTokens(), [mode]);
-  const extraStables = useMemo(() => getConfigurableStables(), [mode]);
+  const tokens = useMemo(() => getSupportedTokens(mode === 'demo'), [mode]);
   const [selectedToken, setSelectedToken] = useState(tokens[0]);
   const [room, setRoom] = useState<HomeRoom | null>(null);
   const [phraseBackedUp, setPhraseBackedUp] = useState(false);
@@ -162,24 +159,19 @@ function HomeScreenWithHooks() {
     loanReadsReady,
     refetch,
   } = useWeb3Balances(walletAddress, selectedToken);
-  const { userInfo: adminInfo } = useWeb3Balances(
-    adminConnected && adminAddress ? adminAddress.toLowerCase() : '',
-    selectedToken
-  );
   const founderHere =
     Boolean(userInfo.referral.isFundador) ||
     isFounderWallet(walletAddress, userInfo.founderAddress);
-  const externalReady = Boolean(adminConnected && adminAddress);
-  const adminInfoIsSeat = Boolean(adminInfo.isOwner || adminInfo.isAdmin);
-  const appIsSeat = Boolean(userInfo.isOwner || userInfo.isAdmin || userInfo.referral.isFundador);
-  const showAdminControls = externalReady ? adminInfoIsSeat : appIsSeat;
+  const showAdminControls = Boolean(
+    userInfo.isOwner || userInfo.isAdmin || userInfo.referral.isFundador
+  );
   const adminSeat = adminSeatOpen({
     demo: isDemoAccount(),
-    connected: externalReady,
-    address: adminAddress || walletAddress,
-    isAdmin: Boolean(adminInfo.isAdmin || userInfo.isAdmin),
-    isOwner: Boolean(adminInfo.isOwner || userInfo.isOwner),
-    roster: adminInfo.adminRoster.length ? adminInfo.adminRoster : userInfo.adminRoster,
+    connected: false,
+    address: walletAddress,
+    isAdmin: Boolean(userInfo.isAdmin),
+    isOwner: Boolean(userInfo.isOwner),
+    roster: userInfo.adminRoster,
     founder: founderHere,
   });
   const debtReminder = useLoanPaymentReminders(userInfo);
@@ -243,19 +235,11 @@ function HomeScreenWithHooks() {
     handlePagarAcceso,
     handleDonar,
     handleAportarReserva,
-    handleProponerRetiroReserva,
-    handleAplicarRetiroReserva,
-    handleRetirarComisiones,
-    handleRetirarComisionesToken,
     handleExecuteProposal,
     handleConfirmProposal,
     handleProposeAddAdmin,
     handleProposeRemoveAdmin,
-    handleProposeFeeCollector,
-    handleProposeConfirmations,
     handleProposeFundador,
-    handleProposeOwner,
-    handleProposeSetTokenConfig,
     handleCancelProposal,
     handleLiquidarDeudor,
     handleMarcarMorosoSiVencido,
@@ -265,10 +249,6 @@ function HomeScreenWithHooks() {
     balances,
     selectedToken,
     appSigner,
-    adminConnected,
-    adminProvider,
-    adminAddress,
-    openExternalWallet,
     confirmFunds,
     refetch,
     clearPendingInvite,
@@ -870,7 +850,7 @@ function HomeScreenWithHooks() {
             isLoading={txLoading}
             tokenSymbol={selectedToken.symbol}
             tokenSupported={userInfo.isTokenSupported}
-            walletConnected={Boolean(walletAddress)}
+            walletReady={Boolean(walletAddress)}
             founderAddress={userInfo.founderAddress}
             donatedUsd={userInfo.donatedUsd || 0}
             altaPaid={Boolean(userInfo.altaPagada)}
@@ -986,8 +966,9 @@ function HomeScreenWithHooks() {
             poolBalance={balances.poolBalance}
             poolOutstanding={balances.poolOutstanding}
             poolCash={balances.poolCash}
+            moneyUnconfirmed={balances.moneyUnconfirmed}
             lpBalance={balances.lpBalance}
-            walletConnected={Boolean(walletAddress)}
+            walletReady={Boolean(walletAddress)}
             paused={creditPaused}
             onDepositPool={servicesOpen ? handleDepositarPool : () => denyUse()}
           />
@@ -1037,47 +1018,34 @@ function HomeScreenWithHooks() {
               onSelectToken={setSelectedToken}
             />
           ) : null}
+          <ApkIntegrityNote />
+          <AdminStatusReadout paused={creditPaused} admins={userInfo.adminRoster || []} />
           {showAdminControls ? (
             <AdminPanel
-              isOwner={externalReady ? adminInfo.isOwner : Boolean(userInfo.isOwner || founderHere)}
-              isAdmin={externalReady ? adminInfo.isAdmin : userInfo.isAdmin}
+              isOwner={Boolean(userInfo.isOwner || founderHere)}
+              isAdmin={userInfo.isAdmin}
               isLoading={txLoading}
               tokenSymbol={selectedToken.symbol}
               tokenAddress={selectedToken.address}
-              onWithdrawFees={handleRetirarComisiones}
-              onWithdrawTokenFees={handleRetirarComisionesToken}
               onExecuteProposal={handleExecuteProposal}
               onConfirmProposal={handleConfirmProposal}
               onCancelProposal={handleCancelProposal}
               onProposeAddAdmin={handleProposeAddAdmin}
               onProposeRemoveAdmin={handleProposeRemoveAdmin}
-              onProposeFeeCollector={handleProposeFeeCollector}
-              onProposeConfirmations={handleProposeConfirmations}
               onProposeFundador={handleProposeFundador}
-              onProposeOwner={handleProposeOwner}
-              extraStables={extraStables}
-              onProposeSetTokenConfig={handleProposeSetTokenConfig}
               onLiquidar={handleLiquidarDeudor}
               onMarcarMoroso={handleMarcarMorosoSiVencido}
               onAportarReserva={handleAportarReserva}
-              onProponerRetiroReserva={handleProponerRetiroReserva}
-              onAplicarRetiroReserva={handleAplicarRetiroReserva}
-              adminRoster={
-                adminInfo.adminRoster.length ? adminInfo.adminRoster : userInfo.adminRoster
-              }
-              requiredConfirmations={
-                adminInfo.requiredConfirmations || userInfo.requiredConfirmations
-              }
-              proposalCount={adminInfo.proposalCount || userInfo.proposalCount}
-              openProposal={adminInfo.openProposal || userInfo.openProposal}
-              founderAddress={adminInfo.founderAddress || userInfo.founderAddress}
-              ownerAddress={adminInfo.ownerAddress || userInfo.ownerAddress}
+              adminRoster={userInfo.adminRoster}
+              requiredConfirmations={userInfo.requiredConfirmations}
+              proposalCount={userInfo.proposalCount}
+              openProposal={userInfo.openProposal}
+              founderAddress={userInfo.founderAddress}
             />
           ) : (
             <AppText style={{ color: colors.text }}>{t('appWalletAdminConnect')}</AppText>
           )}
         </AppWindow>
-        <AppKit />
         <BusyMark />
         {waitingChain ? (
           <View style={styles.bootCover}>

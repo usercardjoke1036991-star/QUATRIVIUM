@@ -2,7 +2,7 @@
 export const PACK_EAST = {
   ru: {
     configWarn: 'Контракт не настроен.',
-    telegramNeedApi: 'Служба уведомлений сейчас недоступна.',
+    localNoticeNeed: 'Служба уведомлений сейчас недоступна.',
     referralHistoryPartial: 'Недавняя история. Старые комиссии могут отсутствовать.',
     reservaFounderNote: 'Часть надбавки направляется на работу платформы в соответствии с уровнем.',
     tokenNotEnabled: 'Токен не включён. Только для администраторов.',
@@ -157,7 +157,7 @@ export const PACK_EAST = {
   },
   tr: {
     configWarn: 'Sözleşme yapılandırılmadı.',
-    telegramNeedApi: 'Bildirim hizmeti şu anda kullanılamıyor.',
+    localNoticeNeed: 'Bildirim hizmeti şu anda kullanılamıyor.',
     referralHistoryPartial: 'Son geçmiş. Eski komisyonlar eksik olabilir.',
     reservaFounderNote: 'Ekstra tutarın bir kısmı kademeye göre platformun işleyişine ayrılır.',
     tokenNotEnabled: 'Jeton etkin değil. Yalnızca yöneticiler.',
@@ -311,7 +311,7 @@ export const PACK_EAST = {
   },
   vi: {
     configWarn: 'Hợp đồng chưa được cấu hình.',
-    telegramNeedApi: 'Dịch vụ thông báo hiện không khả dụng.',
+    localNoticeNeed: 'Dịch vụ thông báo hiện không khả dụng.',
     referralHistoryPartial: 'Lịch sử gần đây. Có thể thiếu hoa hồng cũ.',
     reservaFounderNote: 'Một phần khoản cộng thêm được dành cho vận hành nền tảng, theo bậc.',
     tokenNotEnabled: 'Token chưa bật. Chỉ dành cho quản trị.',

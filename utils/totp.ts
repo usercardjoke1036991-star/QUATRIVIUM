@@ -136,13 +136,19 @@ export function totpAt(secret: string, atMs = Date.now()): string {
   return String(bin % 1_000_000).padStart(6, '0');
 }
 
-export function verifyTotp(secret: string, code: string, atMs = Date.now()): boolean {
+/** Paso de 30 s que coincide con el código, o null. El paso ya usado no se vuelve a aceptar. */
+export function matchingTotpStep(secret: string, code: string, atMs = Date.now()): number | null {
   const trimmed = code.replace(/\D/g, '');
-  if (trimmed.length !== 6 || !secret) return false;
-  for (const step of [-1, 0, 1]) {
-    if (totpAt(secret, atMs + step * 30_000) === trimmed) return true;
+  if (trimmed.length !== 6 || !secret) return null;
+  for (const delta of [-1, 0, 1]) {
+    const at = atMs + delta * 30_000;
+    if (totpAt(secret, at) === trimmed) return Math.floor(at / 1000 / 30);
   }
-  return false;
+  return null;
+}
+
+export function verifyTotp(secret: string, code: string, atMs = Date.now()): boolean {
+  return matchingTotpStep(secret, code, atMs) != null;
 }
 
 export function otpauthUrl(secret: string, account: string): string {

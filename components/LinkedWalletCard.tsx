@@ -1,36 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { useAccount, useAppKit, useProvider } from '@reown/appkit-react-native';
-import type { Eip1193Provider } from 'ethers';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useI18n } from '../i18n/LanguageContext';
 import { useTheme } from '../theme/ThemeContext';
 import { formatAddress } from '../utils/formatters';
-import {
-  hasLinkedExternalWallet,
-  loadRequiredExternalWallet,
-  proveAndSaveLinkedWallet,
-} from '../services/linkedWallet';
-import { openWalletConnect, withWalletSignTimeout } from '../utils/openWalletConnect';
+import { hasLinkedExternalWallet, loadRequiredExternalWallet } from '../services/linkedWallet';
 import { isDemoMode } from '../constants/rpcConfig';
 import { useAppMode } from '../wallet/AppModeContext';
+import { LinkWalletForm } from './LinkWalletForm';
 import { AppText } from './AppText';
-
 interface LinkedWalletCardProps {
   internalWallet: string;
   compact?: boolean;
 }
-
+/** Billetera externa de retiro. Se vincula con una prueba en cadena (LinkWalletForm); no hay sesión que conectar. */
 export function LinkedWalletCard({ internalWallet, compact = false }: LinkedWalletCardProps) {
   const { t } = useI18n();
   const { colors } = useTheme();
-  const { open } = useAppKit();
-  const { address, isConnected } = useAccount();
-  const { provider } = useProvider();
   const { mode } = useAppMode();
   const [linked, setLinked] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-
+  const [editing, setEditing] = useState(false);
   useEffect(() => {
     if (!internalWallet) return undefined;
     let live = true;
@@ -44,46 +32,8 @@ export function LinkedWalletCard({ internalWallet, compact = false }: LinkedWall
     return () => {
       live = false;
     };
-  }, [internalWallet, address, isConnected, mode]);
-
-  const saveConnected = async () => {
-    if (!hasLinkedExternalWallet(address || '')) {
-      await openWalletConnect(open);
-      return;
-    }
-    setBusy(true);
-    setError('');
-    try {
-      const saved = await withWalletSignTimeout(
-        proveAndSaveLinkedWallet(provider as Eip1193Provider, internalWallet, address || ''),
-        45000
-      );
-      setLinked(saved);
-    } catch (caught) {
-      const message = String((caught as Error)?.message || '');
-      const wrongNetwork = message.includes('wrong-network') || message.includes('chainId');
-      setError(
-        wrongNetwork
-          ? t(isDemoMode() ? 'linkWalletNetworkDemo' : 'linkWalletNetworkLive')
-          : t('linkWalletSignNeed')
-      );
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const connectedReady = hasLinkedExternalWallet(address || '');
-  const sessionLive = Boolean(isConnected && connectedReady);
-  const mismatch = Boolean(
-    linked && sessionLive && String(address).toLowerCase() !== linked.toLowerCase()
-  );
-  const looksBound = Boolean(linked && sessionLive && !mismatch);
-  const boundLabel = looksBound
-    ? 'linkWalletBound'
-    : linked
-      ? 'linkWalletReconnect'
-      : 'linkWalletBind';
-
+  }, [internalWallet, mode]);
+  const boundLabel = linked ? 'linkWalletChange' : 'linkWalletBind';
   return (
     <View
       style={[
@@ -101,36 +51,40 @@ export function LinkedWalletCard({ internalWallet, compact = false }: LinkedWall
           {formatAddress(linked)}
         </AppText>
       ) : null}
-      {linked && !sessionLive ? (
-        <AppText style={[styles.meta, { color: colors.warnText }]}>
-          {t('linkWalletSessionOff')}
-        </AppText>
-      ) : null}
-      {mismatch ? (
-        <AppText style={[styles.meta, { color: colors.warnText }]}>
-          {t('linkWalletMismatch')}
-        </AppText>
-      ) : null}
-      {error ? <AppText style={[styles.meta, { color: colors.warnText }]}>{error}</AppText> : null}
-      <TouchableOpacity
-        disabled={busy}
-        onPress={() => (looksBound ? void openWalletConnect(open) : void saveConnected())}
-        style={[styles.btn, { backgroundColor: looksBound ? colors.chip : colors.primary }]}
-        accessibilityRole="button"
-        accessibilityLabel={t(boundLabel)}
-      >
-        {busy ? (
-          <ActivityIndicator color={looksBound ? colors.text : colors.onPrimary} />
-        ) : (
-          <AppText style={[styles.btnText, { color: looksBound ? colors.text : colors.onPrimary }]}>
+      {editing ? (
+        <>
+          <LinkWalletForm
+            internalWallet={internalWallet}
+            allowSkip={false}
+            onLinked={(external) => {
+              if (hasLinkedExternalWallet(external)) setLinked(external);
+              setEditing(false);
+            }}
+          />
+          <TouchableOpacity
+            onPress={() => setEditing(false)}
+            style={styles.cancel}
+            accessibilityRole="button"
+            accessibilityLabel={t('cancel')}
+          >
+            <AppText style={[styles.btnText, { color: colors.textMuted }]}>{t('cancel')}</AppText>
+          </TouchableOpacity>
+        </>
+      ) : (
+        <TouchableOpacity
+          onPress={() => setEditing(true)}
+          style={[styles.btn, { backgroundColor: linked ? colors.chip : colors.primary }]}
+          accessibilityRole="button"
+          accessibilityLabel={t(boundLabel)}
+        >
+          <AppText style={[styles.btnText, { color: linked ? colors.text : colors.onPrimary }]}>
             {t(boundLabel)}
           </AppText>
-        )}
-      </TouchableOpacity>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   box: {
     borderWidth: 1,
@@ -163,5 +117,9 @@ const styles = StyleSheet.create({
   btnText: {
     fontSize: 15,
     fontWeight: '600',
+  },
+  cancel: {
+    paddingVertical: 10,
+    alignItems: 'center',
   },
 });

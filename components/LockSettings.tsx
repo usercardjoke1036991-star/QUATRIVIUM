@@ -17,8 +17,10 @@ import { isWeakPin } from '../utils/pinPolicy';
 import { fallbackAuthIfNeeded } from '../services/authPrefs';
 import { hasSecurityConfirmMethod } from '../services/fundsConfirm';
 import { useFundsConfirm } from './FundsConfirmHost';
+import { DeviceGuardNotice } from './DeviceGuardNotice';
 import { SecretInput } from './SecretInput';
 import { AppText } from './AppText';
+import { passwordFailText } from '../utils/lockErrors';
 
 type LockSettingsMode = 'pin' | 'password';
 
@@ -89,9 +91,11 @@ export const LockSettings: React.FC<{
       setMessage(
         error instanceof Error && error.message === 'weak-pin'
           ? t('lockPinWeak')
-          : error instanceof Error && error.message === 'locked'
-            ? t('lockUnlockLead')
-            : t('lockPinWrong')
+          : error instanceof Error && error.message === 'pbkdf2-missing'
+            ? t('lockKdfMissing')
+            : error instanceof Error && error.message === 'locked'
+              ? t('lockUnlockLead')
+              : t('lockPinWrong')
       );
     } finally {
       setBusy(false);
@@ -138,12 +142,6 @@ export const LockSettings: React.FC<{
     ]);
   };
 
-  const passwordFail = (error: unknown) => {
-    const code = error instanceof Error ? error.message : '';
-    if (code === 'password-key') return t('lockPasswordPrivateKey');
-    return t('lockPasswordWeak');
-  };
-
   const savePassword = async () => {
     if (nextPassword !== confirmPassword) {
       setPasswordMessage(t('lockPasswordMismatch'));
@@ -172,7 +170,7 @@ export const LockSettings: React.FC<{
       Alert.alert(t('ready'), t('settingsSaved'));
     } catch (error) {
       const code = error instanceof Error ? error.message : '';
-      setPasswordMessage(code === 'wrong-pin' ? t('lockPinWrong') : passwordFail(error));
+      setPasswordMessage(code === 'wrong-pin' ? t('lockPinWrong') : passwordFailText(error, t));
     } finally {
       setPasswordBusy(false);
     }
@@ -224,7 +222,10 @@ export const LockSettings: React.FC<{
         ]}
       >
         {busy ? (
-          <ActivityIndicator color="#111" />
+          <>
+            <ActivityIndicator color="#111" />
+            <AppText style={styles.buttonText}>{t('lockKdfWait')}</AppText>
+          </>
         ) : (
           <AppText style={styles.buttonText}>{t('settingsSave')}</AppText>
         )}
@@ -302,7 +303,10 @@ export const LockSettings: React.FC<{
         style={[styles.button, { backgroundColor: colors.connect }]}
       >
         {passwordBusy ? (
-          <ActivityIndicator color="#111" />
+          <>
+            <ActivityIndicator color="#111" />
+            <AppText style={styles.buttonText}>{t('lockKdfWait')}</AppText>
+          </>
         ) : (
           <AppText style={styles.buttonText}>{t('settingsSave')}</AppText>
         )}
@@ -313,7 +317,12 @@ export const LockSettings: React.FC<{
     </View>
   );
 
-  return <View>{mode === 'password' ? passwordBlock : pinBlock}</View>;
+  return (
+    <View>
+      <DeviceGuardNotice />
+      {mode === 'password' ? passwordBlock : pinBlock}
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({

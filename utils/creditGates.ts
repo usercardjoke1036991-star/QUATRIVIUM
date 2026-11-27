@@ -43,11 +43,6 @@ export function identityUnlocked(paidUsd: number, altaPaid = false): boolean {
 
 export const CREDIT_ACCESS_LEGACY_USDT = 2;
 export const CREDIT_ACCESS_USDT = CREDIT_ALTA_USDT;
-export type VerificationFeeKind = 'kyc' | 'phone' | 'email';
-
-export function verificationFeeUsdt(_kind: VerificationFeeKind, _demo?: boolean): number {
-  return 0;
-}
 
 export function isHiddenVerificationDonation(_usdAmount: number, _demo?: boolean): boolean {
   return false;

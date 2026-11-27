@@ -5,9 +5,9 @@ set +e
 export PATH="/root/.foundry/bin:/root/.cyfrin/bin:/root/.cargo/bin:/root/.local/bin:/usr/local/bin:/opt/zaproxy:/usr/bin:${PATH}"
 [[ -f /root/.cargo/env ]] && . /root/.cargo/env
 export SEMGREP_SEND_METRICS=off
-MAGNO=/mnt/c/CURSORPLANTILLA-BASE/Magno
+MAGNO="$(cd "$(dirname "$0")/.." && pwd)"
 # Una carpeta por día: dos auditorías distintas no se pisan los resultados.
-OUT="${CYBER_OUT:-/root/cyber-scans/$(date +%F)}"
+OUT="${CYBER_OUT:-$MAGNO/cyber-scans/$(date +%F)}"
 export OUT
 mkdir -p "$OUT"
 cd "$MAGNO" || exit 1
@@ -32,14 +32,14 @@ want() {
   echo -n "forge: "; forge --version 2>/dev/null | head -1 || echo MISSING
   echo -n "zap: "; ls /opt/zaproxy/zap.sh 2>/dev/null || echo MISSING
   echo -n "java: "; java -version 2>&1 | head -1
-  df -h / /mnt/c | cat
+  df -h / | cat
 } | tee "$OUT/tools.txt"
 
 if want aderyn; then
 echo "===== 1 ADERYN $(date -Is) =====" | tee -a "$OUT/progress.txt"
 aderyn "$MAGNO" \
   -s contracts \
-  -x mocks,Groth16Verifier,QuatriviumCreditHarness,lib/,node_modules/,forge-out/,forge-cache/,zk-contracts/,test/,forge-test/,artifacts/,cache/ \
+  -x mocks,QuatriviumCreditHarness,lib/,node_modules/,forge-out/,forge-cache/,test/,forge-test/,artifacts/,cache/ \
   -o "$OUT/aderyn-report.md"
 echo ADERYN_EXIT:$? | tee -a "$OUT/progress.txt"
 sed -n '1,160p' "$OUT/aderyn-report.md" 2>/dev/null | tee "$OUT/aderyn-head.txt"
@@ -77,8 +77,6 @@ trivy_step() {
 }
 trivy_step deps fs --skip-db-update --scanners vuln \
   --severity HIGH,CRITICAL,MEDIUM "$MAGNO/package-lock.json"
-trivy_step docker config --skip-check-update \
-  --severity HIGH,CRITICAL,MEDIUM "$MAGNO/Dockerfile.notify"
 trivy_step secrets fs --skip-db-update --scanners secret \
   --severity HIGH,CRITICAL,MEDIUM "$MAGNO/scripts"
 sed -n '1,180p' "$OUT/trivy.txt" | tee "$OUT/trivy-head.txt"

@@ -1,29 +1,19 @@
 #!/usr/bin/env bash
 set -e
 export PATH=/usr/local/bin:/usr/bin:/bin:/root/.local/bin:/opt/zaproxy
-MAGNO=/mnt/c/CURSORPLANTILLA-BASE/Magno
+MAGNO="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$MAGNO"
-OUT="${CYBER_OUT:-/root/cyber-scans/$(date +%F)}"
+OUT="${CYBER_OUT:-$MAGNO/cyber-scans/$(date +%F)}"
 export OUT
 mkdir -p /tmp/notify-zap "$OUT"
-# dotenv carga .env del cwd. El arnés corre en /tmp para no heredar Magno/.env.
+# El worker de avisos ya no existe. El bucle se queda para no abrir CORS ni un proceso ajeno.
 cd /tmp/notify-zap
-# Con `*` el propio escaneo se provoca un "Cross-Domain Misconfiguration" que en mainnet
-# es imposible: el worker se niega a arrancar con comodín. Escanear la configuración real.
 env -i \
   PATH="$PATH" \
-  HOME=/root \
+  HOME="${HOME:-/tmp}" \
   NODE_ENV=test \
-  NOTIFY_BIND=127.0.0.1 \
-  PORT=8788 \
-  NOTIFY_PORT=8788 \
-  NOTIFY_DATA_FILE=/tmp/notify-zap/.notify-data.json \
-  NOTIFY_DATA_KEY=zap-health-scan-key-32chars \
-  EXPO_PUBLIC_CHAIN_ID=97 \
-  EXPO_PUBLIC_CONTRACT_ADDRESS_TESTNET=0xD2d2A9eF0D1e4f253abc90Dd4ACb0E6C50B2de9f \
-  NOTIFY_CORS_ORIGIN=https://quatriviumcredit.app \
-  node "$MAGNO/scripts/notify-worker.mjs" >/tmp/notify-zap/out.log 2>&1 &
-WPID=$!
+  true
+WPID=""
 ok=0
 for i in $(seq 1 40); do
   if curl -sf http://127.0.0.1:8788/health >/tmp/notify-zap/health.json; then
@@ -41,7 +31,9 @@ if [[ "$ok" != 1 ]]; then
 fi
 /opt/zaproxy/zap.sh -cmd -quickurl http://127.0.0.1:8788/health -quickout "$OUT/zap-health.html" -quickprogress
 echo ZAP_EXIT=$?
-kill $WPID 2>/dev/null || true
+if [[ -n "${WPID}" ]]; then
+  kill $WPID 2>/dev/null || true
+fi
 python3 - <<'PY'
 from pathlib import Path
 import os

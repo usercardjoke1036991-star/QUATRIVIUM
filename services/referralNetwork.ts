@@ -162,7 +162,7 @@ async function queryFilterChunked(
   deadline = 0
 ): Promise<LogPack> {
   if (!filter || fromBlock > toBlock) return { events: [], failed: 0, cut: false };
-  const ranges: Array<[number, number]> = [];
+  const ranges: [number, number][] = [];
   for (let end = toBlock; end >= fromBlock; end -= CHUNK) {
     ranges.push([Math.max(fromBlock, end - CHUNK + 1), end]);
   }
@@ -240,10 +240,10 @@ function blocksAgo(latest: number, seconds: number, perBlock: number): number {
   return Math.max(0, latest - Math.ceil(seconds / step));
 }
 
-function chunkRanges(fromBlock: number, toBlock: number, step = CHUNK): Array<[number, number]> {
+function chunkRanges(fromBlock: number, toBlock: number, step = CHUNK): [number, number][] {
   if (fromBlock > toBlock) return [];
   const size = step > 0 ? step : CHUNK;
-  const ranges: Array<[number, number]> = [];
+  const ranges: [number, number][] = [];
   for (let end = toBlock; end >= fromBlock; end -= size) {
     ranges.push([Math.max(fromBlock, end - size + 1), end]);
   }
@@ -265,14 +265,14 @@ function eventName(event: object): string {
 }
 
 /** El trozo que contiene el bloque pedido pasa delante. El resto conserva su orden. */
-function focusFirst(ranges: Array<[number, number]>, focus: number): Array<[number, number]> {
+function focusFirst(ranges: [number, number][], focus: number): [number, number][] {
   const index = ranges.findIndex(([start, end]) => focus >= start && focus <= end);
   if (index <= 0) return ranges;
   return [ranges[index], ...ranges.slice(0, index), ...ranges.slice(index + 1)];
 }
 
 /** Si el trozo se parte, la mitad que contiene el bloque pedido sale primero. */
-function orderHalves(start: number, end: number, focus?: number): Array<[number, number]> {
+function orderHalves(start: number, end: number, focus?: number): [number, number][] {
   const mid = start + Math.floor((end - start + 1) / 2);
   const newer: [number, number] = [mid, end];
   const older: [number, number] = [start, mid - 1];
@@ -292,10 +292,10 @@ async function readWindow(
   events: LogPack['events'];
   failed: number;
   cut: boolean;
-  split: Array<[number, number]>;
+  split: [number, number][];
 }> {
   const events: LogPack['events'] = [];
-  const split: Array<[number, number]> = [];
+  const split: [number, number][] = [];
   let failed = 0;
   let cut = false;
   const span = end - start + 1;
@@ -341,7 +341,7 @@ async function readWindow(
 async function queryFilterRanges(
   contract: Contract,
   filters: unknown[],
-  ranges: Array<[number, number]>,
+  ranges: [number, number][],
   deadline: number,
   focus?: number
 ): Promise<LogPack> {
@@ -349,7 +349,7 @@ async function queryFilterRanges(
   const seen = new Set<string>();
   let failed = 0;
   let cut = false;
-  const pending: Array<[number, number]> = ranges.filter(([start, end]) => start <= end);
+  const pending: [number, number][] = ranges.filter(([start, end]) => start <= end);
   while (pending.length > 0) {
     if (Date.now() > deadline) {
       cut = true;
@@ -728,7 +728,7 @@ export async function loadReferralNetwork(walletAddress: string): Promise<Referr
     if (blockNumber > node.lastEarnBlock) node.lastEarnBlock = blockNumber;
   };
 
-  const drafts: Array<ReferralActivity & { blockNumber: number }> = [];
+  const drafts: (ReferralActivity & { blockNumber: number })[] = [];
 
   for (const event of signups) {
     const args = eventArgs(event);

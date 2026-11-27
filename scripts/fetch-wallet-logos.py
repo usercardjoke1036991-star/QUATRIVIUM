@@ -8,7 +8,7 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "assets" / "wallets"
 
-# URLs oficiales o de kits de marca / listados WalletConnect-TON de cada wallet.
+# URLs oficiales o de kits de marca de cada wallet.
 SOURCES = {
     "metamask": [
         "https://raw.githubusercontent.com/MetaMask/metamask-extension/master/app/images/icon-512.png",
@@ -20,11 +20,6 @@ SOURCES = {
         "https://icons.llamao.fi/icons/wallets/trustwallet?w=256&h=256",
         "https://trustwallet.com/assets/images/favicon.png",
         "https://avatars.githubusercontent.com/u/32179889?s=512&v=4",
-    ],
-    "binance": [
-        "https://public.bnbstatic.com/static/binance-w3w/ton-provider/binancew3w.png",
-        "https://icons.llamao.fi/icons/wallets/binance-wallet?w=256&h=256",
-        "https://icons.llamao.fi/icons/wallets/binance?w=256&h=256",
     ],
     "okx": [
         "https://static.okx.com/cdn/web3/assets/imgs/70d223c0-8527-40c1-8292-b3cc10b53d88.png",

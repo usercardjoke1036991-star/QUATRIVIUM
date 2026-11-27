@@ -16,7 +16,7 @@ import { ALTA_ABI, getAltaAddress, isAltaConfigured } from '../constants/altaCon
 import { CONTRACT_ABI, ERC20_ABI, getContractAddress } from '../constants/contractConfig';
 import { FAMA_ABI, isFamaAddress } from '../constants/famaConfig';
 import { FAMA_CANJE_POR_USDT } from '../constants/fama';
-import { isTestnetOnlyToken } from '../constants/bsc';
+import { isTestnetOnlyToken } from '../constants/arbitrum';
 import {
   assertTrustedRpc,
   getProviderWithFallback,
@@ -24,9 +24,11 @@ import {
   isContractConfigured,
   isDemoAccount,
   isDemoMode,
+  publicRpcList,
 } from '../constants/rpcConfig';
 import { getTokenMeta } from '../constants/tokens';
 import { isAllowedWei } from '../utils/sanitize';
+import { agreedCallData } from '../utils/broadcastRpc';
 import {
   CORE_LOAN_LEVEL,
   MAX_LOAN_LEVEL,
@@ -190,6 +192,19 @@ const assertProposalId = (id: number) => {
   if (!Number.isInteger(id) || id < 1) throw new Error('no-admin-proposal');
 };
 
+async function agreedUintAt(
+  contract: Contract,
+  method: string,
+  args: readonly unknown[],
+  index = 0
+): Promise<bigint> {
+  const data = contract.interface.encodeFunctionData(method, [...args]);
+  const agreed = await agreedCallData(publicRpcList(), await contract.getAddress(), data);
+  if (agreed.kind !== 'value') throw new Error('rpc-money-mismatch');
+  const decoded = contract.interface.decodeFunctionResult(method, agreed.value);
+  return BigInt(decoded[index]);
+}
+
 const asegurarAprobacionToken = async (
   signer: Signer,
   userAddress: string,
@@ -198,7 +213,7 @@ const asegurarAprobacionToken = async (
   spender = getContractAddress()
 ) => {
   const tokenContract = new Contract(tokenAddress, ERC20_ABI, signer);
-  const allowance = (await tokenContract.allowance(userAddress, spender)) as bigint;
+  const allowance = await agreedUintAt(tokenContract, 'allowance', [userAddress, spender]);
   const required = BigInt(amountWei);
 
   if (allowance < required) {
@@ -218,8 +233,7 @@ async function topUpDemoUsdtToDebt(tokenAddress: string, neededWei = '0'): Promi
   const { signer } = await requireInternalSigner();
   const userAddress = await signer.getAddress();
   const credit = contractWith(signer);
-  const deuda = await credit.obtenerDeuda(userAddress);
-  const fromLoan = deuda[2] as bigint;
+  const fromLoan = await agreedUintAt(credit, 'obtenerDeuda', [userAddress], 2);
   let needed = fromLoan;
   if (neededWei && neededWei !== '0') {
     try {
@@ -231,7 +245,7 @@ async function topUpDemoUsdtToDebt(tokenAddress: string, neededWei = '0'): Promi
   }
   if (needed <= 0n) return false;
   const token = new Contract(tokenAddress, DEMO_TOKEN_ABI, signer);
-  const balance = (await token.balanceOf(userAddress)) as bigint;
+  const balance = await agreedUintAt(token, 'balanceOf', [userAddress]);
   if (balance >= needed) return false;
   const tx = await token.mint(userAddress, needed - balance);
   await waitMined(tx);
@@ -392,8 +406,7 @@ export const QuatriviumCreditService = {
     const tx = await credit.solicitarPrestamo(tokenAddress, nivel);
     const receipt = await waitMined(tx);
     const userAddress = await signer.getAddress();
-    const deuda = await credit.obtenerDeuda(userAddress);
-    const remaining = deuda[2] as bigint;
+    const remaining = await agreedUintAt(credit, 'obtenerDeuda', [userAddress], 2);
     if (remaining > 0n) {
       await asegurarAprobacionToken(signer, userAddress, tokenAddress, remaining.toString());
     }
@@ -471,11 +484,10 @@ export const QuatriviumCreditService = {
       const { provider } = await getProviderAndSigner();
       const credit = contractWith(provider);
       const token = new Contract(tokenAddress, ERC20_ABI, provider);
-      const [cash, outstanding, liquidity, fees] = await Promise.all([
+      const [cash, outstanding, liquidity] = await Promise.all([
         token.balanceOf(getContractAddress()),
         credit.outstandingLoans(tokenAddress),
         credit.totalLiquidity(tokenAddress),
-        credit.collectedFees(tokenAddress),
       ]);
       let reservaBote: bigint | null = null;
       let reservaLocked: bigint | null = null;
@@ -504,7 +516,7 @@ export const QuatriviumCreditService = {
         cash: BigInt(cash),
         outstanding: BigInt(outstanding),
         liquidity: BigInt(liquidity),
-        fees: BigInt(fees),
+        fees: 0n,
         reservaBote,
         reservaLocked,
         reservaApyBps,
@@ -670,6 +682,8 @@ export const QuatriviumCreditService = {
     const credit = contractWith(signer);
     await credit.pagarPrestamo.staticCall(tokenAddress, amountInWei);
     await cobrarComisionIntermediario(signer, true);
+    // Sin gasLimit fijo. ethers estima el gas: el aviso a la Reserva revierte el pago
+    // si el límite no cubre el mínimo, y la estimación incluye las 40 generaciones.
     const tx = await credit.pagarPrestamo(tokenAddress, amountInWei);
     const receipt = await waitMined(tx);
     await QuatriviumCreditService.notificarRacha(userAddress);
@@ -687,9 +701,8 @@ export const QuatriviumCreditService = {
     await cobrarComisionIntermediario(signer, true);
     let last: unknown = null;
     for (let i = 0; i < count; i += 1) {
-      const deuda = await credit.obtenerDeuda(userAddress);
+      const totalDue = await agreedUintAt(credit, 'obtenerDeuda', [userAddress], 2);
       const plan = await credit.planPago(userAddress);
-      const totalDue = deuda[2] as bigint;
       const pagado = plan[0] as bigint;
       if (totalDue <= pagado) break;
       const restantes = totalDue - pagado;
@@ -729,32 +742,9 @@ export const QuatriviumCreditService = {
     return proposeAdmin('removeAdmin', [address]);
   },
 
-  proposeFeeCollector: async (address: string) => {
-    if (!isAddress(address)) throw new Error('invalid address');
-    return proposeAdmin('setFeeCollector', [address]);
-  },
-
   proposeFundador: async (address: string) => {
     if (!isAddress(address)) throw new Error('invalid address');
     return proposeAdmin('setFundador', [address]);
-  },
-
-  proposeOwner: async (address: string) => {
-    if (!isAddress(address)) throw new Error('invalid address');
-    return proposeAdmin('setOwner', [address]);
-  },
-
-  proposeRequiredConfirmations: async (required: number) => {
-    if (!Number.isInteger(required) || required < 1 || required > 3) {
-      throw new Error('invalid confirms');
-    }
-    return proposeAdmin('setRequiredConfirmations', [required]);
-  },
-
-  proposeSetTokenConfig: async (token: string, feed: string, enabled: boolean) => {
-    if (!isAddress(token)) throw new Error('invalid address');
-    if (enabled && !isAddress(feed)) throw new Error('invalid feed');
-    return proposeAdmin('setTokenConfig', [token, enabled ? feed : ZeroAddress, enabled]);
   },
 
   confirmAdminAction: async (id: number) => {
@@ -840,13 +830,6 @@ export const QuatriviumCreditService = {
     }
   },
 
-  retirarComisiones: async () => proposeAdmin('retirarComisiones', []),
-
-  retirarComisionesToken: async (tokenAddress: string) => {
-    assertToken(tokenAddress);
-    return proposeAdmin('retirarComisionesToken', [tokenAddress]);
-  },
-
   cancelAdminAction: async (id: number) => {
     assertProposalId(id);
     const { signer } = await requireSigner();
@@ -859,16 +842,12 @@ export const QuatriviumCreditService = {
     assertToken(tokenAddress);
     const { signer } = await requireSigner();
     const credit = contractWith(signer);
-    const userAddress = await signer.getAddress();
-    // Obtener la deuda total del deudor para aprobar el monto exacto
-    const deuda = await credit.obtenerDeuda(debtorAddress);
-    const totalDue = deuda[2] as bigint;
+    const totalDue = await agreedUintAt(credit, 'obtenerDeuda', [debtorAddress], 2);
     if (totalDue <= 0n) throw new Error('no-active-debt');
     const plan = await credit.planPago(debtorAddress);
     const pagado = plan[0] as bigint;
     const remaining = totalDue > pagado ? totalDue - pagado : 0n;
     if (remaining <= 0n) throw new Error('no-active-debt');
-    await asegurarAprobacionToken(signer, userAddress, tokenAddress, remaining.toString());
     const tx = await credit.liquidate(debtorAddress, tokenAddress);
     return waitMined(tx);
   },

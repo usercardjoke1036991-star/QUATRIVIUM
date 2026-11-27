@@ -1,4 +1,5 @@
-import * as Linking from 'expo-linking';
+import { INVITE_APP_SCHEME, PUBLIC_APP_HOST } from '../constants/appLinks';
+import { parseLinkingUrl } from './parseLinkingUrl';
 
 export type AppDeepLink =
   | {
@@ -45,7 +46,7 @@ export const LOCKED_DEEP_LINK_ROOMS = new Set([
   'reserva',
   'bonuses',
 ]);
-const APP_HOST = 'quatriviumcredit.app';
+const APP_HOST = PUBLIC_APP_HOST;
 
 function trimPathSlashes(path: string): string {
   let s = path;
@@ -71,10 +72,12 @@ function isMetroDevUrl(url: string): boolean {
 export function isAllowedAppUrl(url?: string | null): boolean {
   if (!url) return false;
   try {
-    const parsed = Linking.parse(url);
+    const parsed = parseLinkingUrl(url);
     const scheme = String(parsed.scheme || '').toLowerCase();
-    if (scheme === 'quatrivium') return true;
     const host = String(parsed.hostname || '').toLowerCase();
+    // `quatrivium` abre la otra app. Cualquier otro esquema también se rechaza.
+    if (scheme === 'quatrivium') return false;
+    if (scheme === INVITE_APP_SCHEME) return true;
     if (scheme === 'https' && host === APP_HOST) return true;
     if (host === 'expo-development-client') {
       const nested = String(parsed.queryParams?.url || '');
@@ -87,7 +90,7 @@ export function isAllowedAppUrl(url?: string | null): boolean {
 }
 
 function tokenFromAllowed(url: string): string {
-  const parsed = Linking.parse(url);
+  const parsed = parseLinkingUrl(url);
   const scheme = String(parsed.scheme || '').toLowerCase();
   const parts = trimPathSlashes(String(parsed.path || ''))
     .split('/')
@@ -114,7 +117,7 @@ function tokenFromAllowed(url: string): string {
     }
     return fromPath.toLowerCase();
   }
-  if (scheme === 'quatrivium' && host) return host;
+  if (scheme === INVITE_APP_SCHEME && host) return host;
   if (host === APP_HOST) return fromPath.toLowerCase();
   return '';
 }

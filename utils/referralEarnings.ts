@@ -9,7 +9,7 @@ export function asWei(value: string | number | bigint | undefined): bigint {
   }
 }
 
-export function sumReferralEarnings(nodes: Array<{ commissionWei?: string; bonusWei?: string }>): {
+export function sumReferralEarnings(nodes: { commissionWei?: string; bonusWei?: string }[]): {
   commissionWei: bigint;
   bonusWei: bigint;
   totalWei: bigint;

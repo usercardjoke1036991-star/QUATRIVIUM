@@ -14,7 +14,7 @@ interface DonateFounderSectionProps {
   isLoading: boolean;
   tokenSymbol: string;
   tokenSupported: boolean;
-  walletConnected: boolean;
+  walletReady: boolean;
   founderAddress?: string;
   donatedUsd: number;
   altaPaid?: boolean;
@@ -27,7 +27,7 @@ export function DonateFounderSection({
   isLoading,
   tokenSymbol,
   tokenSupported,
-  walletConnected,
+  walletReady,
   founderAddress,
   donatedUsd,
   altaPaid = false,
@@ -40,7 +40,7 @@ export function DonateFounderSection({
   const { colors } = useTheme();
   const kind = supportKind(voluntaryDonateUsd(donatedUsd), lpUsd);
   const titleKey = supportNameKey(kind);
-  const blocked = isLoading || !walletConnected || !canSend || !founderAddress || !tokenSupported;
+  const blocked = isLoading || !walletReady || !canSend || !founderAddress || !tokenSupported;
   const parsed = parsePositiveDecimal(amount);
   const fameGain = parsed ? fameFromDonateUsd(Number(parsed)) : 0;
   const voluntary = voluntaryDonateUsd(donatedUsd);
@@ -59,7 +59,7 @@ export function DonateFounderSection({
           <AppText style={[styles.meta, { color: colors.textMuted }]}>
             {t('donateWalletPending')}
           </AppText>
-        ) : !tokenSupported && walletConnected ? (
+        ) : !tokenSupported && walletReady ? (
           <AppText style={[styles.warn, { color: colors.warnText }]}>
             {t('tokenNotEnabled')}
           </AppText>

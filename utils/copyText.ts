@@ -4,6 +4,8 @@ export async function copyText(text: string): Promise<'copied' | 'shared' | 'fai
   const value = String(text || '').trim();
   if (!value) return 'failed';
   try {
+    // Módulo nativo opcional: no está en todos los builds.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const expoClipboard = require('expo-clipboard') as {
       setStringAsync?: (next: string) => Promise<void>;
     };
@@ -15,6 +17,7 @@ export async function copyText(text: string): Promise<'copied' | 'shared' | 'fai
     // El módulo nativo puede no estar en este build.
   }
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { Clipboard } = require('react-native') as {
       Clipboard?: { setString?: (next: string) => void };
     };

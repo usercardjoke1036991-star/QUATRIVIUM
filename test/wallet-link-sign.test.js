@@ -20,7 +20,7 @@ describe('wallet link requires a bind signature', function () {
     const domain = {
       name: 'Quatrivium Credit',
       version: '2',
-      chainId: 97,
+      chainId: 42161,
       verifyingContract: '0x0000000000000000000000000000000000000001',
     };
     const value = {
@@ -34,50 +34,29 @@ describe('wallet link requires a bind signature', function () {
     expect(recovered).to.equal(signer.address);
   });
 
-  it('does not save a link until proveAndSaveLinkedWallet runs', function () {
-    const form = fs.readFileSync(
-      path.join(__dirname, '..', 'components', 'LinkWalletForm.tsx'),
-      'utf8'
-    );
-    const card = fs.readFileSync(
-      path.join(__dirname, '..', 'components', 'LinkedWalletCard.tsx'),
-      'utf8'
-    );
-    const linked = fs.readFileSync(
-      path.join(__dirname, '..', 'services', 'linkedWallet.ts'),
-      'utf8'
-    );
-    const auth = fs.readFileSync(path.join(__dirname, '..', 'services', 'walletAuth.ts'), 'utf8');
-    expect(form).to.include('proveAndSaveLinkedWallet');
-    expect(form).to.include('linkWalletSignNeed');
-    expect(form).to.not.match(/saveLinkedExternalWallet\(internalWallet, address\)/);
-    expect(card).to.include('proveAndSaveLinkedWallet');
-    expect(card).to.include('sessionLive');
-    expect(card).to.include('linkWalletSessionOff');
-    expect(card).to.not.include('saveLinkedExternalWallet(');
-    expect(linked).to.include('signBindExternalWallet');
-    expect(linked).to.include('proven:');
-    const transfer = fs.readFileSync(
-      path.join(__dirname, '..', 'components', 'TransferWalletsModal.tsx'),
-      'utf8'
-    );
-    const handlers = fs.readFileSync(
-      path.join(__dirname, '..', 'hooks', 'useHomeHandlers.ts'),
-      'utf8'
-    );
-    const charge = fs.readFileSync(
-      path.join(__dirname, '..', 'services', 'founderUsdtCharge.ts'),
-      'utf8'
-    );
+  it('does not save a link without a test transfer confirmed on chain', function () {
+    const read = (...parts) => fs.readFileSync(path.join(__dirname, '..', ...parts), 'utf8');
+    const form = read('components', 'LinkWalletForm.tsx');
+    const card = read('components', 'LinkedWalletCard.tsx');
+    const linked = read('services', 'linkedWallet.ts');
+    const auth = read('services', 'walletAuth.ts');
+    expect(linked).to.include('proof: LinkProof');
+    expect(linked).to.include("TRANSFER_PREFIX = 'transfer:'");
+    expect(linked).to.include("PROVEN_PREFIX = 'proven:'");
+    expect(linked).to.not.include('typed:');
+    expect(form).to.include('saveLinkedExternalWallet(internalWallet, result.proof)');
+    expect(card).to.not.include('saveLinkedExternalWallet');
+    expect(card).to.include('LinkWalletForm');
+    const transfer = read('components', 'TransferWalletsModal.tsx');
+    const handlers = read('hooks', 'useHomeHandlers.ts');
     expect(transfer).to.not.include('saveLinkedExternalWallet');
     expect(handlers).to.not.include('saveLinkedExternalWallet');
-    expect(charge).to.not.include('saveLinkedExternalWallet');
-    expect(auth).to.include("BIND_WALLET_PURPOSE = 'vincular-billetera'");
-    expect(auth).to.include('signBindExternalWallet');
-    expect(auth).to.include('purpose: BIND_WALLET_PURPOSE');
+    expect(auth).to.not.include('BIND_WALLET_PURPOSE');
+    expect(auth).to.not.include('signBindExternalWallet');
+    expect(auth).to.not.include('vincular-billetera');
   });
 
-  it('keeps a chain 56 proof out of chain 97', function () {
+  it('keeps an Arbitrum One proof out of Arbitrum Sepolia', function () {
     const linked = fs.readFileSync(
       path.join(__dirname, '..', 'services', 'linkedWallet.ts'),
       'utf8'
@@ -96,9 +75,9 @@ describe('wallet link requires a bind signature', function () {
     const wallet = '0xAbC';
     const key = (chainId) => `${prefix}${chainId}:${wallet.trim().toLowerCase()}`;
     const store = new Map();
-    store.set(key(56), 'proven:0x5023bf46dB7458B9bb9152a7ffE64f195CD1a047');
-    expect(store.get(key(97))).to.equal(undefined);
-    expect(store.get(key(56))).to.match(/^proven:/);
-    expect(key(56)).to.not.equal(key(97));
+    store.set(key(42161), 'proven:0x5023bf46dB7458B9bb9152a7ffE64f195CD1a047');
+    expect(store.get(key(421614))).to.equal(undefined);
+    expect(store.get(key(42161))).to.match(/^proven:/);
+    expect(key(42161)).to.not.equal(key(421614));
   });
 });

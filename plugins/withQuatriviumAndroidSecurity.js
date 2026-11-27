@@ -349,7 +349,7 @@ function withQuatriviumAndroidSecurity(config) {
         if (!rules.includes('-dontwarn java.awt.Component')) {
           rules += `
 
-# JNA desktop stubs pulled by WalletConnect; they do not exist on Android.
+# JNA desktop stubs; they do not exist on Android.
 -dontwarn java.awt.Component
 -dontwarn java.awt.**
 -dontwarn javax.swing.**

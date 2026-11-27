@@ -150,12 +150,13 @@ export const FameLeaderboard: React.FC<FameLeaderboardProps> = ({
   }, [page, safePage]);
 
   useEffect(() => {
+    const rows = seatsForDivision(seats, division);
     const wallets = [
-      ...new Set([...visible.map((seat) => seat.player.address), walletAddress].filter(Boolean)),
+      ...new Set([...rows.map((seat) => seat.player.address), walletAddress].filter(Boolean)),
     ];
     if (!wallets.length) return;
     refreshDirectory(wallets).catch(() => {});
-  }, [kind, division, data.players, walletAddress, refreshDirectory]);
+  }, [seats, division, walletAddress, refreshDirectory]);
 
   const first = podium.find((seat) => seat.placeInDivision === 1);
   const second = podium.find((seat) => seat.placeInDivision === 2);
